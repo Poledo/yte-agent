@@ -78,7 +78,7 @@ jobs:
           echo "dist khớp mã nguồn."
 
       - name: Lưu bản chưa đóng gói để tải về cài thử
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: zerocheck-ai-unpacked-${{ github.sha }}
           path: extension-his/extension/dist
