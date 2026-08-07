@@ -29,7 +29,7 @@ jobs:
       run:
         working-directory: web-admin
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v4
         with:
@@ -87,7 +87,7 @@ jobs:
       REGISTRY: ecr.vnptplatform.vn
       IMAGE: ecr.vnptplatform.vn/${{ secrets.ECR_ID }}/web-admin
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Đăng nhập VNPT ECR
         run: echo "${{ secrets.ECR_PASSWORD }}" | docker login "$REGISTRY" -u "${{ secrets.ECR_USER }}" --password-stdin
