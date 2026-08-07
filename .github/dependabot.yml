@@ -1,0 +1,93 @@
+# Dependabot tự mở PR khi thư viện có bản vá bảo mật hoặc bản mới.
+# Gom theo tuần để không ngập PR; PR đi qua đúng CI như mọi thay đổi khác
+# (job test chặn trước build-and-deploy) nên bản nâng làm đỏ test sẽ không merge được.
+#
+# Monorepo: mọi `directory` tính từ gốc kho. File này gộp 3 file dependabot.yml
+# hồi 3 repo còn tách rời.
+version: 2
+
+updates:
+  # ---- api-validation ----
+  # Gói NuGet của API và của project test.
+  - package-ecosystem: nuget
+    directories:
+      - /api-validation/AIValidation.Api
+      - /api-validation/AIValidation.Tests
+    schedule:
+      interval: weekly
+      day: monday
+      time: '07:00'
+      timezone: Asia/Ho_Chi_Minh
+    open-pull-requests-limit: 5
+    groups:
+      # Các gói Microsoft.* / EF Core lên phiên bản cùng nhịp — gom một PR
+      # thay vì mỗi gói một PR rồi xung đột phiên bản.
+      microsoft:
+        patterns:
+          - 'Microsoft.*'
+          - 'System.*'
+    commit-message:
+      prefix: 'nuget(api)'
+
+  # ---- web-admin ----
+  - package-ecosystem: npm
+    directory: /web-admin
+    schedule:
+      interval: weekly
+      day: monday
+      time: '07:00'
+      timezone: Asia/Ho_Chi_Minh
+    open-pull-requests-limit: 5
+    groups:
+      # Toàn bộ gói @angular/* phải cùng phiên bản, nâng lẻ là gãy build.
+      angular:
+        patterns:
+          - '@angular/*'
+          - '@angular-devkit/*'
+          - 'ng-packagr'
+    commit-message:
+      prefix: 'npm(web)'
+
+  # ---- extension-his ----
+  # package.json của extension nằm trong thư mục con extension/, không phải gốc thành phần.
+  - package-ecosystem: npm
+    directory: /extension-his/extension
+    schedule:
+      interval: weekly
+      day: monday
+      time: '07:00'
+      timezone: Asia/Ho_Chi_Minh
+    open-pull-requests-limit: 5
+    groups:
+      # Vite và các plugin đi kèm nâng cùng nhịp.
+      vite:
+        patterns:
+          - 'vite'
+          - 'vite-*'
+          - '@vitejs/*'
+          - 'vitest'
+    commit-message:
+      prefix: 'npm(ext)'
+
+  # ---- ảnh nền Docker ----
+  # Bản vá CVE của ảnh nền (SDK/runtime .NET, node/nginx) thường là đường vá nhanh
+  # nhất cho lỗ hổng hệ điều hành.
+  - package-ecosystem: docker
+    directories:
+      - /api-validation
+      - /web-admin
+    schedule:
+      interval: weekly
+      day: monday
+      time: '07:00'
+      timezone: Asia/Ho_Chi_Minh
+    commit-message:
+      prefix: 'docker'
+
+  # ---- chính các action dùng trong workflow ----
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: 'ci'

@@ -1,12 +1,15 @@
 name: Đóng gói bản cài extension
 
-# Chạy khi đẩy tag dạng v1.2.3. Kết quả là một file .zip đính vào GitHub Release —
-# đây chính là file kéo lên Chrome Web Store khi nào cần, và cũng là bản gửi cho
-# đơn vị tự cài. Workflow này KHÔNG tự đăng lên store: store duyệt tay, mỗi lần
-# đăng phải tăng version, và đã đăng là mọi máy tự cập nhật — không lùi lại được.
+# Chạy khi đẩy tag dạng extension-v1.2.3. Kết quả là một file .zip đính vào GitHub
+# Release — đây chính là file kéo lên Chrome Web Store khi nào cần, và cũng là bản
+# gửi cho đơn vị tự cài. Workflow này KHÔNG tự đăng lên store: store duyệt tay, mỗi
+# lần đăng phải tăng version, và đã đăng là mọi máy tự cập nhật — không lùi lại được.
+#
+# Tiền tố `extension-` là quy ước của monorepo: một kho chứa 3 thành phần nên tag
+# phải nói rõ đang phát hành cái nào (hồi tách repo tag chỉ là `v1.2.3`).
 on:
   push:
-    tags: ['v*']
+    tags: ['extension-v*']
   workflow_dispatch:
 
 permissions:
@@ -24,15 +27,15 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-          cache-dependency-path: extension/package-lock.json
+          cache-dependency-path: extension-his/extension/package-lock.json
 
       - name: Cài phụ thuộc
         run: npm ci
-        working-directory: extension
+        working-directory: extension-his/extension
 
       - name: Build extension
         run: npm run build
-        working-directory: extension
+        working-directory: extension-his/extension
 
       # Chrome Web Store từ chối bản upload trùng version với bản đã có. Đặt tên file
       # theo version trong manifest để không bao giờ nhầm bản, và bắt lỗi ngay nếu tag
@@ -40,12 +43,12 @@ jobs:
       - name: Lấy version trong manifest
         id: ver
         run: |
-          VERSION=$(node -p "require('./extension/public/manifest.json').version")
+          VERSION=$(node -p "require('./extension-his/extension/public/manifest.json').version")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
-            TAG_VERSION="${GITHUB_REF_NAME#v}"
+            TAG_VERSION="${GITHUB_REF_NAME#extension-v}"
             if [ "$TAG_VERSION" != "$VERSION" ]; then
-              echo "::error::Tag ${GITHUB_REF_NAME} không khớp version trong manifest ($VERSION). Sửa extension/public/manifest.json rồi tag lại."
+              echo "::error::Tag ${GITHUB_REF_NAME} không khớp version trong manifest ($VERSION). Sửa extension-his/extension/public/manifest.json rồi tag lại."
               exit 1
             fi
           fi
@@ -54,9 +57,9 @@ jobs:
       - name: Đóng gói dist thành .zip
         run: |
           TEN="zerocheck-ai-v${{ steps.ver.outputs.version }}.zip"
-          cd extension/dist
-          zip -qr "../../$TEN" .
-          cd ../..
+          cd extension-his/extension/dist
+          zip -qr "$GITHUB_WORKSPACE/$TEN" .
+          cd "$GITHUB_WORKSPACE"
           echo "TEN_FILE=$TEN" >> "$GITHUB_ENV"
           unzip -l "$TEN" | tail -1
 

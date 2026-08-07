@@ -1,8 +1,10 @@
-# Quét lộ bí mật (secret scanning) bằng gitleaks.
+# Quét lộ bí mật (secret scanning) bằng gitleaks — quét cả monorepo, không lọc theo
+# thư mục con: một khóa lọt vào bất kỳ chỗ nào cũng phải bắt được.
 #
 # Quét cây thư mục làm việc (lệnh `gitleaks dir`), tức là NỘI DUNG SẼ ĐƯỢC MERGE —
 # mục tiêu là chặn key/mật khẩu mới lọt vào master, không phải rà lại lịch sử cũ.
-# Lịch sử git được xử lý riêng (xem docs/PERFORMANCE-SECURITY.md ở repo hackathon-api-validation).
+# Lịch sử git được xử lý riêng (xem api-validation/docs/PERFORMANCE-SECURITY.md,
+# mục Quản lý bí mật).
 #
 # Không gắn vào workflow deploy: đây là cổng chất lượng chạy song song, kết quả
 # hiện ngay trên tab Actions và trên mỗi pull request.

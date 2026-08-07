@@ -1,25 +1,38 @@
-# CI/CD api-validation: build image .NET → push VNPT ECR → deploy VNPT K8s.
+# CI/CD api-validation: test → build image .NET → push VNPT ECR → deploy VNPT K8s.
+#
+# Monorepo: chỉ chạy khi thư mục api-validation/ (hoặc chính file này) thay đổi.
+# Mọi bước đều chạy trong thư mục api-validation/ nên đường dẫn giữ nguyên như hồi tách repo.
 #
 # Secrets cần khai báo trong GitHub repo (Settings > Secrets and variables > Actions):
 #   ECR_ID       - id repository trên VNPT ECR (vd: ecr_p1wkreqhz9a8)
 #   ECR_USER     - tài khoản ECR
 #   ECR_PASSWORD - mật khẩu tài khoản ECR
 #   KUBE_CONFIG  - kubeconfig cụm VNPT K8s, mã hóa base64 (base64 -w0 kubeconfig.yaml)
-name: Deploy api-validation
+# Chưa khai đủ 4 secrets thì job triển khai tự bỏ qua (xem job kiem-tra-secrets),
+# CI vẫn xanh chứ không đỏ vô nghĩa.
+name: api-validation
 
 on:
   push:
-    branches: [main, master]
+    branches: [master]
+    paths:
+      - 'api-validation/**'
+      - '.github/workflows/api-validation.yml'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'api-validation/**'
+      - '.github/workflows/api-validation.yml'
   workflow_dispatch:
-
-env:
-  REGISTRY: ecr.vnptplatform.vn
-  IMAGE: ecr.vnptplatform.vn/${{ secrets.ECR_ID }}/api-validation
 
 jobs:
   # Unit test rule engine (AIValidation.Tests) — fail là KHÔNG deploy.
   test:
+    name: Test và kiểm tra chất lượng
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api-validation
     steps:
       - uses: actions/checkout@v4
 
@@ -31,7 +44,7 @@ jobs:
       - name: Chạy unit test
         run: dotnet test AIValidation.Tests/AIValidation.Tests.csproj -c Release --logger "console;verbosity=normal"
 
-      # Kiểm tra quy ước code theo .editorconfig ở gốc repo. Chỉ chặn các rule đặt
+      # Kiểm tra quy ước code theo api-validation/.editorconfig. Chỉ chặn các rule đặt
       # mức error (hiện là CA2100 - nguy cơ SQL injection); rule mức warning/suggestion
       # vẫn hiện lúc build nhưng không làm đỏ CI, để không biến việc dọn dần thành
       # rào cản phát hành.
@@ -52,9 +65,45 @@ jobs:
           fi
           echo "Không có thư viện nào dính lỗ hổng đã công bố."
 
-  build-and-deploy:
-    needs: test
+  # Context `secrets` KHÔNG dùng được ở `if:` cấp job, nên phải soi bằng một job riêng
+  # rồi chuyền kết quả qua outputs. Nhờ vậy kho chưa khai secrets vẫn push xanh.
+  kiem-tra-secrets:
+    name: Soát secrets triển khai
     runs-on: ubuntu-latest
+    outputs:
+      du: ${{ steps.soat.outputs.du }}
+    steps:
+      - id: soat
+        env:
+          ECR_ID: ${{ secrets.ECR_ID }}
+          ECR_USER: ${{ secrets.ECR_USER }}
+          ECR_PASSWORD: ${{ secrets.ECR_PASSWORD }}
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+        run: |
+          THIEU=""
+          for TEN in ECR_ID ECR_USER ECR_PASSWORD KUBE_CONFIG; do
+            if [ -z "${!TEN}" ]; then THIEU="$THIEU $TEN"; fi
+          done
+          if [ -n "$THIEU" ]; then
+            echo "::warning::Bỏ qua triển khai: kho chưa khai secrets:$THIEU (Settings > Secrets and variables > Actions)."
+            echo "du=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Đã có đủ 4 secrets triển khai."
+            echo "du=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  build-and-deploy:
+    name: Build image và triển khai
+    needs: [test, kiem-tra-secrets]
+    # Pull request KHÔNG deploy — chỉ push vào master mới đẩy lên cụm production.
+    if: github.event_name != 'pull_request' && needs.kiem-tra-secrets.outputs.du == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api-validation
+    env:
+      REGISTRY: ecr.vnptplatform.vn
+      IMAGE: ecr.vnptplatform.vn/${{ secrets.ECR_ID }}/api-validation
     steps:
       - uses: actions/checkout@v4
 

@@ -1,13 +1,21 @@
-name: CI extension
+name: extension-his
 
 # Không deploy đi đâu cả — extension không có server. Việc của CI ở đây là chặn
 # code hỏng lọt vào master: sai kiểu TypeScript, build gãy, thiếu file manifest
 # tham chiếu, hoặc thư mục dist/ đã commit không còn khớp mã nguồn.
+#
+# Monorepo: chỉ chạy khi thư mục extension-his/ (hoặc chính file này) thay đổi.
 on:
   push:
     branches: [master]
+    paths:
+      - 'extension-his/**'
+      - '.github/workflows/extension-his.yml'
   pull_request:
     branches: [master]
+    paths:
+      - 'extension-his/**'
+      - '.github/workflows/extension-his.yml'
   workflow_dispatch:
 
 jobs:
@@ -16,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: extension
+        working-directory: extension-his/extension
 
     steps:
       - uses: actions/checkout@v4
@@ -25,7 +33,7 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-          cache-dependency-path: extension/package-lock.json
+          cache-dependency-path: extension-his/extension/package-lock.json
 
       - name: Cài phụ thuộc
         run: npm ci
@@ -62,7 +70,7 @@ jobs:
         run: |
           THAY_DOI=$(git status --porcelain -- dist)
           if [ -n "$THAY_DOI" ]; then
-            echo "::error::Thư mục extension/dist trong repo đã cũ so với mã nguồn. Chạy 'npm run build' rồi commit lại dist."
+            echo "::error::Thư mục extension-his/extension/dist trong repo đã cũ so với mã nguồn. Chạy 'npm run build' rồi commit lại dist."
             echo "$THAY_DOI"
             git --no-pager diff --stat -- dist
             exit 1
@@ -73,5 +81,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: zerocheck-ai-unpacked-${{ github.sha }}
-          path: extension/dist
+          path: extension-his/extension/dist
           retention-days: 14

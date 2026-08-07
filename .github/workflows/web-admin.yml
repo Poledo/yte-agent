@@ -1,0 +1,115 @@
+# CI/CD web-admin: test → build image → push VNPT ECR → deploy VNPT K8s.
+#
+# Monorepo: chỉ chạy khi thư mục web-admin/ (hoặc chính file này) thay đổi.
+#
+# Secrets — xem chú thích ở .github/workflows/api-validation.yml (dùng chung 4 secrets).
+# Chưa khai đủ thì job triển khai tự bỏ qua, CI vẫn xanh.
+name: web-admin
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'web-admin/**'
+      - '.github/workflows/web-admin.yml'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'web-admin/**'
+      - '.github/workflows/web-admin.yml'
+  workflow_dispatch:
+
+jobs:
+  # Unit test Angular (vitest + jsdom, chạy một lượt rồi thoát) — fail là KHÔNG deploy.
+  # Phủ phần logic bảo vệ đường vào: lưu/xóa token và hai guard chặn route.
+  test:
+    name: Test và soi lỗ hổng
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web-admin
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web-admin/package-lock.json
+
+      - name: Cài phụ thuộc
+        run: npm ci
+
+      - name: Chạy unit test
+        run: npm test
+
+      # Chỉ soi phụ thuộc chạy trên trình duyệt người dùng (--omit=dev). Lỗ hổng của
+      # công cụ build do Dependabot xử lý dần, không chặn phát hành.
+      - name: Kiểm tra lỗ hổng thư viện phát hành
+        run: npm audit --omit=dev --audit-level=high
+
+  # Xem giải thích ở .github/workflows/api-validation.yml — `secrets` không dùng được
+  # trong `if:` cấp job nên phải soi bằng job riêng.
+  kiem-tra-secrets:
+    name: Soát secrets triển khai
+    runs-on: ubuntu-latest
+    outputs:
+      du: ${{ steps.soat.outputs.du }}
+    steps:
+      - id: soat
+        env:
+          ECR_ID: ${{ secrets.ECR_ID }}
+          ECR_USER: ${{ secrets.ECR_USER }}
+          ECR_PASSWORD: ${{ secrets.ECR_PASSWORD }}
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+        run: |
+          THIEU=""
+          for TEN in ECR_ID ECR_USER ECR_PASSWORD KUBE_CONFIG; do
+            if [ -z "${!TEN}" ]; then THIEU="$THIEU $TEN"; fi
+          done
+          if [ -n "$THIEU" ]; then
+            echo "::warning::Bỏ qua triển khai: kho chưa khai secrets:$THIEU (Settings > Secrets and variables > Actions)."
+            echo "du=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Đã có đủ 4 secrets triển khai."
+            echo "du=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  build-and-deploy:
+    name: Build image và triển khai
+    needs: [test, kiem-tra-secrets]
+    if: github.event_name != 'pull_request' && needs.kiem-tra-secrets.outputs.du == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web-admin
+    env:
+      REGISTRY: ecr.vnptplatform.vn
+      IMAGE: ecr.vnptplatform.vn/${{ secrets.ECR_ID }}/web-admin
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Đăng nhập VNPT ECR
+        run: echo "${{ secrets.ECR_PASSWORD }}" | docker login "$REGISTRY" -u "${{ secrets.ECR_USER }}" --password-stdin
+
+      - name: Build và push image
+        run: |
+          TAG="${GITHUB_SHA::8}"
+          docker build -t "$IMAGE:$TAG" -t "$IMAGE:latest" .
+          docker push "$IMAGE:$TAG"
+          docker push "$IMAGE:latest"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+
+      - name: Cấu hình kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Áp dụng manifest và cập nhật image
+        run: |
+          sed -i "s|REPLACE_ECR_ID|${{ secrets.ECR_ID }}|g" k8s/web-admin.yaml
+          kubectl apply -f k8s/web-admin.yaml
+          kubectl -n cbyts set image deployment/web-admin \
+            web-admin="$IMAGE:$TAG"
+          kubectl -n cbyts rollout status deployment/web-admin --timeout=180s

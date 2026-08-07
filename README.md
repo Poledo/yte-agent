@@ -41,12 +41,23 @@ không bao giờ ghi vào file trong kho này.
 
 ## CI/CD
 
-Mỗi thư mục con vẫn giữ nguyên `.github/workflows/` cũ từ thời tách repo. **GitHub chỉ đọc
-workflow ở `.github/workflows/` tại gốc kho**, nên các file đó hiện KHÔNG chạy — giữ lại làm
-bản gốc để dựng lại pipeline cho monorepo (gộp về gốc, thêm `paths:` lọc theo thư mục và
-`working-directory`). Dựng xong phải thêm secrets `ECR_ID`, `ECR_USER`, `ECR_PASSWORD`,
-`KUBE_CONFIG` cho kho này, và nhớ rằng lúc đó **push lên `main` sẽ deploy thẳng lên cụm
-production**.
+Toàn bộ pipeline nằm ở [`.github/workflows/`](.github/workflows) tại gốc kho (GitHub chỉ đọc
+workflow ở đây). Mỗi workflow lọc `paths:` theo thư mục của mình nên sửa web-admin không kéo
+theo build của API.
+
+| Workflow | Kích hoạt | Làm gì |
+|---|---|---|
+| [`api-validation.yml`](.github/workflows/api-validation.yml) | push/PR `master` chạm `api-validation/**` | test + `dotnet format` + soi CVE → build image → push ECR → `kubectl apply` + rollout |
+| [`web-admin.yml`](.github/workflows/web-admin.yml) | push/PR `master` chạm `web-admin/**` | `npm test` + `npm audit` → build image → push ECR → rollout |
+| [`extension-his.yml`](.github/workflows/extension-his.yml) | push/PR `master` chạm `extension-his/**` | tsc + lint + test + audit + build, chặn `dist/` cũ, lưu bản unpacked làm artifact |
+| [`extension-release.yml`](.github/workflows/extension-release.yml) | tag `extension-v1.2.3` | đóng gói `.zip` + tạo GitHub Release (tag phải khớp version trong manifest) |
+| [`security-scan.yml`](.github/workflows/security-scan.yml) | push/PR `master`, hằng tuần | gitleaks quét cả kho |
+
+**Push lên `master` là deploy thẳng lên cụm production** — pull request thì chỉ chạy test.
+
+Trước khi deploy chạy được phải khai 4 secrets ở *Settings > Secrets and variables > Actions*:
+`ECR_ID`, `ECR_USER`, `ECR_PASSWORD`, `KUBE_CONFIG`. Chưa khai đủ thì job `kiem-tra-secrets`
+báo warning và **bỏ qua** phần triển khai, CI vẫn xanh chứ không đỏ.
 
 ## Nguồn gốc
 

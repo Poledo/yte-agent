@@ -104,10 +104,13 @@ Việc dự thi còn treo:
 
 Việc của riêng monorepo:
 
-- **CI/CD chưa chạy**: 7 workflow cũ vẫn nằm trong `.github/workflows/` của từng thư mục con,
-  mà GitHub chỉ đọc `.github/workflows/` ở gốc kho. Phải gộp về gốc kèm `paths:` lọc theo thư mục
-  và `working-directory`, rồi thêm 4 secrets `ECR_ID/ECR_USER/ECR_PASSWORD/KUBE_CONFIG`.
-  **Lưu ý: xong việc đó thì push lên `main` sẽ deploy thẳng lên cụm production.**
+- **CI/CD đã gộp về gốc** (`.github/workflows/`, 5 workflow, lọc `paths:` theo thư mục con) —
+  bảng chi tiết ở README. Nhánh làm việc là **`master`**. Còn phải làm bằng tay trên GitHub:
+  khai 4 secrets `ECR_ID/ECR_USER/ECR_PASSWORD/KUBE_CONFIG` và đổi default branch sang `master`.
+  Chưa khai secrets thì job triển khai tự bỏ qua (CI vẫn xanh).
+  **Khai xong rồi thì mỗi lần push lên `master` là deploy thẳng lên cụm production.**
+- Tag phát hành extension đổi tiền tố: `extension-v1.2.3` (hồi tách repo chỉ là `v1.2.3`),
+  vì một kho giờ chứa 3 thành phần.
 - Quyết định có chép nốt `nop-btc/`, `report/`, `data-import/`, `vnpt-cloud/` sang không.
 - Khi đã chắc chắn, người dùng tự xóa workspace cũ `D:\VNPT\hackathon`.
 
