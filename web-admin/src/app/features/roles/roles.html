@@ -1,0 +1,63 @@
+<app-page-header icon="admin_panel_settings" title="Vai trò & quyền" subtitle="Định nghĩa vai trò và phân quyền chi tiết">
+  <button [matButton]="'filled'" color="primary" (click)="openCreate()">
+    <mat-icon>add</mat-icon> Tạo vai trò
+  </button>
+</app-page-header>
+
+@if (loading()) {
+  <app-loading-spinner label="Đang tải vai trò..."></app-loading-spinner>
+} @else {
+  <div class="roles-layout">
+    <!-- Danh sách vai trò -->
+    <div class="role-list">
+      @for (role of roles(); track role.id) {
+        <div class="role-card" [class.selected]="role.id === selectedId()" (click)="select(role)">
+          <div class="rc-top">
+            <div class="rc-icon"><mat-icon>shield</mat-icon></div>
+            <div class="rc-title">
+              <div class="rc-name">
+                {{ role.name }}
+                @if (role.isSystem) {
+                  <span class="sys-badge">Hệ thống</span>
+                }
+              </div>
+              <div class="rc-desc">{{ role.description || 'Không có mô tả' }}</div>
+            </div>
+          </div>
+          <div class="rc-bottom">
+            <span class="rc-perms"><mat-icon>key</mat-icon> {{ role.permissions.length }} quyền</span>
+            <span class="rc-actions">
+              <button matIconButton matTooltip="Sửa" (click)="openEdit(role, $event)">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button
+                matIconButton
+                matTooltip="Xóa"
+                [disabled]="role.isSystem"
+                (click)="remove(role, $event)"
+              >
+                <mat-icon>delete</mat-icon>
+              </button>
+            </span>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Trình phân quyền -->
+    <div class="editor-panel">
+      @if (selectedRole; as role) {
+        <app-permission-editor
+          [role]="role"
+          [groups]="groups()"
+          (saved)="onPermissionsSaved($event)"
+        ></app-permission-editor>
+      } @else {
+        <div class="pick-hint">
+          <mat-icon>touch_app</mat-icon>
+          <p>Chọn một vai trò bên trái để phân quyền</p>
+        </div>
+      }
+    </div>
+  </div>
+}

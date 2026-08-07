@@ -1,0 +1,59 @@
+<h2 mat-dialog-title>{{ isEdit ? 'Sửa người dùng' : 'Thêm người dùng' }}</h2>
+<mat-dialog-content>
+  <form [formGroup]="form" class="form-grid">
+    <mat-form-field appearance="outline">
+      <mat-label>Email</mat-label>
+      <input matInput type="email" formControlName="email" />
+      <mat-icon matPrefix>mail</mat-icon>
+      @if (form.controls.email.hasError('required') && form.controls.email.touched) {
+        <mat-error>Bắt buộc</mat-error>
+      }
+      @if (form.controls.email.hasError('email')) {
+        <mat-error>Email không hợp lệ</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Họ và tên</mat-label>
+      <input matInput formControlName="fullName" />
+      <mat-icon matPrefix>badge</mat-icon>
+      @if (form.controls.fullName.hasError('required') && form.controls.fullName.touched) {
+        <mat-error>Bắt buộc</mat-error>
+      }
+    </mat-form-field>
+
+    @if (!isEdit) {
+      <mat-form-field appearance="outline">
+        <mat-label>Mật khẩu</mat-label>
+        <input matInput [type]="hide() ? 'password' : 'text'" formControlName="password" />
+        <mat-icon matPrefix>lock</mat-icon>
+        <button matIconButton matSuffix type="button" (click)="hide.set(!hide())">
+          <mat-icon>{{ hide() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+        @if (form.controls.password.hasError('minlength')) {
+          <mat-error>Tối thiểu 6 ký tự</mat-error>
+        }
+      </mat-form-field>
+    }
+
+    <mat-form-field appearance="outline">
+      <mat-label>Vai trò</mat-label>
+      <mat-select formControlName="roles" multiple>
+        @for (r of data.roles; track r.id) {
+          <mat-option [value]="r.name">{{ r.name }}</mat-option>
+        }
+      </mat-select>
+      <mat-icon matPrefix>admin_panel_settings</mat-icon>
+    </mat-form-field>
+
+    @if (isEdit) {
+      <mat-slide-toggle formControlName="isActive">Tài khoản đang hoạt động</mat-slide-toggle>
+    }
+  </form>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button matButton (click)="cancel()">Hủy</button>
+  <button [matButton]="'filled'" color="primary" (click)="save()" [disabled]="saving()">
+    {{ isEdit ? 'Lưu' : 'Tạo' }}
+  </button>
+</mat-dialog-actions>

@@ -1,0 +1,74 @@
+# CI/CD web-admin: build image → push VNPT ECR → deploy VNPT K8s.
+#
+# Secrets cần khai báo trong GitHub repo (Settings > Secrets and variables > Actions):
+#   ECR_ID              - id repository trên VNPT ECR (đoạn sau tên registry),
+#                         ví dụ: ecr_p1wkreqhz9a8
+#   ECR_USER            - tài khoản ECR (tạo ở tab "Tài khoản" của dịch vụ ECR)
+#   ECR_PASSWORD        - mật khẩu tài khoản ECR
+#   KUBE_CONFIG         - nội dung kubeconfig của cụm VNPT K8s, mã hóa base64
+#                         (chạy: base64 -w0 kubeconfig.yaml)
+name: Deploy web-admin
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ecr.vnptplatform.vn
+  IMAGE: ecr.vnptplatform.vn/${{ secrets.ECR_ID }}/web-admin
+
+jobs:
+  # Unit test Angular (vitest + jsdom, chạy một lượt rồi thoát) — fail là KHÔNG deploy.
+  # Phủ phần logic bảo vệ đường vào: lưu/xóa token và hai guard chặn route.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Cài phụ thuộc
+        run: npm ci
+
+      - name: Chạy unit test
+        run: npm test
+
+      # Chỉ soi phụ thuộc chạy trên trình duyệt người dùng (--omit=dev). Lỗ hổng của
+      # công cụ build do Dependabot xử lý dần, không chặn phát hành.
+      - name: Kiểm tra lỗ hổng thư viện phát hành
+        run: npm audit --omit=dev --audit-level=high
+
+  build-and-deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Đăng nhập VNPT ECR
+        run: echo "${{ secrets.ECR_PASSWORD }}" | docker login "$REGISTRY" -u "${{ secrets.ECR_USER }}" --password-stdin
+
+      - name: Build và push image
+        run: |
+          TAG="${GITHUB_SHA::8}"
+          docker build -t "$IMAGE:$TAG" -t "$IMAGE:latest" .
+          docker push "$IMAGE:$TAG"
+          docker push "$IMAGE:latest"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+
+      - name: Cấu hình kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Áp dụng manifest và cập nhật image
+        run: |
+          sed -i "s|REPLACE_ECR_ID|${{ secrets.ECR_ID }}|g" k8s/web-admin.yaml
+          kubectl apply -f k8s/web-admin.yaml
+          kubectl -n cbyts set image deployment/web-admin \
+            web-admin="$IMAGE:$TAG"
+          kubectl -n cbyts rollout status deployment/web-admin --timeout=180s

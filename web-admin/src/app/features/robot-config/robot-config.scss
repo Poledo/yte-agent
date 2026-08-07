@@ -1,0 +1,207 @@
+.section-title {
+  margin: 8px 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--mat-sys-on-surface);
+}
+
+.renderer-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 26px;
+}
+
+.renderer-card {
+  padding: 18px !important;
+  border-radius: 16px !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &.selected {
+    border-color: var(--mat-sys-primary);
+    box-shadow: 0 0 0 1px var(--mat-sys-primary);
+  }
+}
+
+.renderer-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 15px;
+  mat-icon {
+    color: var(--mat-sys-primary);
+  }
+}
+
+.renderer-desc {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant);
+  line-height: 1.5;
+}
+
+/* ===== Diện mạo robot 3D ===== */
+.appearance-card {
+  padding: 18px !important;
+  border-radius: 16px !important;
+  margin-bottom: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.appearance-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.appearance-label {
+  font-weight: 600;
+  font-size: 14px;
+  min-width: 72px;
+}
+
+.appearance-hint {
+  font-size: 12.5px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.color-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+
+  input[type='color'] {
+    width: 40px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid var(--mat-sys-outline);
+    border-radius: 6px;
+    background: none;
+    cursor: pointer;
+  }
+  .color-value {
+    font-family: monospace;
+    font-size: 13px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.scale-range {
+  flex: 1;
+  min-width: 160px;
+  max-width: 320px;
+  accent-color: var(--mat-sys-primary);
+}
+
+.scale-value {
+  font-weight: 600;
+  font-size: 14px;
+  min-width: 46px;
+}
+
+.logo-row {
+  align-items: flex-start;
+}
+
+.logo-preview {
+  width: 72px;
+  height: 72px;
+  border-radius: 12px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--mat-sys-surface-container);
+  flex-shrink: 0;
+
+  img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+  &.empty span {
+    font-size: 11px;
+    text-align: center;
+    color: var(--mat-sys-on-surface-variant);
+    padding: 4px;
+  }
+}
+
+.logo-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.logo-error {
+  font-size: 12.5px;
+  color: var(--mat-sys-error);
+}
+
+.random-toggle {
+  margin: 2px 0 6px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.random-hint {
+  margin: 0 0 18px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.categories {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Nhóm bị "tạm không dùng" khi bật chế độ ngẫu nhiên: làm mờ để báo hiệu. */
+.category-card.muted {
+  opacity: 0.55;
+}
+
+.muted-note {
+  color: var(--mat-sys-primary) !important;
+  font-style: italic;
+}
+
+.category-card {
+  padding: 18px !important;
+  border-radius: 16px !important;
+}
+
+.category-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 14px;
+
+  strong {
+    font-size: 14.5px;
+  }
+  .category-hint {
+    font-size: 12.5px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.stage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.stage-field {
+  width: 100%;
+}
+
+// Hàng nút Lưu dùng chuẩn chung .form-actions (styles.scss)

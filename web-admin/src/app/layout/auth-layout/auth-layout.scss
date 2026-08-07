@@ -1,0 +1,109 @@
+.auth-shell {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 32px 16px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #0d47a1 0%, #1976d2 40%, #26a69a 100%);
+}
+
+.bg-decoration {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.5;
+  animation: float 14s ease-in-out infinite;
+}
+.b1 {
+  width: 380px;
+  height: 380px;
+  background: #4dd0e1;
+  top: -80px;
+  left: -60px;
+}
+.b2 {
+  width: 300px;
+  height: 300px;
+  background: #7e57c2;
+  bottom: -60px;
+  right: -40px;
+  animation-delay: -4s;
+}
+.b3 {
+  width: 260px;
+  height: 260px;
+  background: #26c6da;
+  top: 40%;
+  right: 20%;
+  animation-delay: -8s;
+}
+
+.brand {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: #fff;
+  z-index: 1;
+}
+.logo {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(8px);
+  //   border: 1px solid rgba(255, 255, 255, 0.3);
+  background-image: url('/logo.png');
+  background-repeat: round;
+}
+.logo .material-icons {
+  font-size: 30px;
+}
+.brand-text h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+}
+.brand-text p {
+  margin: 2px 0 0;
+  opacity: 0.85;
+  font-size: 14px;
+}
+
+.card-wrap {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+}
+
+.foot {
+  position: relative;
+  z-index: 1;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 12.5px;
+  text-align: center;
+  margin: 0;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(20px, -24px);
+  }
+}

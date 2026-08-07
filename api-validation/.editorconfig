@@ -1,0 +1,81 @@
+# Quy ước code cho api-validation. Áp dụng cho mọi IDE hỗ trợ EditorConfig
+# (Visual Studio, Rider, VS Code) và cho lệnh `dotnet format` chạy trong CI.
+#
+# Nguyên tắc chọn mức độ:
+#   error      - lỗi thật, có thể gây bug hoặc lộ dữ liệu. CI chặn.
+#   warning    - nên sửa, hiện trong danh sách cảnh báo lúc build.
+#   suggestion - gợi ý phong cách, không làm ồn build.
+# Cố ý KHÔNG đặt các rule định dạng thuần (khoảng trắng, xuống dòng) ở mức error
+# để tránh một lượt sửa hàng loạt không liên quan tới chất lượng code.
+root = true
+
+[*]
+charset = utf-8
+# Cố ý không đặt end_of_line: repo dùng core.autocrlf=true (đĩa CRLF, git lưu LF).
+# Ép giá trị ở đây sẽ làm mọi file bị đánh dấu thay đổi ngay lần lưu đầu tiên.
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{json,yml,yaml,js,ts,html,css}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.{cs,csx}]
+indent_size = 4
+
+# ---- Quy ước đặt tên ----
+dotnet_naming_rule.interfaces_bat_dau_bang_i.severity = warning
+dotnet_naming_rule.interfaces_bat_dau_bang_i.symbols = interface_symbol
+dotnet_naming_rule.interfaces_bat_dau_bang_i.style = i_prefix_style
+dotnet_naming_symbols.interface_symbol.applicable_kinds = interface
+dotnet_naming_style.i_prefix_style.required_prefix = I
+dotnet_naming_style.i_prefix_style.capitalization = pascal_case
+
+dotnet_naming_rule.thanh_phan_public_pascal_case.severity = warning
+dotnet_naming_rule.thanh_phan_public_pascal_case.symbols = public_members
+dotnet_naming_rule.thanh_phan_public_pascal_case.style = pascal_case_style
+dotnet_naming_symbols.public_members.applicable_kinds = class,struct,enum,property,method,event,delegate
+dotnet_naming_symbols.public_members.applicable_accessibilities = public,internal,protected
+dotnet_naming_style.pascal_case_style.capitalization = pascal_case
+
+dotnet_naming_rule.field_private_gach_duoi.severity = suggestion
+dotnet_naming_rule.field_private_gach_duoi.symbols = private_fields
+dotnet_naming_rule.field_private_gach_duoi.style = underscore_camel_style
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_style.underscore_camel_style.required_prefix = _
+dotnet_naming_style.underscore_camel_style.capitalization = camel_case
+
+# ---- Phong cách C# (gợi ý, không chặn build) ----
+csharp_style_var_for_built_in_types = false:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_prefer_braces = true:suggestion
+csharp_style_namespace_declarations = file_scoped:suggestion
+csharp_style_expression_bodied_methods = when_on_single_line:suggestion
+dotnet_style_prefer_conditional_expression_over_return = true:suggestion
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+
+# ---- Analyzer .NET: những rule bắt lỗi thật, để mức error ----
+# CA2100: nối chuỗi vào câu lệnh SQL -> nguy cơ SQL injection.
+dotnet_diagnostic.CA2100.severity = error
+# CA2007 tắt: đây là ASP.NET Core, không có SynchronizationContext nên
+# ConfigureAwait(false) chỉ làm code rối chứ không đổi hành vi.
+dotnet_diagnostic.CA2007.severity = none
+# CA1305/CA1310: so sánh và định dạng chuỗi không nêu rõ văn hóa -> kết quả đổi
+# theo locale máy chủ. Với dữ liệu y tế (ngày, số tiền) đây là bug thật.
+dotnet_diagnostic.CA1305.severity = warning
+dotnet_diagnostic.CA1310.severity = warning
+# CA2016: quên truyền CancellationToken xuống lời gọi async -> request hủy vẫn chạy tiếp.
+dotnet_diagnostic.CA2016.severity = warning
+# IDE0005: using thừa.
+dotnet_diagnostic.IDE0005.severity = warning
+
+# ---- Không soi code sinh tự động ----
+[**/Migrations/*.cs]
+generated_code = true
+dotnet_diagnostic.IDE0005.severity = none

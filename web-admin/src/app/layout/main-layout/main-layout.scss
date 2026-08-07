@@ -1,0 +1,236 @@
+.shell {
+  height: 100vh;
+  // Bề rộng sidebar dùng chung cho cả sidebar lẫn margin vùng nội dung
+  --sidebar-w: 256px;
+
+  &.collapsed {
+    --sidebar-w: 76px;
+  }
+}
+
+// Material tính margin-left cho vùng nội dung bằng bề rộng sidenav ĐO/CACHE trễ,
+// nên thu gọn bằng CSS thì nội dung không nở đúng (lệch một nhịp). Ghi đè để margin
+// BÁM theo --sidebar-w — external !important thắng style inline (không quan trọng)
+// của Material; transition cho mượt, đồng bộ với sidebar.
+.content {
+  margin-left: var(--sidebar-w) !important;
+  transition: margin-left 0.22s ease;
+}
+
+.sidebar {
+  width: var(--sidebar-w);
+  border-right: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container-low);
+  display: flex;
+  flex-direction: column;
+  transition: width 0.22s ease;
+  overflow-x: hidden;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 18px 14px;
+  &.mini {
+    justify-content: center;
+    padding: 18px 0 14px;
+  }
+}
+.logo {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #0e7490, #7c3aed);
+  color: #fff;
+  background-image: url('/logo.png');
+  background-repeat: round;
+  box-shadow: 0 0 14px rgba(34, 211, 238, 0.35);
+}
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  overflow: hidden;
+}
+.brand-text .name {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.brand-text .sub {
+  font-size: 12px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.menu {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  overflow-y: auto;
+}
+.sidebar-foot {
+  padding: 8px 12px 14px;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: var(--mat-sys-on-surface-variant);
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+
+  mat-icon {
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    background: var(--mat-sys-surface-container-high);
+    color: var(--mat-sys-on-surface);
+  }
+  // Light: nền active thật nhẹ; Dark: đậm hơn + icon phát sáng (neon)
+  &.active {
+    background: linear-gradient(92deg, rgba(34, 211, 238, 0.08), rgba(167, 139, 250, 0.06));
+    color: var(--mat-sys-primary);
+    font-weight: 600;
+    box-shadow: inset 2.5px 0 0 var(--mat-sys-primary);
+
+    mat-icon {
+      color: var(--mat-sys-primary);
+    }
+  }
+}
+
+.collapsed .menu-item {
+  justify-content: center;
+  gap: 0;
+}
+
+:host-context(html.dark-theme) .menu-item.active {
+  background: linear-gradient(92deg, rgba(34, 211, 238, 0.16), rgba(167, 139, 250, 0.14));
+  color: var(--mat-sys-on-primary-container);
+
+  mat-icon {
+    filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.5));
+  }
+}
+
+/* Topbar */
+.content {
+  display: flex;
+  flex-direction: column;
+  background: var(--mat-sys-surface-container-lowest);
+}
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: color-mix(in srgb, var(--mat-sys-surface) 82%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  padding: 0 12px;
+}
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 14px;
+  color: var(--mat-sys-on-surface-variant);
+  .root {
+    opacity: 0.8;
+  }
+  .current {
+    color: var(--mat-sys-on-surface);
+    font-weight: 600;
+  }
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+.spacer {
+  flex: 1;
+}
+
+.user-btn {
+  .uname {
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  // Nội dung nút (avatar + tên + mũi tên) nằm trong span .mdc-button__label do
+  // Material tạo — phần tử này KHÔNG mang [_ngcontent] của component nên CSS
+  // scoped thường không chạm tới. ::ng-deep xuyên qua, giới hạn trong .user-btn.
+  ::ng-deep .mdc-button__label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0e7490, #7c3aed);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.menu-header {
+  padding: 10px 16px;
+  .mh-name {
+    margin: 0;
+    font-weight: 600;
+  }
+  .mh-email {
+    margin: 2px 0 0;
+    font-size: 12.5px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.page {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+// Mobile: sidebar chuyển sang overlay (mode="over"). Nội dung chiếm trọn bề rộng,
+// không còn margin-left theo sidebar; drawer trượt đè lên khi mở, có backdrop.
+@media (max-width: 768px) {
+  .shell.mobile {
+    --sidebar-w: 256px;
+  }
+  .shell.mobile .content {
+    margin-left: 0 !important;
+  }
+  .user-btn .uname {
+    display: none;
+  }
+  .breadcrumb .root,
+  .breadcrumb .root + mat-icon {
+    display: none;
+  }
+  .page {
+    padding: 16px;
+  }
+}

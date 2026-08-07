@@ -1,0 +1,22 @@
+{
+    "comparisons": [
+        {
+            "fieldId": "ngayVao",
+            "compareWith": "ngayRa",
+            "operator": "<=",
+            "message": "Ngày vào phải nhỏ hơn hoặc bằng ngày ra"
+        },
+        {
+            "fieldId": "ngaySinh",
+            "compareWith": "ngayKham",
+            "operator": "<=",
+            "message": "Ngày sinh phải nhỏ hơn hoặc bằng ngày khám"
+        },
+        {
+            "fieldId": "ngayCap",
+            "compareWith": "today",
+            "operator": "<=",
+            "message": "Ngày cấp không được lớn hơn ngày hôm nay"
+        }
+    ]
+}

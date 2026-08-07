@@ -1,0 +1,222 @@
+// Theming Angular Material (Material 3) — phong cách ZeroCheck AI:
+// nền tối neon cyan–tím + glass card (đồng bộ trang giới thiệu /gioi-thieu.html),
+// font tiếng Việt Be Vietnam Pro (thân) + Chakra Petch (tiêu đề).
+// Sáng/tối do ThemeService gắn class .dark-theme trên <html> (mặc định tối).
+@use '@angular/material' as mat;
+
+html {
+  height: 100%;
+  color-scheme: light;
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$cyan-palette,
+        tertiary: mat.$violet-palette,
+      ),
+      typography: (
+        plain-family: "'Be Vietnam Pro', 'Segoe UI', sans-serif",
+        brand-family: "'Chakra Petch', 'Be Vietnam Pro', 'Segoe UI', sans-serif",
+      ),
+      density: 0,
+    )
+  );
+
+  // Input (outline) hạ chiều cao 56px → 40px, ngang bằng nút filled — đồng bộ toolbar/form
+  @include mat.form-field-overrides(
+    (
+      container-height: 40px,
+      container-vertical-padding: 8px,
+    )
+  );
+}
+
+// Khi bật dark mode, ThemeService gắn class + đổi color-scheme trên <html>
+html.dark-theme {
+  color-scheme: dark;
+
+  // Bảng màu bề mặt "xanh đêm" — cùng tông trang giới thiệu
+  --mat-sys-surface: #0a0e1d;
+  --mat-sys-surface-container-lowest: #05070f;
+  --mat-sys-surface-container-low: #0b1224;
+  --mat-sys-surface-container: #0d1530;
+  --mat-sys-surface-container-high: #111a3a;
+  --mat-sys-surface-container-highest: #16214a;
+  --mat-sys-on-surface: #e7ecf6;
+  --mat-sys-on-surface-variant: #9aa7c2;
+  --mat-sys-outline: #55617f;
+  --mat-sys-outline-variant: rgba(148, 163, 184, 0.18);
+  --mat-sys-primary: #22d3ee;
+  --mat-sys-on-primary: #04222b;
+  --mat-sys-primary-container: rgba(34, 211, 238, 0.16);
+  --mat-sys-on-primary-container: #a5f3fc;
+  --mat-sys-tertiary: #a78bfa;
+  --mat-sys-on-tertiary: #241b45;
+  --mat-sys-tertiary-container: rgba(167, 139, 250, 0.18);
+  --mat-sys-on-tertiary-container: #ddd3ff;
+}
+
+body {
+  margin: 0;
+  min-height: 100%;
+  background-color: var(--mat-sys-surface-container-lowest);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+}
+
+// Nền dark: lưới mạch mờ + 2 quầng sáng cyan/tím (cố định, không chặn chuột)
+html.dark-theme body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(820px 460px at 10% -8%, rgba(34, 211, 238, 0.09), transparent 60%),
+    radial-gradient(820px 500px at 96% 106%, rgba(167, 139, 250, 0.09), transparent 60%),
+    linear-gradient(rgba(148, 163, 184, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.04) 1px, transparent 1px);
+  background-size: auto, auto, 44px 44px, 44px 44px;
+}
+// Nội dung app nổi trên lớp nền hiệu ứng
+app-root {
+  position: relative;
+  z-index: 1;
+  display: block;
+  min-height: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+// ===== Tiêu đề dùng font brand (Chakra Petch) =====
+h1,
+h2,
+h3 {
+  font-family: 'Chakra Petch', 'Be Vietnam Pro', 'Segoe UI', sans-serif;
+  letter-spacing: 0.01em;
+}
+
+// ===== Card: bo lớn + glass (dark) =====
+mat-card.mat-mdc-card {
+  border-radius: 16px !important;
+}
+html.dark-theme mat-card.mat-mdc-card {
+  background: rgba(17, 24, 45, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  backdrop-filter: blur(8px);
+  box-shadow: none;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+
+  &:hover {
+    border-color: rgba(34, 211, 238, 0.32);
+    box-shadow: 0 8px 28px rgba(34, 211, 238, 0.08);
+  }
+}
+
+// ===== Bảng: header nổi bật, hàng hover nhấn nhẹ =====
+html.dark-theme {
+  .mat-mdc-table {
+    background: transparent;
+  }
+  .mat-mdc-header-cell {
+    color: var(--mat-sys-primary);
+    font-family: 'Chakra Petch', 'Be Vietnam Pro', sans-serif;
+    font-weight: 600;
+  }
+  .mat-mdc-row:hover {
+    background: rgba(34, 211, 238, 0.05);
+  }
+}
+
+// ===== Dialog / menu / expansion trong dark: nền navy đồng bộ =====
+html.dark-theme {
+  .mat-mdc-dialog-surface,
+  .mat-mdc-menu-panel,
+  .mat-expansion-panel {
+    background: #0d1530 !important;
+    border: 1px solid rgba(148, 163, 184, 0.14);
+  }
+  .mat-mdc-dialog-surface {
+    border-radius: 18px !important;
+  }
+}
+
+// Thanh cuộn mảnh
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--mat-sys-outline-variant);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--mat-sys-outline);
+}
+
+// Toast (snackbar)
+.snack-success {
+  --mdc-snackbar-container-color: #2e7d32;
+  --mat-snack-bar-button-color: #fff;
+  --mdc-snackbar-supporting-text-color: #fff;
+}
+.snack-error {
+  --mdc-snackbar-container-color: var(--mat-sys-error);
+  --mat-snack-bar-button-color: #fff;
+  --mdc-snackbar-supporting-text-color: #fff;
+}
+
+// Tiện ích
+.spacer {
+  flex: 1;
+}
+
+// ===== Hàng nút hành động của form — CHUẨN CHUNG toàn app =====
+// Quy ước: chú thích (hint) nằm trái; nút phụ (đặt lại/hủy) đứng trước;
+// nút CHÍNH (Lưu/Tạo) luôn NGOÀI CÙNG BÊN PHẢI. Dialog dùng
+// <mat-dialog-actions align="end"> với cùng thứ tự.
+.form-actions {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+
+  .hint {
+    margin-right: auto;
+    font-size: 12.5px;
+    color: var(--mat-sys-on-surface-variant);
+    line-height: 1.5;
+  }
+}
+
+// Màu icon theo loại file (danh mục HIS, kho tri thức)
+.ft-pdf {
+  color: #d32f2f;
+}
+.ft-excel {
+  color: #1d6f42;
+}
+.ft-word {
+  color: #2b579a;
+}
+.ft-text {
+  color: var(--mat-sys-on-surface-variant);
+}
+.ft-default {
+  color: var(--mat-sys-primary);
+}
+html.dark-theme {
+  .ft-pdf {
+    color: #f87171;
+  }
+  .ft-excel {
+    color: #34d399;
+  }
+  .ft-word {
+    color: #60a5fa;
+  }
+}

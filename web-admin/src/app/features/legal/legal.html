@@ -1,0 +1,219 @@
+<app-page-header
+  icon="cloud_download"
+  title="Tải văn bản"
+  subtitle="Tìm văn bản pháp luật (bản text) trên vbpl.vn, tải về rồi chọn nạp vào kho tri thức"
+></app-page-header>
+
+<mat-tab-group [selectedIndex]="activeTab()" (selectedIndexChange)="activeTab.set($event)" animationDuration="200ms">
+<mat-tab label="🔎 Tìm &amp; tải văn bản">
+
+<!-- ============ Tab 1: Tìm trên vbpl.vn ============ -->
+<mat-card class="search-panel" appearance="outlined">
+  <div class="search-row">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="f-field">
+      <mat-label>Lĩnh vực</mat-label>
+      <mat-select [formControl]="fieldCtrl">
+        @for (f of fields; track f.label) {
+          <mat-option [value]="f.keyword">{{ f.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="f-keyword">
+      <mat-label>Từ khóa / tên / số hiệu văn bản (ưu tiên hơn lĩnh vực)</mat-label>
+      <input matInput [formControl]="keywordCtrl" placeholder="vd: mức hưởng, 87/2026/TT-BCA..." (keydown.enter)="search()" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="f-date">
+      <mat-label>Ban hành từ</mat-label>
+      <input matInput type="date" [formControl]="fromCtrl" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="f-date">
+      <mat-label>Đến</mat-label>
+      <input matInput type="date" [formControl]="toCtrl" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="f-eff">
+      <mat-label>Hiệu lực</mat-label>
+      <mat-select [formControl]="effStatusCtrl">
+        <mat-option value="all">Tất cả</mat-option>
+        <mat-option value="active">Còn hiệu lực</mat-option>
+        <mat-option value="expired">Hết hiệu lực</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <button [matButton]="'filled'" color="primary" (click)="search()" [disabled]="searching()">
+      <mat-icon>search</mat-icon> Tìm
+    </button>
+  </div>
+  <p class="hint">
+    Nguồn: vbpl.vn — Cổng CSDL quốc gia về văn bản QPPL (toàn văn dạng chữ, không phải scan).
+    Bấm "Tải về" để lưu vào hệ thống; nạp kho tri thức là bước riêng ở danh sách bên dưới.
+  </p>
+
+  @if (searching()) {
+    <div class="searching"><mat-spinner diameter="26"></mat-spinner> Đang tìm trên vbpl.vn...</div>
+  } @else if (searched() && results().length === 0) {
+    <div class="no-result">Không tìm thấy văn bản nào — thử từ khóa khác hoặc mở rộng khoảng thời gian.</div>
+  } @else if (results().length > 0) {
+    <div class="result-toolbar">
+      <span>{{ results().length }} văn bản (trang {{ page() }})</span>
+      <span class="spacer"></span>
+      <button matIconButton matTooltip="Trang trước" [disabled]="page() <= 1 || searching()" (click)="search(page() - 1)">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <button matIconButton matTooltip="Trang sau" [disabled]="searching()" (click)="search(page() + 1)">
+        <mat-icon>chevron_right</mat-icon>
+      </button>
+    </div>
+
+    <div class="result-list">
+      @for (doc of results(); track doc.itemId) {
+        <div class="result-card">
+          <div class="doc-icon"><mat-icon>gavel</mat-icon></div>
+          <div class="doc-body">
+            <div class="doc-title">{{ doc.title }}</div>
+            <div class="doc-meta">
+              @if (doc.docNumber) { <span class="tag">{{ doc.docNumber }}</span> }
+              @if (doc.issuedDate) { <span><mat-icon>event</mat-icon> BH: {{ doc.issuedDate | date: 'dd/MM/yyyy' }}</span> }
+              @if (doc.effectiveDate) { <span><mat-icon>play_circle</mat-icon> HL: {{ doc.effectiveDate | date: 'dd/MM/yyyy' }}</span> }
+              @if (isExpired(doc.expiryDate)) {
+                <span class="expired-tag"><mat-icon>block</mat-icon> Hết hiệu lực {{ doc.expiryDate | date: 'dd/MM/yyyy' }}</span>
+              } @else if (doc.expiryDate) {
+                <span><mat-icon>timer</mat-icon> Hết HL: {{ doc.expiryDate | date: 'dd/MM/yyyy' }}</span>
+              }
+              @if (doc.alreadyIngested) {
+                <span class="imported-tag"><mat-icon>check_circle</mat-icon> Đã nạp kho tri thức</span>
+              } @else if (doc.alreadyDownloaded) {
+                <span class="downloaded-tag"><mat-icon>download_done</mat-icon> Đã tải về</span>
+              }
+            </div>
+          </div>
+          <div class="doc-actions">
+            <button matIconButton matTooltip="Xem toàn văn trên vbpl.vn" (click)="openSource(doc.url)">
+              <mat-icon>open_in_new</mat-icon>
+            </button>
+            @if (isDownloading(doc)) {
+              <mat-spinner diameter="22" matTooltip="Đang tải về..."></mat-spinner>
+            } @else {
+              <button [matButton]="'outlined'" (click)="download(doc)"
+                [class.redownload-btn]="doc.alreadyDownloaded"
+                [matTooltip]="doc.alreadyDownloaded ? 'Tải lại (cập nhật nội dung mới nhất)' : 'Lưu thông tin + toàn văn vào hệ thống'">
+                <mat-icon>{{ doc.alreadyDownloaded ? 'refresh' : 'download' }}</mat-icon>
+                {{ doc.alreadyDownloaded ? 'Tải lại' : 'Tải về' }}
+              </button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+</mat-card>
+
+</mat-tab>
+<mat-tab [label]="'📁 Văn bản đã tải (' + downloadsList().length + ')'">
+
+<!-- ============ Tab 2: Văn bản đã tải (lưu trong DB) ============ -->
+<div class="downloads-header">
+  <h3><mat-icon>folder_open</mat-icon> Văn bản đã tải ({{ downloadsList().length }})</h3>
+  <span class="spacer"></span>
+  <button [matButton]="'outlined'" (click)="removeKnowledgeSelected()"
+    [disabled]="selectedRemoveCount() === 0 || ingesting()"
+    matTooltip="Gỡ các dòng ĐÃ nạp trong số đã chọn khỏi kho tri thức (dòng chưa nạp tự bỏ qua)">
+    <mat-icon>remove_circle_outline</mat-icon>
+    Gỡ khỏi kho ({{ selectedRemoveCount() }})
+  </button>
+  <button [matButton]="'filled'" color="primary" (click)="ingestSelected()"
+    [disabled]="selectedIngestCount() === 0 || ingesting()"
+    matTooltip="Nạp các dòng CHƯA nạp trong số đã chọn vào kho tri thức (dòng đã nạp tự bỏ qua)">
+    <mat-icon>{{ ingesting() ? 'hourglass_top' : 'library_add' }}</mat-icon>
+    {{ ingesting() ? 'Đang xử lý...' : 'Nạp vào kho (' + selectedIngestCount() + ')' }}
+  </button>
+</div>
+
+@if (loadingDownloads()) {
+  <div class="searching"><mat-spinner diameter="26"></mat-spinner> Đang tải danh sách...</div>
+} @else if (downloadsList().length === 0) {
+  <app-empty-state
+    icon="folder_open"
+    title="Chưa tải văn bản nào"
+    description="Tìm văn bản ở khung trên rồi bấm 'Tải về' — danh sách sẽ lưu lại tại đây."
+  ></app-empty-state>
+} @else {
+  <div class="dl-table">
+    <div class="dl-row dl-head">
+      <mat-checkbox
+        [checked]="allSelected()"
+        [indeterminate]="someSelected()"
+        (change)="toggleAll($event.checked)"
+        matTooltip="Chọn tất cả văn bản chưa nạp"
+      ></mat-checkbox>
+      <span class="dl-title-col">Văn bản</span>
+      <span class="dl-date">Ban hành</span>
+      <span class="dl-date">Hiệu lực</span>
+      <span class="dl-date">Hết hiệu lực</span>
+      <span class="dl-size">Dung lượng</span>
+      <span class="dl-status">Trạng thái</span>
+      <span class="dl-actions"></span>
+    </div>
+
+    @for (d of downloadsList(); track d.id) {
+      <div class="dl-row" [class.ingested-row]="d.ingested">
+        <mat-checkbox
+          [checked]="isSelected(d)"
+          [disabled]="ingesting()"
+          (change)="toggleOne(d, $event.checked)"
+          matTooltip="Chọn để nạp / gỡ hàng loạt"
+        ></mat-checkbox>
+        <div class="dl-title-col">
+          <div class="dl-title">{{ d.title }}</div>
+          <div class="dl-meta">
+            @if (d.docNumber) { <span class="tag">{{ d.docNumber }}</span> }
+            <span>Tải: {{ d.downloadedAt | date: 'dd/MM/yyyy HH:mm' }}</span>
+          </div>
+        </div>
+        <span class="dl-date">{{ d.issuedDate ? (d.issuedDate | date: 'dd/MM/yyyy') : '—' }}</span>
+        <span class="dl-date">{{ d.effectiveDate ? (d.effectiveDate | date: 'dd/MM/yyyy') : '—' }}</span>
+        @if (isExpired(d.expiryDate)) {
+          <span class="dl-date expired-cell" matTooltip="Đã hết hiệu lực — AI sẽ không trích dẫn văn bản này">
+            <mat-icon>block</mat-icon> {{ d.expiryDate | date: 'dd/MM/yyyy' }}
+          </span>
+        } @else {
+          <span class="dl-date">{{ d.expiryDate ? (d.expiryDate | date: 'dd/MM/yyyy') : '—' }}</span>
+        }
+        <span class="dl-size">{{ d.contentLength | number }} ký tự</span>
+        <span class="dl-status">
+          @if (d.ingested) {
+            <span class="imported-tag"><mat-icon>check_circle</mat-icon> Đã nạp kho tri thức</span>
+          } @else {
+            <span class="pending-tag"><mat-icon>schedule</mat-icon> Chưa nạp</span>
+          }
+        </span>
+        <span class="dl-actions">
+          <button matIconButton matTooltip="Xem toàn văn đã tải" (click)="viewContent(d)">
+            <mat-icon>visibility</mat-icon>
+          </button>
+          <button matIconButton matTooltip="Mở trang gốc vbpl.vn" (click)="openSource(d.sourceUrl)">
+            <mat-icon>open_in_new</mat-icon>
+          </button>
+          @if (d.ingested) {
+            <button matIconButton matTooltip="Gỡ khỏi kho tri thức (khôi phục/nạp lại được)" [disabled]="ingesting()" (click)="removeKnowledgeOne(d)">
+              <mat-icon>remove_circle_outline</mat-icon>
+            </button>
+          } @else {
+            <button matIconButton matTooltip="Nạp văn bản này vào kho tri thức" [disabled]="ingesting()" (click)="ingestOne(d)">
+              <mat-icon>library_add</mat-icon>
+            </button>
+          }
+          <button matIconButton matTooltip="Xóa văn bản đã tải (xóa vĩnh viễn toàn văn đã lưu)" [disabled]="ingesting()" (click)="removeDownload(d)">
+            <mat-icon>delete_outline</mat-icon>
+          </button>
+        </span>
+      </div>
+    }
+  </div>
+}
+
+</mat-tab>
+</mat-tab-group>

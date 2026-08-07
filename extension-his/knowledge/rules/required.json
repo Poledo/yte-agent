@@ -1,0 +1,28 @@
+{
+    "fields": [
+        {
+            "id": "maBenhNhan",
+            "required": true
+        },
+        {
+            "id": "icdVao",
+            "required": true
+        },
+        {
+            "id": "icdRa",
+            "required": true
+        },
+        {
+            "id": "ngayKham",
+            "required": true
+        },
+        {
+            "id": "ngayVao",
+            "required": true
+        },
+        {
+            "id": "ngayRa",
+            "required": true
+        }
+    ]
+}

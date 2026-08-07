@@ -1,0 +1,32 @@
+# Dependabot tự mở PR khi thư viện có bản vá bảo mật hoặc bản mới.
+# PR chạy qua CI extension (tsc + test + build + kiểm tra dist khớp mã nguồn),
+# nên bản nâng làm gãy build hay đỏ test sẽ không merge được.
+version: 2
+
+updates:
+  # package.json của extension nằm ở thư mục con extension/, không phải gốc repo.
+  - package-ecosystem: npm
+    directory: /extension
+    schedule:
+      interval: weekly
+      day: monday
+      time: '07:00'
+      timezone: Asia/Ho_Chi_Minh
+    open-pull-requests-limit: 5
+    groups:
+      # Vite và các plugin đi kèm nâng cùng nhịp.
+      vite:
+        patterns:
+          - 'vite'
+          - 'vite-*'
+          - '@vitejs/*'
+          - 'vitest'
+    commit-message:
+      prefix: 'npm'
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: 'ci'

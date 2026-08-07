@@ -1,0 +1,112 @@
+<app-page-header
+  icon="smart_toy"
+  title="Cấu hình AI"
+  subtitle="Chọn chạy model trên cloud (online) hay máy chủ nội bộ (offline)"
+></app-page-header>
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+} @else {
+  @if (config(); as cfg) {
+    <div class="effective-bar" [class.warn]="!cfg.effective.isConfigured">
+      <mat-icon>{{ cfg.effective.isConfigured ? 'check_circle' : 'warning' }}</mat-icon>
+      <span>
+        Đang hiệu lực: <strong>{{ cfg.mode === 'offline' ? 'OFFLINE — Ollama local' : 'ONLINE — OpenRouter cloud' }}</strong>
+        · model <code>{{ cfg.effective.model }}</code>
+        @if (!cfg.effective.isConfigured) {
+          · <strong>chưa sẵn sàng (thiếu ApiKey)</strong>
+        }
+      </span>
+    </div>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <mat-radio-group formControlName="mode" class="mode-group">
+      <!-- ===== ONLINE ===== -->
+      <mat-card appearance="outlined" class="mode-card" [class.selected]="form.value.mode === 'online'">
+        <div class="mode-head">
+          <mat-radio-button value="online">
+            <span class="mode-title"><mat-icon>cloud</mat-icon> Online — OpenRouter</span>
+          </mat-radio-button>
+          <button
+            matButton
+            type="button"
+            [disabled]="testing() !== null"
+            (click)="test('online')"
+          >
+            <mat-icon>network_check</mat-icon>
+            {{ testing() === 'online' ? 'Đang kiểm tra...' : 'Kiểm tra kết nối' }}
+          </button>
+        </div>
+        <p class="mode-desc">
+          Gọi model qua cloud. Chất lượng cao, không cần GPU — nhưng cần internet,
+          ApiKey và dữ liệu câu hỏi được gửi ra ngoài.
+          @if (config() && !config()!.hasOnlineApiKey) {
+            <span class="key-warn"><mat-icon>key_off</mat-icon> Chưa có LLM:ApiKey trong appsettings.</span>
+          }
+        </p>
+        <div class="fields">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Model chính</mat-label>
+            <input matInput formControlName="onlineModel" placeholder="vd: qwen/qwen3-next-80b-a3b-instruct:free" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Model dự phòng (mỗi dòng một model, tối đa 2)</mat-label>
+            <textarea matInput formControlName="onlineFallbackModels" rows="2"></textarea>
+          </mat-form-field>
+        </div>
+      </mat-card>
+
+      <!-- ===== OFFLINE ===== -->
+      <mat-card appearance="outlined" class="mode-card" [class.selected]="form.value.mode === 'offline'">
+        <div class="mode-head">
+          <mat-radio-button value="offline">
+            <span class="mode-title"><mat-icon>dns</mat-icon> Offline — Ollama local</span>
+          </mat-radio-button>
+          <button
+            matButton
+            type="button"
+            [disabled]="testing() !== null"
+            (click)="test('offline')"
+          >
+            <mat-icon>network_check</mat-icon>
+            {{ testing() === 'offline' ? 'Đang kiểm tra...' : 'Kiểm tra kết nối' }}
+          </button>
+        </div>
+        <p class="mode-desc">
+          Chạy model ngay trên máy chủ — dữ liệu y tế không rời hệ thống, không rate-limit.
+          Cần cài Ollama và tải model trước (<code>ollama pull &lt;model&gt;</code>).
+          Không có GPU sẽ chậm (1–2 phút/câu hỏi).
+        </p>
+        <div class="fields">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Địa chỉ Ollama</mat-label>
+            <input matInput formControlName="offlineBaseUrl" placeholder="http://localhost:11434" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Model</mat-label>
+            <input matInput formControlName="offlineModel" placeholder="vd: qwen2.5:7b-instruct" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="short">
+            <mat-label>Timeout (giây)</mat-label>
+            <input matInput type="number" formControlName="offlineTimeoutSeconds" />
+          </mat-form-field>
+        </div>
+      </mat-card>
+    </mat-radio-group>
+
+    @if (testResult(); as t) {
+      <div class="test-result" [class.ok]="t.ok" [class.fail]="!t.ok">
+        <mat-icon>{{ t.ok ? 'check_circle' : 'error' }}</mat-icon>
+        <span>{{ t.message }}</span>
+      </div>
+    }
+
+    <div class="form-actions">
+      <span class="hint">Áp dụng cho: hỏi đáp AI, kiểm tra hồ sơ có AI, chấm điểm truy hồi RAG — không cần khởi động lại.</span>
+      <button matButton="filled" color="primary" type="submit" [disabled]="saving()">
+        <mat-icon>save</mat-icon> {{ saving() ? 'Đang lưu...' : 'Lưu & áp dụng ngay' }}
+      </button>
+    </div>
+  </form>
+}

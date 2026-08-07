@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="AIValidation.Api/AIValidation.Api.csproj" />
+  <Project Path="AIValidation.Tests/AIValidation.Tests.csproj" />
+</Solution>

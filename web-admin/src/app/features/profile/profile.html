@@ -1,0 +1,69 @@
+<app-page-header icon="account_circle" title="Hồ sơ của tôi" subtitle="Thông tin tài khoản và bảo mật"></app-page-header>
+
+<div class="profile-grid">
+  <!-- Thông tin -->
+  <mat-card class="info-card" appearance="outlined">
+    <div class="profile-head">
+      <span class="big-ava">{{ initials() }}</span>
+      <div>
+        <h2>{{ user()?.fullName }}</h2>
+        <p class="email">{{ user()?.email }}</p>
+      </div>
+    </div>
+
+    <div class="info-block">
+      <span class="lbl">Vai trò</span>
+      @if (user()?.roles?.length) {
+        <mat-chip-set>
+          @for (r of user()!.roles; track r) {
+            <mat-chip>{{ r }}</mat-chip>
+          }
+        </mat-chip-set>
+      } @else {
+        <span class="muted">Chưa gán vai trò</span>
+      }
+    </div>
+
+    <div class="info-block">
+      <span class="lbl">Số quyền được cấp</span>
+      <span class="val">{{ user()?.permissions?.length ?? 0 }} quyền</span>
+    </div>
+  </mat-card>
+
+  <!-- Đổi mật khẩu -->
+  <mat-card class="pw-card" appearance="outlined">
+    <h3><mat-icon>lock</mat-icon> Đổi mật khẩu</h3>
+    <form [formGroup]="form" (ngSubmit)="changePassword()">
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>Mật khẩu hiện tại</mat-label>
+        <input matInput [type]="hideCur() ? 'password' : 'text'" formControlName="currentPassword" />
+        <button matIconButton matSuffix type="button" (click)="hideCur.set(!hideCur())">
+          <mat-icon>{{ hideCur() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>Mật khẩu mới</mat-label>
+        <input matInput [type]="hideNew() ? 'password' : 'text'" formControlName="newPassword" />
+        <button matIconButton matSuffix type="button" (click)="hideNew.set(!hideNew())">
+          <mat-icon>{{ hideNew() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+        @if (form.controls.newPassword.hasError('minlength')) {
+          <mat-error>Tối thiểu 6 ký tự</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>Xác nhận mật khẩu mới</mat-label>
+        <input matInput [type]="hideNew() ? 'password' : 'text'" formControlName="confirmPassword" />
+        @if (form.hasError('mismatch') && form.controls.confirmPassword.touched) {
+          <mat-error>Mật khẩu không khớp</mat-error>
+        }
+      </mat-form-field>
+
+      <button [matButton]="'filled'" color="primary" type="submit" [disabled]="saving()">
+        <mat-icon>save</mat-icon> Cập nhật mật khẩu
+      </button>
+    </form>
+  </mat-card>
+</div>

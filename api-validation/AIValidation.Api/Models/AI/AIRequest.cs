@@ -1,0 +1,80 @@
+namespace AIValidation.Api.Models.AI;
+
+/// <summary>
+/// Request contract giữa PromptBuilder và LLMProvider.
+/// 
+/// Đại diện cho toàn bộ dữ liệu cần thiết để gửi đến AI Provider.
+/// PromptBuilder sẽ build AIRequest từ:
+/// - System Prompt (from PromptLoader)
+/// - Validation Rules (from PromptLoader)
+/// - Form Data (from ValidationRequest)
+/// - Knowledge (from KnowledgeProvider)
+/// - Output Schema (from PromptLoader)
+/// - Model & Temperature (from Configuration)
+/// 
+/// LLMProvider sẽ nhận AIRequest và gửi đến AI Provider cụ thể.
+/// </summary>
+public record AIRequest
+{
+    /// <summary>
+    /// System message - hướng dẫn cơ bản cho AI.
+    /// 
+    /// Ví dụ: "You are a medical data validator..."
+    /// </summary>
+    public required string SystemPrompt { get; init; }
+
+    /// <summary>
+    /// Actual prompt - request cụ thể cho AI.
+    /// 
+    /// Kết hợp:
+    /// - Validation rules
+    /// - Knowledge data
+    /// - Form data
+    /// - Output schema
+    /// - Instructions
+    /// </summary>
+    public required string UserPrompt { get; init; }
+
+    /// <summary>
+    /// Model name để sử dụng.
+    /// 
+    /// Ví dụ: "gpt-4", "gpt-3.5-turbo", "gemini-pro", "glm-4"
+    /// Lấy từ configuration (LLMOptions.Model).
+    /// </summary>
+    public required string Model { get; init; }
+
+    /// <summary>
+    /// Temperature parameter (0.0 - 2.0).
+    /// 
+    /// Kiểm soát độ "sáng tạo" của response.
+    /// - 0.0 = determinist (tốt cho validation)
+    /// - 1.0 = balanced
+    /// - 2.0 = creative (không tốt cho validation)
+    /// 
+    /// Lấy từ configuration (LLMOptions.Temperature).
+    /// </summary>
+    public required double Temperature { get; init; }
+
+    /// <summary>
+    /// Maximum tokens trong response.
+    /// 
+    /// Giới hạn độ dài response từ AI.
+    /// Lấy từ configuration (LLMOptions.MaxTokens).
+    /// </summary>
+    public required int MaxTokens { get; init; }
+
+    /// <summary>
+    /// Metadata bổ sung cho request.
+    /// 
+    /// Ví dụ:
+    /// {
+    ///   "page": "PatientRegistration",
+    ///   "trigger_field": "PatientCode",
+    ///   "request_id": "uuid",
+    ///   "timestamp": "2024-01-15T10:30:00Z"
+    /// }
+    /// 
+    /// Có thể null nếu không cần metadata.
+    /// </summary>
+    public Dictionary<string, string>? Metadata { get; init; }
+}

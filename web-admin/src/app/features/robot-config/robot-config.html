@@ -1,0 +1,133 @@
+<app-page-header
+  icon="smart_toy"
+  title="Cấu hình robot trợ lý"
+  subtitle="Chọn hình hài robot và tinh chỉnh hệ sinh hoạt hiển thị trên trang HIS"
+></app-page-header>
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+} @else {
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <!-- ===== HÌNH HÀI ROBOT ===== -->
+    <h3 class="section-title">Hình hài</h3>
+    <mat-radio-group formControlName="robotRenderer" class="renderer-group">
+      @for (r of renderers; track r.id) {
+        <mat-card
+          appearance="outlined"
+          class="renderer-card"
+          [class.selected]="form.value.robotRenderer === r.id"
+        >
+          <mat-radio-button [value]="r.id">
+            <span class="renderer-title"><mat-icon>{{ r.icon }}</mat-icon> {{ r.name }}</span>
+          </mat-radio-button>
+          <p class="renderer-desc">{{ r.desc }}</p>
+        </mat-card>
+      }
+    </mat-radio-group>
+
+    <!-- ===== DIỆN MẠO (chỉ cho Trợ lý 3D) ===== -->
+    @if (form.value.robotRenderer === 'three') {
+      <h3 class="section-title">Diện mạo robot 3D</h3>
+      <mat-card appearance="outlined" class="appearance-card">
+        <!-- Màu thương hiệu -->
+        <div class="appearance-row">
+          <mat-slide-toggle formControlName="useCustomColor">Màu thương hiệu tuỳ chỉnh</mat-slide-toggle>
+          @if (form.value.useCustomColor) {
+            <label class="color-field">
+              <input type="color" formControlName="appearanceColor" />
+              <span class="color-value">{{ form.value.appearanceColor }}</span>
+            </label>
+          } @else {
+            <span class="appearance-hint">Đang dùng xanh VNPT mặc định.</span>
+          }
+        </div>
+
+        <!-- Cỡ robot -->
+        <div class="appearance-row">
+          <span class="appearance-label">Cỡ robot</span>
+          <input type="range" min="40" max="200" step="5" formControlName="appearanceScale" class="scale-range" />
+          <span class="scale-value">{{ form.value.appearanceScale }}%</span>
+        </div>
+
+        <!-- Logo -->
+        <div class="appearance-row">
+          <mat-slide-toggle formControlName="appearanceShowLogo">Hiện logo trên ngực</mat-slide-toggle>
+        </div>
+        <div class="appearance-row logo-row">
+          <div class="logo-preview" [class.empty]="!logoDataUrl()">
+            @if (logoDataUrl()) {
+              <img [src]="logoDataUrl()" alt="Logo tuỳ chỉnh" />
+            } @else {
+              <span>Logo VNPT mặc định</span>
+            }
+          </div>
+          <div class="logo-actions">
+            <button matButton type="button" (click)="logoInput.click()">
+              <mat-icon>upload</mat-icon> Tải logo tuỳ chỉnh
+            </button>
+            @if (logoDataUrl()) {
+              <button matButton type="button" (click)="clearLogo()">
+                <mat-icon>restart_alt</mat-icon> Về logo mặc định
+              </button>
+            }
+            <input #logoInput type="file" accept="image/*" hidden (change)="onLogoSelected($event)" />
+            <span class="appearance-hint">PNG/JPG/SVG, tối đa ~500KB.</span>
+            @if (logoError()) {
+              <span class="logo-error">{{ logoError() }}</span>
+            }
+          </div>
+        </div>
+      </mat-card>
+    }
+
+    <!-- ===== HỆ SINH HOẠT ===== -->
+    <h3 class="section-title">Hệ sinh hoạt (ngưỡng thời gian, đơn vị: giây)</h3>
+
+    <!-- Chế độ ngẫu nhiên cho "Leo thang khi chờ AI" -->
+    <mat-slide-toggle formControlName="waitEscalationRandom" class="random-toggle">
+      Ngẫu nhiên hoá “Leo thang khi chờ AI”
+    </mat-slide-toggle>
+    <p class="random-hint">
+      Bật: robot đổi hoạt động <strong>ngẫu nhiên</strong> theo khoảng thời gian ngẫu nhiên (bỏ qua
+      các mốc cố định bên dưới). Tắt: leo thang lần lượt theo mốc đã đặt.
+    </p>
+
+    <div class="categories">
+      @for (cat of categories; track cat.key) {
+        <mat-card
+          appearance="outlined"
+          class="category-card"
+          [class.muted]="cat.key === 'waitEscalation' && form.value.waitEscalationRandom"
+          [formGroupName]="cat.key"
+        >
+          <div class="category-head">
+            <strong>{{ cat.title }}</strong>
+            <span class="category-hint">{{ cat.hint }}</span>
+            @if (cat.key === 'waitEscalation' && form.value.waitEscalationRandom) {
+              <span class="category-hint muted-note">Đang ở chế độ ngẫu nhiên — các mốc dưới đây tạm không dùng.</span>
+            }
+          </div>
+          <div class="stage-grid">
+            @for (stage of cat.stages; track stage.id) {
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="stage-field">
+                <mat-label>{{ stage.label }}</mat-label>
+                <input matInput type="number" min="0" [formControlName]="stage.id" />
+                <span matTextSuffix>s</span>
+              </mat-form-field>
+            }
+          </div>
+        </mat-card>
+      }
+    </div>
+
+    <div class="form-actions">
+      <span class="hint">Áp dụng cho lần tải trang HIS tiếp theo của extension.</span>
+      <button matButton type="button" (click)="resetDefaults()" [disabled]="saving()">
+        <mat-icon>restart_alt</mat-icon> Khôi phục mặc định
+      </button>
+      <button matButton="filled" color="primary" type="submit" [disabled]="saving()">
+        <mat-icon>save</mat-icon> {{ saving() ? 'Đang lưu...' : 'Lưu & áp dụng' }}
+      </button>
+    </div>
+  </form>
+}

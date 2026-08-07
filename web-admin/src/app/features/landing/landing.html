@@ -1,0 +1,22 @@
+<!-- Bản trình chiếu giới thiệu hệ thống (file tĩnh trong public/) -->
+<iframe class="intro-frame" src="gioi-thieu.html" title="Giới thiệu ZeroCheck AI"></iframe>
+
+<!-- Thương hiệu góc trên trái -->
+<a class="brand" href="/">
+  <span class="brand-bot">🤖</span>
+  <span class="brand-name">ZeroCheck <em>AI</em></span>
+</a>
+
+<!-- Hàng menu nổi góc trên phải -->
+<nav class="top-menu">
+  @if (!loggedIn()) {
+    <a matButton="outlined" class="menu-btn ghost" routerLink="/login">
+      <mat-icon>login</mat-icon>
+      Đăng nhập
+    </a>
+  }
+  <a matButton="filled" class="menu-btn solid" routerLink="/dashboard">
+    <mat-icon>space_dashboard</mat-icon>
+    Trang quản trị
+  </a>
+</nav>

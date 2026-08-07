@@ -1,0 +1,37 @@
+.err-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 8px;
+  min-height: 70vh;
+  padding: 24px;
+
+  .code {
+    font-size: 72px;
+    font-weight: 800;
+    line-height: 1;
+    background: linear-gradient(135deg, #1976d2, #26a69a);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .big {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    color: var(--mat-sys-on-surface-variant);
+    opacity: 0.6;
+    margin: 8px 0;
+  }
+  h1 {
+    margin: 0;
+    font-size: 24px;
+  }
+  p {
+    margin: 4px 0 16px;
+    max-width: 420px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}

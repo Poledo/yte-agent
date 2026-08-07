@@ -1,0 +1,80 @@
+<h2 mat-dialog-title class="dlg-title">
+  <mat-icon>table_chart</mat-icon>
+  <div class="title-block">
+    <span class="title-text">{{ data.source.displayName }}</span>
+    <span class="subtitle">
+      {{ data.source.fileName }} · {{ data.source.rowCount | number }} dòng
+      @if (data.source.facilityCode) {
+        · cơ sở {{ data.source.facilityCode }}
+      }
+      @if (!data.source.isActive) {
+        · <span class="removed">đã gỡ</span>
+      }
+    </span>
+  </div>
+</h2>
+
+<mat-dialog-content>
+  <mat-form-field appearance="outline" class="search-field" subscriptSizing="dynamic">
+    <mat-icon matPrefix>search</mat-icon>
+    <input matInput [formControl]="search" placeholder="Tìm theo tên mục" />
+  </mat-form-field>
+
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+  } @else if (items().length === 0) {
+    <p class="empty">Không có dòng nào khớp.</p>
+  } @else {
+    <p class="hint">
+      Hiển thị {{ items().length }} dòng đầu
+      @if (items().length >= pageSize) {
+        (gõ từ khóa để thu hẹp)
+      }
+    </p>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Mã DMDC</th>
+            <th>Mã HIS</th>
+            <th>Tên</th>
+            <th>ĐVT</th>
+            <th class="num">Giá BHYT</th>
+            <th class="num">Giá BV</th>
+            <th>Trạng thái</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (it of items(); track it.id) {
+            <tr>
+              <td class="mono">{{ it.code || '—' }}</td>
+              <td class="mono">{{ it.hisCode || '—' }}</td>
+              <td class="name-col" [matTooltip]="it.name">{{ it.name }}</td>
+              <td>{{ it.unit || '—' }}</td>
+              <td class="num">{{ it.priceBhyt != null ? (it.priceBhyt | number) : '—' }}</td>
+              <td class="num">{{ it.priceHospital != null ? (it.priceHospital | number) : '—' }}</td>
+              <td>
+                @if (it.isSuspended) {
+                  <span class="flag warn">Tạm ngưng</span>
+                } @else if (!it.isActive) {
+                  <span class="flag warn">Ngừng dùng</span>
+                } @else if (it.isOutsideBhyt) {
+                  <span class="flag info">Ngoài BHYT</span>
+                } @else {
+                  <span class="flag ok">Hoạt động</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button matButton (click)="openFile()">
+    <mat-icon>open_in_new</mat-icon> Xem file gốc
+  </button>
+  <button matButton mat-dialog-close>Đóng</button>
+</mat-dialog-actions>

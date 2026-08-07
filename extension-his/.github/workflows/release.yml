@@ -1,0 +1,85 @@
+name: Đóng gói bản cài extension
+
+# Chạy khi đẩy tag dạng v1.2.3. Kết quả là một file .zip đính vào GitHub Release —
+# đây chính là file kéo lên Chrome Web Store khi nào cần, và cũng là bản gửi cho
+# đơn vị tự cài. Workflow này KHÔNG tự đăng lên store: store duyệt tay, mỗi lần
+# đăng phải tăng version, và đã đăng là mọi máy tự cập nhật — không lùi lại được.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    name: Build và đóng gói .zip
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: extension/package-lock.json
+
+      - name: Cài phụ thuộc
+        run: npm ci
+        working-directory: extension
+
+      - name: Build extension
+        run: npm run build
+        working-directory: extension
+
+      # Chrome Web Store từ chối bản upload trùng version với bản đã có. Đặt tên file
+      # theo version trong manifest để không bao giờ nhầm bản, và bắt lỗi ngay nếu tag
+      # lệch với manifest (dễ xảy ra khi tag trước, quên sửa manifest).
+      - name: Lấy version trong manifest
+        id: ver
+        run: |
+          VERSION=$(node -p "require('./extension/public/manifest.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            TAG_VERSION="${GITHUB_REF_NAME#v}"
+            if [ "$TAG_VERSION" != "$VERSION" ]; then
+              echo "::error::Tag ${GITHUB_REF_NAME} không khớp version trong manifest ($VERSION). Sửa extension/public/manifest.json rồi tag lại."
+              exit 1
+            fi
+          fi
+          echo "Version: $VERSION"
+
+      - name: Đóng gói dist thành .zip
+        run: |
+          TEN="zerocheck-ai-v${{ steps.ver.outputs.version }}.zip"
+          cd extension/dist
+          zip -qr "../../$TEN" .
+          cd ../..
+          echo "TEN_FILE=$TEN" >> "$GITHUB_ENV"
+          unzip -l "$TEN" | tail -1
+
+      - name: Lưu .zip làm artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.TEN_FILE }}
+          path: ${{ env.TEN_FILE }}
+          retention-days: 90
+
+      # Chỉ tạo Release khi chạy từ tag. Bấm tay (workflow_dispatch) thì dừng ở artifact.
+      - name: Đính .zip vào GitHub Release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.TEN_FILE }}
+          name: ZeroCheck AI ${{ github.ref_name }}
+          body: |
+            Bản cài extension ZeroCheck AI ${{ github.ref_name }}.
+
+            **Cài để dùng thử:** tải file `${{ env.TEN_FILE }}`, giải nén, vào
+            `chrome://extensions` bật *Chế độ dành cho nhà phát triển* rồi bấm
+            *Tải tiện ích đã giải nén* và trỏ vào thư mục vừa giải nén.
+
+            **Đưa lên Chrome Web Store:** tải chính file .zip này lên trang quản trị
+            của tài khoản nhà phát triển, không cần đóng gói lại.

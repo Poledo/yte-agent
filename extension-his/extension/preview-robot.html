@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Xem thử robot trợ lý (Bé Bi / Trợ lý 3D)</title>
+<style>
+  body { margin: 0; min-height: 100vh; background: #dfe7f2; font-family: 'Segoe UI', sans-serif; }
+  .panel {
+    position: fixed; top: 14px; left: 14px; z-index: 10;
+    background: #fff; border: 1px solid #c6d2e4; border-radius: 12px;
+    padding: 14px 16px; width: 300px; box-shadow: 0 8px 24px rgba(20,40,80,.15);
+  }
+  h1 { font-size: 15px; margin: 0 0 10px; }
+  .grp { margin-bottom: 10px; }
+  .grp b { display: block; font-size: 12px; color: #56637d; margin-bottom: 5px; }
+  button, .vbtn {
+    margin: 2px; padding: 6px 10px; font-size: 12.5px; cursor: pointer;
+    border: 1px solid #b9c6dc; border-radius: 8px; background: #f4f7fc;
+    color: #1c2434; text-decoration: none; display: inline-block;
+  }
+  button:hover, .vbtn:hover { background: #e3ecfa; }
+  .vbtn.on { background: #2456c4; border-color: #2456c4; color: #fff; }
+  input[type=color] { vertical-align: middle; }
+  input[type=file] { font-size: 11.5px; width: 100%; }
+  label { font-size: 12.5px; }
+  .note { font-size: 11.5px; color: #7b879e; line-height: 1.5; }
+</style>
+</head>
+<body>
+  <div class="panel">
+    <h1>🤖 Robot trợ lý — bảng điều khiển thử</h1>
+    <div class="grp"><b>Hình hài (option)</b>
+      <a class="vbtn" id="vCute"  href="?v=cute">2 · Bé Bi</a>
+      <a class="vbtn" id="vDemo"  href="?v=demo">3 · Pé Q (3D)</a>
+    </div>
+    <div class="grp"><b>Trạng thái</b>
+      <button data-s="idle">Rảnh</button>
+      <button data-s="listening">Được hỏi</button>
+      <button data-s="typing">Đang gõ</button>
+      <button data-s="thinking">Suy nghĩ</button>
+      <button data-s="happy">Có kết quả</button>
+      <button data-s="celebrate">Ăn mừng</button>
+      <button data-s="confused">Bối rối</button>
+      <button data-s="pointError">Chỉ lỗi</button>
+      <button data-s="sad">Buồn/lỗi</button>
+    </div>
+    <div class="grp"><b>Suy nghĩ lâu (hoá già)</b>
+      <button data-age="">Bình thường</button>
+      <button data-age="rust">Hơi lâu</button>
+      <button data-age="grayHair">Lâu</button>
+      <button data-age="elder">Rất lâu 💤</button>
+    </div>
+    <div class="grp"><b>Vật cản đáy trang (như nút Ký số của HIS)</b>
+      <button id="barSign">Thanh nút cố định</button>
+      <button id="btnOne">Một nút nhỏ</button>
+      <button id="btnSmartCa">Nút nổi Smart CA</button>
+      <button id="barNone">Bỏ vật cản</button>
+    </div>
+    <div class="grp"><b>Màu setting (phần xanh)</b>
+      <input type="color" id="color" value="#2456c4">
+      <button id="applyColor">Áp màu</button>
+      <button id="resetColor">Mặc định</button>
+    </div>
+    <div class="grp"><b>Logo ngực (như cấu hình web-admin)</b>
+      <label><input type="checkbox" id="showLogo" checked> Hiện logo</label>
+      <input type="file" id="logoFile" accept="image/*">
+      <button id="clearLogo">Dùng logo mặc định</button>
+    </div>
+    <p class="note">Robot hiển thị góc phải dưới (đúng vị trí trên HIS). Bấm vào robot = mở panel (ở đây chỉ log). Chụp màn hình gửi Claude để tinh chỉnh dáng.</p>
+  </div>
+
+  <!-- Chạy qua vite dev (npx vite): nạp thẳng TS nguồn — sửa code là tự reload.
+       Biến thể chọn qua ?v= của TRANG (cute mặc định | demo = model .glb),
+       truyền vào entry bằng global vì vite dev có thể can thiệp query của module. -->
+  <script>
+    window.__HIS_ROBOT_VARIANT =
+      new URLSearchParams(location.search).get('v') === 'demo' ? 'demo' : 'cute';
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById(window.__HIS_ROBOT_VARIANT === 'demo' ? 'vDemo' : 'vCute')
+        .classList.add('on');
+    });
+  </script>
+  <script type="module" src="/src/content/robot/three/index.ts"></script>
+  <script>
+    // Điều khiển qua ĐÚNG giao thức CustomEvent mà content script dùng thật
+    const CMD = 'his-robot3d:cmd';
+    const send = (detail) => document.dispatchEvent(new CustomEvent(CMD, { detail }));
+    document.addEventListener('his-robot3d:activate', () => console.log('[preview] click robot'));
+
+    const mapState = {
+      idle: { type: 'chatClosed' },
+      listening: { type: 'chatOpened' },
+      typing: { type: 'typing' },
+      thinking: { type: 'thinking', active: true, random: true },
+      happy: { type: 'result', result: 'success' },
+      celebrate: { type: 'result', result: 'allValid' },
+      confused: { type: 'result', result: 'warning' },
+      pointError: { type: 'result', result: 'localError' },
+      sad: { type: 'result', result: 'aiError' },
+    };
+    document.querySelectorAll('[data-s]').forEach((b) =>
+      b.addEventListener('click', () => send(mapState[b.dataset.s])));
+    document.querySelectorAll('[data-age]').forEach((b) =>
+      b.addEventListener('click', () => send({ type: 'life', aging: b.dataset.age || null, season: null })));
+
+    // Diện mạo giữ TRẠNG THÁI hiện tại (đổi màu không làm mất logo và ngược lại)
+    const look = { color: null, scale: 100, showLogo: true, logoDataUrl: null };
+    const sendLook = () => send({ type: 'appearance', ...look });
+    document.getElementById('applyColor').addEventListener('click', () => {
+      look.color = document.getElementById('color').value; sendLook();
+    });
+    document.getElementById('resetColor').addEventListener('click', () => {
+      look.color = null; sendLook();
+    });
+    document.getElementById('showLogo').addEventListener('change', (e) => {
+      look.showLogo = e.target.checked; sendLook();
+    });
+    document.getElementById('logoFile').addEventListener('change', (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = () => { look.logoDataUrl = reader.result; sendLook(); };
+      reader.readAsDataURL(f);
+    });
+    // Vật cản giả lập màn hình "Kiểm tra bảng kê": nút cố định ở đáy, đúng chỗ robot đậu.
+    const obstacle = document.createElement('div');
+    obstacle.style.cssText = 'position:fixed; right:0; bottom:0; z-index:5; display:none;';
+    document.body.appendChild(obstacle);
+    const showObstacle = (html, css) => {
+      obstacle.innerHTML = html;
+      obstacle.style.cssText = `position:fixed; z-index:5; ${css}`;
+    };
+    const barStyle = 'left:0; right:0; bottom:0; height:56px; background:#fff; border-top:1px solid #c6d2e4;' +
+      ' display:flex; align-items:center; justify-content:flex-end; gap:8px; padding:0 16px;';
+    document.getElementById('barSign').addEventListener('click', () =>
+      showObstacle('<button>Ký số</button><button>Lưu</button>', barStyle));
+    document.getElementById('btnOne').addEventListener('click', () =>
+      showObstacle('<button style="padding:12px 18px">Ký số</button>', 'right:24px; bottom:16px;'));
+    // Nút nổi Smart CA của HIS: toàn thẻ div lồng nhau, không có thẻ <button> nào.
+    const smartCaHtml =
+      '<div class="smartca-ad-float-button-scanner-wrapper" title="Chữ ký số Smart CA"' +
+      ' id="smartca-ad-float-button-scanner" style="width:56px; height:56px; border-radius:50%;' +
+      ' background:#0068B3; box-shadow:0 4px 12px rgba(0,0,0,.25); cursor:pointer;">' +
+      '<div class="smartca-ad-float-button-scanner"><p></p><i></i><span></span></div></div>';
+    document.getElementById('btnSmartCa').addEventListener('click', () =>
+      showObstacle(smartCaHtml, 'right:20px; bottom:24px;'));
+    document.getElementById('barNone').addEventListener('click', () =>
+      showObstacle('', 'display:none;'));
+
+    document.getElementById('clearLogo').addEventListener('click', () => {
+      look.logoDataUrl = null; document.getElementById('logoFile').value = ''; sendLook();
+    });
+  </script>
+</body>
+</html>

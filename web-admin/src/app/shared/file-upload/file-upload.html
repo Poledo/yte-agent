@@ -1,0 +1,109 @@
+<div class="uploader">
+  <!-- Vùng kéo-thả -->
+  <div
+    class="dropzone"
+    [class.drag-over]="dragOver()"
+    (dragover)="onDragOver($event)"
+    (dragleave)="onDragLeave($event)"
+    (drop)="onDrop($event)"
+  >
+    <div class="dz-icon">
+      <mat-icon>cloud_upload</mat-icon>
+    </div>
+    <p class="dz-title">Kéo &amp; thả file vào đây</p>
+    <p class="dz-hint">
+      hoặc
+      <button [matButton]="'tonal'" (click)="fileInput.click()">
+        <mat-icon>attach_file</mat-icon> Chọn file
+      </button>
+    </p>
+    @if (accept()) {
+      <p class="dz-accept">Định dạng: {{ accept() }}</p>
+    }
+    <input
+      #fileInput
+      type="file"
+      hidden
+      [accept]="accept()"
+      [multiple]="multiple()"
+      (change)="onPick(fileInput)"
+    />
+  </div>
+
+  <!-- Danh sách file đã chọn -->
+  @if (items().length > 0) {
+    <div class="queue">
+      @for (item of items(); track item.id) {
+        <div class="queue-item" [class]="item.status">
+          <mat-icon class="status-icon" [class.spin]="item.status === 'uploading'">
+            {{ iconFor(item.status) }}
+          </mat-icon>
+          <div class="info">
+            <div class="row-top">
+              <span class="name" [matTooltip]="item.file.name">{{ item.file.name }}</span>
+              <span class="size">{{ formatSize(item.file.size) }}</span>
+            </div>
+            <mat-progress-bar
+              [mode]="item.status === 'uploading' && item.progress === 0 ? 'indeterminate' : 'determinate'"
+              [value]="item.status === 'pending' || item.status === 'queued' ? 0 : item.progress"
+            ></mat-progress-bar>
+            <div class="row-bottom">
+              <span class="state">
+                {{ labelFor(item.status) }}
+                @if (item.status === 'uploading') {
+                  · {{ item.progress }}%
+                }
+                @if ((item.status === 'error' || item.status === 'success')
+                  && item.message && item.message !== 'Thành công') {
+                  · {{ item.message }}
+                }
+              </span>
+            </div>
+          </div>
+          <div class="actions">
+            @if (item.status === 'pending') {
+              <button matIconButton matTooltip="Nạp file này" (click)="uploadOne(item.id)">
+                <mat-icon>play_arrow</mat-icon>
+              </button>
+            }
+            @if (item.status === 'error') {
+              <button matIconButton matTooltip="Thử lại" (click)="retry(item.id)">
+                <mat-icon>refresh</mat-icon>
+              </button>
+            }
+            @if (item.status !== 'success') {
+              <button matIconButton matTooltip="Xóa khỏi danh sách" (click)="remove(item.id)">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Thanh hành động: nạp tất cả + tổng kết -->
+    <div class="summary">
+      @if (pendingCount() > 0) {
+        <button [matButton]="'filled'" (click)="uploadAll()">
+          <mat-icon>upload</mat-icon> Nạp tất cả ({{ pendingCount() }})
+        </button>
+      }
+      @if (busyCount() > 0) {
+        <span class="busy"><mat-icon class="spin">sync</mat-icon> Đang nạp {{ busyCount() }} file</span>
+      }
+      @if (successCount() > 0) {
+        <span class="ok"><mat-icon>check_circle</mat-icon> {{ successCount() }} thành công</span>
+      }
+      @if (errorCount() > 0) {
+        <span class="fail"><mat-icon>error</mat-icon> {{ errorCount() }} lỗi</span>
+      }
+      <span class="spacer"></span>
+      @if (hasFinished()) {
+        <button matButton (click)="clearFinished()">Dọn danh sách</button>
+      }
+      <button matButton class="clear-all-btn" (click)="clearAll()" matTooltip="Xóa hết file khỏi khay chọn (không ảnh hưởng dữ liệu đã nạp)">
+        <mat-icon>delete_sweep</mat-icon> Xóa hết
+      </button>
+    </div>
+  }
+</div>

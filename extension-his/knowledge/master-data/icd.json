@@ -1,0 +1,4 @@
+{
+    "inactive": ["J18.9", "A00X", "B34.9", "I10X"],
+    "note": "This is sample data for demo purposes. In production, this will be fetched from the Backend API."
+}

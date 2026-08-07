@@ -1,0 +1,67 @@
+# Job chạy k6 NGAY TRONG cụm, bắn vào service api-validation của namespace
+# cbyts-loadtest. Chạy trong cụm để số đo không lẫn độ trễ Internet và không
+# đụng tới namespace production.
+#
+# Trước khi apply phải tạo 2 ConfigMap:
+#   kubectl -n cbyts-loadtest create configmap k6-kich-ban \
+#     --from-file=xml130-validate.k6.js=loadtest/xml130-validate.k6.js
+#   kubectl -n cbyts-loadtest create configmap k6-bo-du-lieu \
+#     --from-file=nho.xml=<đường dẫn> --from-file=vua.xml=<...> --from-file=lon.xml=<...>
+#
+# Bộ dữ liệu đưa lên cụm là bản ĐÃ ẨN DANH (họ tên/địa chỉ/số thẻ/mã bệnh nhân
+# thay bằng ký tự giả, giữ nguyên độ dài và cấu trúc file) — hồ sơ bệnh nhân
+# thật chỉ nằm trên máy dev, không đẩy lên cụm.
+#
+# Đổi VUS/DURATION bằng cách sửa env bên dưới rồi apply lại (xóa Job cũ trước).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: k6-xml130
+  namespace: cbyts-loadtest
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: k6
+          image: grafana/k6:2.1.0
+          # k6 thoát mã khác 0 khi ngưỡng bị vượt (ngưỡng trong script viết cho 1 VU),
+          # nên dùng ";" chứ không phải "&&" để vẫn in được kết xuất thô ra log.
+          command:
+            - sh
+            - -c
+            - |
+              k6 run --summary-trend-stats 'avg,min,med,p(95),p(99),max' \
+                     --summary-export=/tmp/ket-qua.json \
+                     /kich-ban/xml130-validate.k6.js
+              echo '===== BAT DAU KET XUAT THO ====='
+              cat /tmp/ket-qua.json
+          env:
+            - name: BASE_URL
+              value: http://api-validation:8080
+            - name: XML_DIR
+              value: /du-lieu
+            - name: VUS
+              value: "20"
+            - name: DURATION
+              value: 60s
+          volumeMounts:
+            - name: kich-ban
+              mountPath: /kich-ban
+            - name: du-lieu
+              mountPath: /du-lieu
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 1Gi
+      volumes:
+        - name: kich-ban
+          configMap:
+            name: k6-kich-ban
+        - name: du-lieu
+          configMap:
+            name: k6-bo-du-lieu

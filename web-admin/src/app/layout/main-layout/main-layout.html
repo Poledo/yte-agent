@@ -1,0 +1,120 @@
+<mat-sidenav-container class="shell" [class.collapsed]="collapsed() && !isMobile()" [class.mobile]="isMobile()">
+  <mat-sidenav
+    [mode]="isMobile() ? 'over' : 'side'"
+    [opened]="isMobile() ? mobileOpen() : true"
+    (openedChange)="onOpenedChange($event)"
+    [class.collapsed]="collapsed() && !isMobile()"
+    class="sidebar"
+  >
+    <div class="brand" [class.mini]="collapsed() && !isMobile()">
+      <div class="logo"></div>
+      @if (!collapsed() || isMobile()) {
+        <div class="brand-text">
+          <span class="name">ZeroCheck AI</span>
+          <span class="sub">Quản trị</span>
+        </div>
+      }
+    </div>
+
+    <nav class="menu">
+      @for (item of menu(); track item.route) {
+        <a
+          [routerLink]="item.route"
+          routerLinkActive="active"
+          class="menu-item"
+          [matTooltip]="collapsed() && !isMobile() ? item.label : ''"
+          matTooltipPosition="right"
+          (click)="closeMobileNav()"
+        >
+          <mat-icon>{{ item.icon }}</mat-icon>
+          @if (!collapsed() || isMobile()) {
+            <span>{{ item.label }}</span>
+          }
+        </a>
+      }
+    </nav>
+
+    <div class="sidebar-foot">
+      <a
+        routerLink="/"
+        class="menu-item"
+        [matTooltip]="collapsed() && !isMobile() ? 'Giới thiệu dự án' : ''"
+        matTooltipPosition="right"
+      >
+        <mat-icon>slideshow</mat-icon>
+        @if (!collapsed() || isMobile()) {
+          <span>Giới thiệu dự án</span>
+        }
+      </a>
+      <a
+        routerLink="/profile"
+        routerLinkActive="active"
+        class="menu-item"
+        [matTooltip]="collapsed() && !isMobile() ? 'Tài khoản' : ''"
+        matTooltipPosition="right"
+        (click)="closeMobileNav()"
+      >
+        <mat-icon>account_circle</mat-icon>
+        @if (!collapsed() || isMobile()) {
+          <span>Tài khoản</span>
+        }
+      </a>
+    </div>
+  </mat-sidenav>
+
+  <mat-sidenav-content class="content">
+    <mat-toolbar class="topbar">
+      <button matIconButton (click)="toggleSidebar()" matTooltip="Thu gọn menu">
+        <mat-icon>menu</mat-icon>
+      </button>
+
+      <div class="breadcrumb">
+        <span class="root">Quản trị</span>
+        <mat-icon>chevron_right</mat-icon>
+        <span class="current">{{ currentLabel() }}</span>
+      </div>
+
+      <span class="spacer"></span>
+
+      <!-- Dark mode -->
+      <button matIconButton [matMenuTriggerFor]="themeMenu" matTooltip="Giao diện">
+        <mat-icon>{{ themeIcon() }}</mat-icon>
+      </button>
+      <mat-menu #themeMenu="matMenu">
+        <button mat-menu-item (click)="setTheme('light')">
+          <mat-icon>light_mode</mat-icon><span>Sáng</span>
+        </button>
+        <button mat-menu-item (click)="setTheme('dark')">
+          <mat-icon>dark_mode</mat-icon><span>Tối</span>
+        </button>
+        <button mat-menu-item (click)="setTheme('system')">
+          <mat-icon>brightness_auto</mat-icon><span>Theo hệ thống</span>
+        </button>
+      </mat-menu>
+
+      <!-- User menu -->
+      <button matButton [matMenuTriggerFor]="userMenu" class="user-btn">
+        <span class="avatar">{{ initials() }}</span>
+        <span class="uname">{{ user()?.fullName || user()?.email }}</span>
+        <mat-icon>arrow_drop_down</mat-icon>
+      </button>
+      <mat-menu #userMenu="matMenu">
+        <div class="menu-header">
+          <p class="mh-name">{{ user()?.fullName }}</p>
+          <p class="mh-email">{{ user()?.email }}</p>
+        </div>
+        <mat-divider></mat-divider>
+        <button mat-menu-item routerLink="/profile">
+          <mat-icon>person</mat-icon><span>Hồ sơ của tôi</span>
+        </button>
+        <button mat-menu-item (click)="logout()">
+          <mat-icon>logout</mat-icon><span>Đăng xuất</span>
+        </button>
+      </mat-menu>
+    </mat-toolbar>
+
+    <main class="page">
+      <router-outlet></router-outlet>
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

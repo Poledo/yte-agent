@@ -1,0 +1,75 @@
+# Tự động co giãn theo tải (HorizontalPodAutoscaler).
+#
+# ĐỌC TRƯỚC KHI APPLY - hai đối tượng dưới đây có điều kiện áp dụng khác nhau.
+#
+# 1) web-admin: stateless hoàn toàn (nginx phục vụ file tĩnh), apply được ngay.
+#
+# 2) api-validation: hiện ghim replicas: 1 vì hai lý do kỹ thuật, KHÔNG phải vì
+#    thiếu thiết kế:
+#      - PVC api-storage đang ReadWriteOnce: pod thứ hai rơi vào node khác sẽ không
+#        mount được ổ đĩa.
+#      - Migration EF Core chạy lúc khởi động: nhiều pod cùng chạy migration một lúc
+#        có thể tranh nhau khóa.
+#    Muốn bật HPA cho API thì làm đủ hai việc trước:
+#      a. Đổi PVC api-storage sang ReadWriteMany (VNPT File Storage / NFS CSI), hoặc
+#         chuyển thư mục Storage sang object storage.
+#      b. Tách migration ra initContainer/Job chạy một lần thay vì chạy trong app.
+#    Chưa làm xong hai việc đó thì để nguyên phần api-validation-hpa (đang comment).
+#
+# Cần metrics-server trong cụm: kubectl -n kube-system get deploy metrics-server
+# Kiểm tra sau khi apply:      kubectl -n cbyts get hpa
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: web-admin
+  namespace: cbyts
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: web-admin
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+  behavior:
+    scaleDown:
+      # Chờ 5 phút mới thu pod, tránh giật lên giật xuống khi tải răng cưa.
+      stabilizationWindowSeconds: 300
+---
+# apiVersion: autoscaling/v2
+# kind: HorizontalPodAutoscaler
+# metadata:
+#   name: api-validation
+#   namespace: cbyts
+# spec:
+#   scaleTargetRef:
+#     apiVersion: apps/v1
+#     kind: Deployment
+#     name: api-validation
+#   minReplicas: 1
+#   maxReplicas: 4
+#   metrics:
+#     - type: Resource
+#       resource:
+#         name: cpu
+#         target:
+#           type: Utilization
+#           averageUtilization: 70
+#     - type: Resource
+#       resource:
+#         name: memory
+#         target:
+#           type: Utilization
+#           averageUtilization: 80
+#   behavior:
+#     scaleUp:
+#       stabilizationWindowSeconds: 60
+#     scaleDown:
+#       stabilizationWindowSeconds: 300

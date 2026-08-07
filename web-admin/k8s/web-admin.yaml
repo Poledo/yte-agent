@@ -1,0 +1,120 @@
+# web-admin (Angular + nginx) trên VNPT Kubernetes.
+# nginx trong image vừa serve SPA vừa proxy /api về Service api-validation.
+# Ra internet qua add-on Ingress Nginx Controller (KHÔNG dùng Service
+# type=LoadBalancer trỏ LB thủ công — nền tảng VNPT chỉ route qua ingress):
+# Service để ClusterIP, Ingress 'nginx' terminate TLS rồi forward về web-admin:80.
+# Controller ingress-nginx bind floating IP 14.225.173.132 (LB portal id 227).
+#
+# Image nằm ở VNPT ECR; CI thay ${ECR_IMAGE} bằng đường dẫn thật lúc deploy:
+#   ecr.vnptplatform.vn/<ecr-id>/web-admin:<tag>
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-admin
+  namespace: cbyts
+  labels:
+    app: web-admin
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web-admin
+  template:
+    metadata:
+      labels:
+        app: web-admin
+    spec:
+      # Secret kéo image từ VNPT ECR (tạo bằng kubectl create secret docker-registry ecr-pull ...)
+      imagePullSecrets:
+        - name: ecr-pull
+      containers:
+        - name: web-admin
+          image: ecr.vnptplatform.vn/REPLACE_ECR_ID/web-admin:latest
+          ports:
+            - containerPort: 80
+            - containerPort: 443
+          # Chứng chỉ TLS wildcard *.vnpt.vn nạp từ secret web-admin-tls
+          # (tạo bằng: kubectl -n cbyts create secret tls web-admin-tls --cert=fullchain.pem --key=privkey.pem)
+          volumeMounts:
+            - name: tls
+              mountPath: /etc/nginx/ssl
+              readOnly: true
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 3
+      volumes:
+        - name: tls
+          secret:
+            secretName: web-admin-tls
+---
+# Service nội cụm (ClusterIP) — Ingress phía dưới mới là cửa ra internet.
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-admin
+  namespace: cbyts
+  labels:
+    app: web-admin
+spec:
+  type: ClusterIP
+  selector:
+    app: web-admin
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+---
+# Ingress ra internet qua add-on ingress-nginx (IngressClass 'nginx').
+# Controller ingress-nginx (ns ingress-nginx) tự bind floating IP 14.225.173.132
+# qua LB portal id 227; nó terminate TLS bằng secret web-admin-tls (*.vnpt.vn)
+# rồi forward về web-admin:80.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web-admin
+  namespace: cbyts
+  annotations:
+    # cho upload file lớn (mặc định ingress-nginx chặn body > 1m)
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    # Hỏi đáp RAG gọi LLM (OpenRouter online) mất ~10-60s; mặc định ingress cắt
+    # kết nối quá sớm khiến client nhận "Không kết nối được máy chủ". Nới timeout
+    # đọc/gửi lên 300s cho khớp proxy_read_timeout của web-admin nginx.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "75"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - cbyts.vnpt.vn
+      secretName: web-admin-tls
+  rules:
+    - host: cbyts.vnpt.vn
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web-admin
+                port:
+                  number: 80
+    # rule catch-all (không host) — truy cập thẳng bằng IP vẫn vào được app
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web-admin
+                port:
+                  number: 80

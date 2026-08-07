@@ -1,0 +1,72 @@
+<app-page-header icon="group" title="Người dùng" subtitle="Quản lý tài khoản và phân vai trò">
+  <mat-form-field appearance="outline" class="search-field" subscriptSizing="dynamic">
+    <mat-icon matPrefix>search</mat-icon>
+    <input matInput [formControl]="search" placeholder="Tìm theo email / tên" />
+  </mat-form-field>
+  <button [matButton]="'filled'" color="primary" (click)="openCreate()">
+    <mat-icon>person_add</mat-icon> Thêm người dùng
+  </button>
+</app-page-header>
+
+<app-data-table
+  [columns]="columns"
+  [data]="users()"
+  [loading]="loading()"
+  emptyIcon="group_off"
+  emptyTitle="Chưa có người dùng"
+  emptyDescription="Nhấn 'Thêm người dùng' để tạo tài khoản mới."
+>
+  <!-- Cột người dùng -->
+  <ng-template appColumnDef="fullName" let-row>
+    <div class="user-cell">
+      <span class="ava">{{ (row.fullName || row.email).charAt(0).toUpperCase() }}</span>
+      <div class="uc-text">
+        <span class="uc-name">{{ row.fullName || '(chưa đặt tên)' }}</span>
+        <span class="uc-email">{{ row.email }}</span>
+      </div>
+    </div>
+  </ng-template>
+
+  <!-- Cột vai trò -->
+  <ng-template appColumnDef="roles" let-row>
+    @if (row.roles.length) {
+      <mat-chip-set>
+        @for (r of row.roles; track r) {
+          <mat-chip>{{ r }}</mat-chip>
+        }
+      </mat-chip-set>
+    } @else {
+      <span class="muted">—</span>
+    }
+  </ng-template>
+
+  <!-- Cột trạng thái -->
+  <ng-template appColumnDef="status" let-row>
+    @if (row.isLockedOut) {
+      <span class="badge locked"><mat-icon>lock</mat-icon> Đã khóa</span>
+    } @else if (row.isActive) {
+      <span class="badge active"><mat-icon>check_circle</mat-icon> Hoạt động</span>
+    } @else {
+      <span class="badge inactive">Vô hiệu</span>
+    }
+  </ng-template>
+
+  <!-- Cột thao tác -->
+  <ng-template appColumnDef="actions" let-row>
+    <button matIconButton [matMenuTriggerFor]="menu">
+      <mat-icon>more_vert</mat-icon>
+    </button>
+    <mat-menu #menu="matMenu">
+      <button mat-menu-item (click)="openEdit(row)">
+        <mat-icon>edit</mat-icon><span>Sửa</span>
+      </button>
+      <button mat-menu-item (click)="toggleLock(row)">
+        <mat-icon>{{ row.isLockedOut ? 'lock_open' : 'lock' }}</mat-icon>
+        <span>{{ row.isLockedOut ? 'Mở khóa' : 'Khóa' }}</span>
+      </button>
+      <button mat-menu-item (click)="remove(row)">
+        <mat-icon>delete</mat-icon><span>Xóa</span>
+      </button>
+    </mat-menu>
+  </ng-template>
+</app-data-table>

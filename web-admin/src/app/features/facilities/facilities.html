@@ -1,0 +1,156 @@
+<app-page-header
+  icon="account_tree"
+  title="Cây đơn vị"
+  subtitle="Cơ sở KCB và cấu hình dùng chung danh mục HIS theo cấp trên"
+>
+  <mat-slide-toggle [checked]="showInactive()" (change)="toggleInactive($event.checked)">
+    Hiện đã ngưng
+  </mat-slide-toggle>
+  <button *appHasPermission="'Catalog.Manage'" [matButton]="'filled'" color="primary" (click)="add()">
+    <mat-icon>add</mat-icon>
+    Thêm đơn vị gốc
+  </button>
+</app-page-header>
+
+<mat-card class="tree-card" appearance="outlined">
+  <p class="hint">
+    Hồ sơ XML 130 của một cơ sở được đối chiếu bằng danh mục của <b>chính cơ sở đó</b>. Loại danh mục nào
+    cơ sở chưa tự nạp thì mượn của <b>đơn vị cấp trên</b> (rồi lên tiếp ông, cụ) — chỉ khi đơn vị bật
+    "được dùng danh mục của đơn vị cấp trên". Bấm vào một đơn vị để xem thực tế đang dùng danh mục của ai.
+  </p>
+
+  @if (loading()) {
+    <div class="tree-loading"><mat-spinner diameter="32"></mat-spinner></div>
+  } @else if (isEmpty()) {
+    <div class="tree-empty">
+      <mat-icon>account_tree</mat-icon>
+      <div class="empty-title">Chưa có đơn vị nào</div>
+      <div class="empty-desc">
+        Đơn vị được tạo tự động khi nạp danh mục HIS có mã cơ sở, hoặc bấm "Thêm đơn vị gốc".
+      </div>
+    </div>
+  } @else {
+    <div class="tree">
+      @for (root of tree(); track root.id) {
+        <ng-container *ngTemplateOutlet="nodeTpl; context: { $implicit: root, depth: 0 }"></ng-container>
+      }
+    </div>
+  }
+</mat-card>
+
+<!-- Một nút trên cây, tự gọi lại chính mình cho các đơn vị cấp dưới. -->
+<ng-template #nodeTpl let-node let-depth="depth">
+  <div
+    class="node"
+    [class.node-inactive]="!node.isActive"
+    [class.node-selected]="scopeOf()?.id === node.id"
+    [style.padding-left.px]="12 + depth * 24"
+  >
+    @if (node.children.length > 0) {
+      <button matIconButton class="twisty" (click)="toggleCollapse(node.id)">
+        <mat-icon>{{ isCollapsed(node.id) ? 'chevron_right' : 'expand_more' }}</mat-icon>
+      </button>
+    } @else {
+      <span class="twisty-spacer"></span>
+    }
+
+    <button class="node-main" type="button" (click)="openScope(node)">
+      <mat-icon class="node-icon">{{ depth === 0 ? 'domain' : 'local_hospital' }}</mat-icon>
+      <span class="node-name">{{ node.name }}</span>
+      <span class="node-code">{{ node.code }}</span>
+    </button>
+
+    <span class="node-badges">
+      @if (node.ownCatalogCount > 0) {
+        <span class="badge own" matTooltip="Số loại danh mục đơn vị tự nạp">
+          <mat-icon>inventory_2</mat-icon> {{ node.ownCatalogCount }}
+        </span>
+      } @else {
+        <span class="badge none" matTooltip="Đơn vị chưa tự nạp danh mục nào">
+          <mat-icon>inventory_2</mat-icon> 0
+        </span>
+      }
+      @if (node.parentId) {
+        @if (node.inheritCatalogFromParent) {
+          <span class="badge inherit" matTooltip="Được mượn danh mục của đơn vị cấp trên">
+            <mat-icon>link</mat-icon> Kế thừa
+          </span>
+        } @else {
+          <span class="badge no-inherit" matTooltip="Chỉ dùng danh mục của chính đơn vị này">
+            <mat-icon>link_off</mat-icon> Không kế thừa
+          </span>
+        }
+      }
+      @if (!node.isActive) {
+        <span class="badge inactive"><mat-icon>block</mat-icon> Đã ngưng</span>
+      }
+    </span>
+
+    <span class="node-actions" *appHasPermission="'Catalog.Manage'">
+      <button matIconButton matTooltip="Thêm đơn vị cấp dưới" (click)="add(node)">
+        <mat-icon>add</mat-icon>
+      </button>
+      <button matIconButton matTooltip="Sửa" (click)="edit(node)">
+        <mat-icon>edit</mat-icon>
+      </button>
+      <button matIconButton matTooltip="Xóa" (click)="remove(node)">
+        <mat-icon>delete_outline</mat-icon>
+      </button>
+    </span>
+  </div>
+
+  <!-- Bảng "đang dùng danh mục của ai" mở ngay dưới đơn vị được chọn -->
+  @if (scopeOf()?.id === node.id) {
+    <div class="scope" [style.margin-left.px]="24 + depth * 24">
+      @if (scopeLoading()) {
+        <mat-spinner diameter="22"></mat-spinner>
+      } @else if (scope(); as s) {
+        <div class="scope-chain">
+          @if (s.chain.length > 1) {
+            Thứ tự ưu tiên khi tìm danh mục: {{ s.chain.join(' → ') }}
+          } @else {
+            Chỉ dùng danh mục của chính đơn vị {{ node.code }}
+          }
+        </div>
+        @if (s.catalogs.length === 0) {
+          <div class="scope-empty">
+            Chưa có danh mục nào dùng được cho đơn vị này — hãy nạp danh mục cho đơn vị hoặc cho cấp trên.
+          </div>
+        } @else {
+          <table class="scope-table">
+            <thead>
+              <tr>
+                <th>Danh mục</th>
+                <th class="num">Số dòng</th>
+                <th class="src">Lấy từ</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of s.catalogs; track c.catalogType) {
+                <tr>
+                  <td>{{ c.displayName }}</td>
+                  <td class="num">{{ c.rowCount | number }}</td>
+                  <td class="src">
+                    @if (c.inherited) {
+                      <span class="from inherited">
+                        <mat-icon>link</mat-icon> Cấp trên {{ c.facilityCode }}
+                      </span>
+                    } @else {
+                      <span class="from own"><mat-icon>check_circle</mat-icon> Đơn vị này</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      }
+    </div>
+  }
+
+  @if (!isCollapsed(node.id)) {
+    @for (child of node.children; track child.id) {
+      <ng-container *ngTemplateOutlet="nodeTpl; context: { $implicit: child, depth: depth + 1 }"></ng-container>
+    }
+  }
+</ng-template>

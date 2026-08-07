@@ -1,0 +1,116 @@
+import { provideZonelessChangeDetection } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { ActivatedRouteSnapshot, Router, RouterStateSnapshot, UrlTree } from '@angular/router';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { authGuard } from './auth.guard';
+import { AuthService } from './auth.service';
+import { permissionGuard } from './permission.guard';
+import { TokenStore } from './token.store';
+
+/** Giả lập Router chỉ để bắt lệnh chuyển trang mà guard phát ra. */
+class FakeRouter {
+  createUrlTree(commands: unknown[], extras?: { queryParams?: Record<string, unknown> }) {
+    return { commands, extras } as unknown as UrlTree;
+  }
+}
+
+function runAuthGuard(url = '/nguoi-dung') {
+  const state = { url } as RouterStateSnapshot;
+  return TestBed.runInInjectionContext(() => authGuard({} as ActivatedRouteSnapshot, state));
+}
+
+function runPermissionGuard(permissions?: string[]) {
+  const route = { data: permissions ? { permissions } : {} } as unknown as ActivatedRouteSnapshot;
+  return TestBed.runInInjectionContext(() =>
+    permissionGuard(route, {} as RouterStateSnapshot),
+  );
+}
+
+describe('authGuard', () => {
+  let auth: AuthService;
+  let tokens: TokenStore;
+
+  beforeEach(() => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection(), { provide: Router, useClass: FakeRouter }],
+    });
+    auth = TestBed.inject(AuthService);
+    tokens = TestBed.inject(TokenStore);
+  });
+
+  it('chưa đăng nhập thì đẩy về /login', () => {
+    const result = runAuthGuard() as unknown as { commands: string[] };
+
+    expect(result).not.toBe(true);
+    expect(result.commands).toEqual(['/login']);
+  });
+
+  it('nhớ trang đang muốn vào để quay lại sau khi đăng nhập', () => {
+    const result = runAuthGuard('/danh-muc') as unknown as {
+      extras: { queryParams: { returnUrl: string } };
+    };
+
+    expect(result.extras.queryParams.returnUrl).toBe('/danh-muc');
+  });
+
+  it('đã nạp thông tin người dùng thì cho vào', () => {
+    auth.currentUser.set({ id: 1, userName: 'admin', permissions: [] } as never);
+
+    expect(runAuthGuard()).toBe(true);
+  });
+
+  it('F5 mất state nhưng còn token thì vẫn cho vào', () => {
+    tokens.setTokens('access-1', 'refresh-1');
+
+    expect(runAuthGuard()).toBe(true);
+  });
+});
+
+describe('permissionGuard', () => {
+  let auth: AuthService;
+
+  beforeEach(() => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection(), { provide: Router, useClass: FakeRouter }],
+    });
+    auth = TestBed.inject(AuthService);
+  });
+
+  function dangNhapVoi(permissions: string[]) {
+    auth.currentUser.set({ id: 1, userName: 'u', permissions } as never);
+  }
+
+  it('route không đòi quyền thì ai cũng vào được', () => {
+    dangNhapVoi([]);
+
+    expect(runPermissionGuard()).toBe(true);
+  });
+
+  it('có đúng quyền được khai báo thì cho vào', () => {
+    dangNhapVoi(['Catalog.View']);
+
+    expect(runPermissionGuard(['Catalog.View'])).toBe(true);
+  });
+
+  it('chỉ cần một trong các quyền được liệt kê', () => {
+    dangNhapVoi(['Catalog.View']);
+
+    expect(runPermissionGuard(['User.Manage', 'Catalog.View'])).toBe(true);
+  });
+
+  it('System.Admin đi qua mọi cửa', () => {
+    dangNhapVoi(['System.Admin']);
+
+    expect(runPermissionGuard(['User.Manage'])).toBe(true);
+  });
+
+  it('thiếu quyền thì đẩy sang /forbidden', () => {
+    dangNhapVoi(['Catalog.View']);
+    const result = runPermissionGuard(['User.Manage']) as unknown as { commands: string[] };
+
+    expect(result).not.toBe(true);
+    expect(result.commands).toEqual(['/forbidden']);
+  });
+});

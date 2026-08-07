@@ -1,0 +1,6 @@
+export enum ValidationDecision {
+    LOCAL_ONLY = 'LOCAL_ONLY',
+    LOCAL_FAILED = 'LOCAL_FAILED',
+    REMOTE_REQUIRED = 'REMOTE_REQUIRED',
+    REMOTE_SKIPPED = 'REMOTE_SKIPPED',
+}

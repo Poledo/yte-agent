@@ -1,0 +1,94 @@
+{
+  "page": "DiagnosisPage",
+  "trigger": {
+    "field": "diagnosis_code",
+    "event": "Change"
+  },
+  "context": {
+    "timestamp": "2024-01-15T10:30:00Z",
+    "extensionVersion": "1.0.0",
+    "sessionId": "sess_male_35_valid",
+    "userId": "user_doctor_001"
+  },
+  "form": {
+    "patient": {
+      "id": "P001",
+      "firstName": "Nguyễn",
+      "lastName": "Văn A",
+      "gender": "Male",
+      "dateOfBirth": "1989-06-15",
+      "age": 35,
+      "nationalId": "123456789"
+    },
+    "encounter": {
+      "id": "E001",
+      "admissionDate": "2024-01-10",
+      "admissionTime": "09:00",
+      "department": "Phòng khám Ngoại",
+      "visitType": "Follow-up",
+      "chiefComplaint": "Đau tức ngực"
+    },
+    "diagnosis": [
+      {
+        "code": "I50",
+        "name": "Suy tim",
+        "type": "Primary",
+        "icdVersion": "10",
+        "severity": "Moderate"
+      },
+      {
+        "code": "E11",
+        "name": "Đái tháo đường type 2",
+        "type": "Secondary",
+        "icdVersion": "10",
+        "severity": "Mild"
+      }
+    ],
+    "procedure": [
+      {
+        "code": "93000",
+        "name": "Điện tâm đồ",
+        "date": "2024-01-10",
+        "status": "Completed"
+      },
+      {
+        "code": "94002",
+        "name": "Siêu âm tim",
+        "date": "2024-01-10",
+        "status": "Completed"
+      }
+    ],
+    "medicine": [
+      {
+        "code": "C09AA01",
+        "name": "Lisinopril",
+        "dose": "10mg",
+        "frequency": "1 lần/ngày",
+        "duration": "30 ngày",
+        "route": "Uống"
+      },
+      {
+        "code": "C10AA01",
+        "name": "Simvastatin",
+        "dose": "20mg",
+        "frequency": "1 lần/tối",
+        "duration": "30 ngày",
+        "route": "Uống"
+      },
+      {
+        "code": "A10BA02",
+        "name": "Metformin",
+        "dose": "500mg",
+        "frequency": "2 lần/ngày",
+        "duration": "30 ngày",
+        "route": "Uống"
+      }
+    ],
+    "insurance": {
+      "code": "BHYT001",
+      "type": "Health Insurance",
+      "status": "Active",
+      "expiryDate": "2024-12-31"
+    }
+  }
+}

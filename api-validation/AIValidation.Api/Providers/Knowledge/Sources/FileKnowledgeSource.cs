@@ -1,0 +1,67 @@
+using AIValidation.Api.Models;
+using AIValidation.Api.Providers.Interfaces;
+
+namespace AIValidation.Api.Providers.Knowledge.Sources;
+
+/// <summary>
+/// Knowledge Source đọc dữ liệu từ file (JSON, CSV, XML, etc.).
+/// 
+/// Chịu trách nhiệm:
+/// - Đọc knowledge files từ thư mục Knowledge/
+/// - Parse dữ liệu từ file
+/// - Trả về IReadOnlyList<KnowledgeDocument>
+/// 
+/// Hỗ trợ file formats:
+/// - JSON (recommended)
+/// - CSV
+/// - XML
+/// - YAML
+/// </summary>
+public class FileKnowledgeSource : IKnowledgeSource
+{
+    private readonly string _knowledgeFolder;
+
+    /// <summary>
+    /// Khởi tạo FileKnowledgeSource.
+    /// 
+    /// Xác định đường dẫn thư mục Knowledge từ configuration.
+    /// </summary>
+    /// <param name="knowledgeFolder">Đường dẫn thư mục chứa knowledge files.</param>
+    public FileKnowledgeSource(string knowledgeFolder)
+    {
+        _knowledgeFolder = knowledgeFolder;
+    }
+
+    /// <summary>
+    /// Lấy danh sách Knowledge Document từ file.
+    /// 
+    /// Quy trình:
+    /// 1. Phân tích request để xác định loại data cần (ICD, DVKT, etc.)
+    /// 2. Xây dựng file path dựa trên category
+    /// 3. Đọc file từ Knowledge folder
+    /// 4. Parse JSON/CSV/XML thành KnowledgeDocument
+    /// 5. Trả về IReadOnlyList<KnowledgeDocument>
+    /// 
+    /// File structure:
+    /// Knowledge/
+    ///   ICD/
+    ///     icd-codes.json
+    ///     icd-descriptions.json
+    ///   DVKT/
+    ///     services.json
+    ///   Drug/
+    ///     drug-list.json
+    ///   Insurance/
+    ///     insurance-codes.json
+    /// </summary>
+    /// <param name="request">Yêu cầu xác thực để xác định knowledge cần thiết.</param>
+    /// <param name="cancellationToken">Token hủy yêu cầu.</param>
+    /// <returns>Danh sách Knowledge Document từ file.</returns>
+    /// <exception cref="NotImplementedException">Chưa được triển khai.</exception>
+    public Task<IReadOnlyList<KnowledgeDocument>> GetDocumentsAsync(
+        ValidationRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
+    }
+}

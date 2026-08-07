@@ -1,0 +1,24 @@
+.form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 420px;
+  padding-top: 8px;
+}
+
+mat-slide-toggle {
+  margin: 8px 0 4px;
+}
+
+.toggle-hint {
+  margin: 0 0 8px 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.form-error {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #b3261e;
+}

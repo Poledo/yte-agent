@@ -1,0 +1,831 @@
+{
+  "profiles": [
+    {
+      "catalogType": "Drug",
+      "displayName": "Danh mục thuốc, vật tư y tế (HIS)",
+      "description": "Danh mục thuốc và vật tư y tế gốc của cơ sở KCB. Dùng để đối chiếu mã thuốc, tên thuốc, hàm lượng, đơn giá BHYT và trạng thái tạm ngưng khi kiểm tra chi tiết thuốc trong hồ sơ.",
+      "fileNamePatterns": [
+        "dm_duoc_vattu"
+      ],
+      "headerRowIndex": 0,
+      "requiredColumns": [
+        "MAVATTU",
+        "TENVATTU",
+        "MAHOATCHAT_DMDC"
+      ],
+      "facilityColumn": "DVTT",
+      "codeColumn": "MAHOATCHAT_DMDC",
+      "hisCodeColumn": "MAVATTU",
+      "nameColumn": "TENVATTU",
+      "unitColumn": "DVT",
+      "priceBhytColumn": "DONGIA_BH",
+      "priceHospitalColumn": "DONGIA_BV",
+      "suspendedColumn": "TAMNGUNG",
+      "outsideBhytColumn": "NGOAIDANHMUCBHYT",
+      "activeColumn": null,
+      "metadataColumns": [
+        "HOATCHAT",
+        "HAMLUONG",
+        "SODANGKY",
+        "SO_DANGKY_DMDC",
+        "MADUONGDUNG_DMDC",
+        "MANHASX",
+        "MANUOCSX",
+        "MANHOMVATTU",
+        "QUYCACH",
+        "MABAOCAO",
+        "MABAOCAO_BYT",
+        "DONGIA_DMDC"
+      ],
+      "usedForXml130": true,
+      "xml130Note": "Đối chiếu MA_THUOC bảng XML2 (chi tiết thuốc) với MAHOATCHAT_DMDC; kiểm tra DON_GIA so với DONGIA_BH và cảnh báo thuốc TAMNGUNG hoặc NGOAIDANHMUCBHYT."
+    },
+    {
+      "catalogType": "MedicalService",
+      "displayName": "Danh mục dịch vụ kỹ thuật (HIS)",
+      "description": "Danh mục dịch vụ kỹ thuật, thủ thuật, phẫu thuật của cơ sở KCB. Dùng để đối chiếu mã DVKT, tên dịch vụ, đơn giá và tỷ lệ BHXH thanh toán khi kiểm tra chi phí dịch vụ trong hồ sơ.",
+      "fileNamePatterns": [
+        "dm_dichvu"
+      ],
+      "headerRowIndex": 0,
+      "requiredColumns": [
+        "MA_DV",
+        "TEN_DV",
+        "MA_DICHVU_KYTHUAT_DMDC"
+      ],
+      "facilityColumn": "DVTT",
+      "codeColumn": "MA_DICHVU_KYTHUAT_DMDC",
+      "hisCodeColumn": "MA_DV",
+      "nameColumn": "TEN_DV",
+      "unitColumn": "DVT_DV",
+      "priceBhytColumn": "GIA_DV",
+      "priceHospitalColumn": "GIA_DV_KHONGBAOHIEM",
+      "suspendedColumn": null,
+      "outsideBhytColumn": null,
+      "activeColumn": "TRANGTHAI",
+      "metadataColumns": [
+        "LOAI_DV",
+        "MA_NHOM_DV",
+        "MABAOCAO",
+        "MABAOCAO_BYT",
+        "MA_THONGTU_43_50_DMDC",
+        "MA_THONGTU_37_DMDC",
+        "NGAY_AP_DUNG",
+        "PHANTRAM_BHXH_TT",
+        "TT_BHYT_CHI",
+        "TEN_TT_4350",
+        "GIABAOHIEM",
+        "GIACOBH_TT23"
+      ],
+      "usedForXml130": true,
+      "xml130Note": "Đối chiếu MA_DICH_VU bảng XML3 (chi tiết DVKT) với MA_DICHVU_KYTHUAT_DMDC; kiểm tra DON_GIA so với GIA_DV và TY_LE_TT so với PHANTRAM_BHXH_TT."
+    },
+    {
+      "catalogType": "Imaging",
+      "displayName": "Danh mục chẩn đoán hình ảnh (HIS)",
+      "description": "Danh mục dịch vụ chẩn đoán hình ảnh (siêu âm, X-quang, CT...) của cơ sở KCB. Dùng để đối chiếu mã DVKT chẩn đoán hình ảnh và đơn giá khi kiểm tra chỉ định cận lâm sàng trong hồ sơ.",
+      "fileNamePatterns": [
+        "dm_cdha"
+      ],
+      "headerRowIndex": 0,
+      "requiredColumns": [
+        "MA_CDHA",
+        "TEN_CDHA",
+        "MA_DICHVU_KYTHUAT_DMDC"
+      ],
+      "facilityColumn": "DVTT",
+      "codeColumn": "MA_DICHVU_KYTHUAT_DMDC",
+      "hisCodeColumn": "MA_CDHA",
+      "nameColumn": "TEN_CDHA",
+      "unitColumn": "DVT_CDHA",
+      "priceBhytColumn": "GIA_CDHA",
+      "priceHospitalColumn": "GIA_DV_KHONGBAOHIEM",
+      "suspendedColumn": null,
+      "outsideBhytColumn": null,
+      "activeColumn": "HOATDONG",
+      "metadataColumns": [
+        "MA_LOAI_CDHA",
+        "MABAOCAO",
+        "MABAOCAO_BYT",
+        "MA_THONGTU_43_50_DMDC",
+        "MA_THONGTU_37_DMDC",
+        "NGAY_AP_DUNG",
+        "PHANTRAM_BHXH_TT",
+        "TRANGTHAI_BHYT",
+        "TEN_TT_4350",
+        "TEN_HIEN_THI",
+        "GIABAOHIEM",
+        "GIACOBH_TT23"
+      ],
+      "usedForXml130": true,
+      "xml130Note": "Đối chiếu MA_DICH_VU bảng XML3 cho nhóm chẩn đoán hình ảnh với MA_DICHVU_KYTHUAT_DMDC; kiểm tra đơn giá so với GIA_CDHA."
+    },
+    {
+      "catalogType": "LabTest",
+      "displayName": "Danh mục xét nghiệm (HIS)",
+      "description": "Danh mục dịch vụ xét nghiệm của cơ sở KCB, gồm mã DVKT, đơn giá và chỉ số tham chiếu. Dùng để đối chiếu chỉ định xét nghiệm và đơn giá khi kiểm tra hồ sơ.",
+      "fileNamePatterns": [
+        "dm_xetnghiem"
+      ],
+      "headerRowIndex": 0,
+      "requiredColumns": [
+        "MA_XETNGHIEM",
+        "TEN_XETNGHIEM",
+        "MA_DICHVU_KYTHUAT_DMDC"
+      ],
+      "facilityColumn": "DVTT",
+      "codeColumn": "MA_DICHVU_KYTHUAT_DMDC",
+      "hisCodeColumn": "MA_XETNGHIEM",
+      "nameColumn": "TEN_XETNGHIEM",
+      "unitColumn": "DVT_XETNGHIEM",
+      "priceBhytColumn": "GIA_XETNGHIEM",
+      "priceHospitalColumn": "GIA_DV_KHONGBAOHIEM",
+      "suspendedColumn": null,
+      "outsideBhytColumn": null,
+      "activeColumn": "HOATDONG",
+      "metadataColumns": [
+        "MA_LOAI_XETNGHIEM",
+        "MABAOCAO",
+        "MABAOCAO_BYT",
+        "MA_THONGTU_43_50_DMDC",
+        "MA_THONGTU_37_DMDC",
+        "NGAY_AP_DUNG",
+        "PHANTRAM_BHXH_TT",
+        "TRANGTHAI_BHYT",
+        "TEN_TT_4350",
+        "CAP_XN",
+        "GIABAOHIEM",
+        "GIACOBH_TT23"
+      ],
+      "usedForXml130": true,
+      "xml130Note": "Đối chiếu MA_DICH_VU bảng XML3 cho nhóm xét nghiệm với MA_DICHVU_KYTHUAT_DMDC. Lưu ý: nhiều dòng trong file này có MA_DICHVU_KYTHUAT_DMDC chưa map (giá trị '0' hoặc trùng mã cơ sở) nên cần fallback sang MABAOCAO_BYT."
+    },
+    {
+      "catalogType": "BedType",
+      "displayName": "Danh mục loại giường bệnh (HIS)",
+      "description": "Danh mục loại giường bệnh và đơn giá ngày giường của cơ sở KCB. Dùng để đối chiếu mã giường, số ngày giường và đơn giá khi kiểm tra chi phí điều trị nội trú.",
+      "fileNamePatterns": [
+        "dm_loaigiuong"
+      ],
+      "headerRowIndex": 0,
+      "requiredColumns": [
+        "MALOAIGIUONGBENH",
+        "TENLOAIGIUONGBENH",
+        "MABAOCAO_BYT"
+      ],
+      "facilityColumn": "DVTT",
+      "codeColumn": "MABAOCAO_BYT",
+      "hisCodeColumn": "MALOAIGIUONGBENH",
+      "nameColumn": "TENLOAIGIUONGBENH",
+      "unitColumn": null,
+      "priceBhytColumn": "GIA_LOAI_GIUONG",
+      "priceHospitalColumn": "GIA_DICH_VU",
+      "suspendedColumn": null,
+      "outsideBhytColumn": "NGOAI_DANH_MUC",
+      "activeColumn": "HOATDONG",
+      "metadataColumns": [
+        "MABAOCAO",
+        "GIABAOHIEM",
+        "GIAKHONGBH",
+        "GIABAOHIEM_TT39",
+        "GIAKHONGBH_TT39",
+        "NGAYAPDUNG_TT39",
+        "GIACOBH_TT13_TT39",
+        "NGAYAPDUNG_TT13_14",
+        "GIACOBH_TT22",
+        "GIAKOBH_TT21",
+        "GIACOBH_TT23",
+        "NGAYAPDUNG_TT15"
+      ],
+      "usedForXml130": true,
+      "xml130Note": "Đối chiếu MA_GIUONG bảng XML3 (dịch vụ ngày giường) với MABAOCAO_BYT; kiểm tra đơn giá so với GIA_LOAI_GIUONG."
+    },
+    {
+      "catalogType": "DrugReport",
+      "displayName": "Báo cáo danh mục thuốc, vật tư",
+      "description": "Bản kết xuất rút gọn của danh mục thuốc, vật tư: tên, hoạt chất, hàm lượng, đơn giá BHYT/bệnh viện. Dùng để tra cứu nhanh và đối chiếu chéo với danh mục thuốc gốc, không dùng trực tiếp cho XML130 vì không có cột mã.",
+      "fileNamePatterns": [
+        "E_vat_tu"
+      ],
+      "headerRowIndex": 0,
+      "requiredColumns": [
+        "Tên vật tư",
+        "Hoạt chất",
+        "Đơn giá bảo hiểm"
+      ],
+      "facilityColumn": null,
+      "codeColumn": null,
+      "hisCodeColumn": null,
+      "nameColumn": "Tên vật tư",
+      "unitColumn": "ĐVT",
+      "priceBhytColumn": "Đơn giá bảo hiểm",
+      "priceHospitalColumn": "Đơn giá bệnh viện",
+      "suspendedColumn": null,
+      "outsideBhytColumn": "Ngoài danh mục BHYT",
+      "activeColumn": null,
+      "metadataColumns": [
+        "Tên hiển thị",
+        "Hoạt chất",
+        "Hàm lượng",
+        "Cách sử dụng",
+        "Mã loại hình"
+      ],
+      "usedForXml130": false,
+      "xml130Note": "File không có cột mã thuốc nội bộ hay mã DMDC nên chỉ dùng để đối chiếu theo tên/hoạt chất, không dùng làm nguồn mã cho XML130."
+    },
+    {
+      "catalogType": "ServiceReport",
+      "displayName": "Báo cáo danh mục dịch vụ kỹ thuật",
+      "description": "Bản kết xuất danh mục dịch vụ kỹ thuật với mã DV nội bộ, tên, đơn giá và tỷ lệ BHYT. Dùng để tra cứu tên dịch vụ theo mã HIS khi diễn giải hồ sơ.",
+      "fileNamePatterns": [
+        "E_dich_vu"
+      ],
+      "headerRowIndex": 0,
+      "requiredColumns": [
+        "Mã DV",
+        "Tên DV",
+        "Giá DV"
+      ],
+      "facilityColumn": null,
+      "codeColumn": "Mã DV",
+      "hisCodeColumn": "Mã DV",
+      "nameColumn": "Tên DV",
+      "unitColumn": "DVT DV",
+      "priceBhytColumn": "Giá DV",
+      "priceHospitalColumn": "Giá DV không bảo hiểm",
+      "suspendedColumn": null,
+      "outsideBhytColumn": null,
+      "activeColumn": "Trạng thái",
+      "metadataColumns": [
+        "Loại DV",
+        "Mã nhóm DV",
+        "Mã báo cáo",
+        "Mã báo cáo BYT",
+        "Mã dịch vụ kỹ thuật DMDC",
+        "Mã thông tư 43 50 DMDC",
+        "Mã thông tư 37 DMDC",
+        "NGAY_AP_DUNG",
+        "% BHYT TT",
+        "TT BHYT chi",
+        "Giá chênh lẹch bảo hiểm",
+        "Tên hiển thị"
+      ],
+      "usedForXml130": false,
+      "xml130Note": "Là báo cáo phái sinh của dm_dichvu; dùng dm_dichvu làm nguồn chuẩn cho XML130."
+    },
+    {
+      "catalogType": "ImagingReport",
+      "displayName": "Báo cáo danh mục chẩn đoán hình ảnh",
+      "description": "Bản kết xuất danh mục chẩn đoán hình ảnh với mã CĐHA nội bộ, tên, đơn giá và ngày áp dụng. Dùng để tra cứu tên dịch vụ CĐHA theo mã HIS khi diễn giải hồ sơ.",
+      "fileNamePatterns": [
+        "E_CDHA"
+      ],
+      "headerRowIndex": 0,
+      "requiredColumns": [
+        "Mã CĐHA",
+        "Tên CĐHA",
+        "Giá CĐHA"
+      ],
+      "facilityColumn": null,
+      "codeColumn": "Mã CĐHA",
+      "hisCodeColumn": "Mã CĐHA",
+      "nameColumn": "Tên CĐHA",
+      "unitColumn": "DVT CĐHA",
+      "priceBhytColumn": "Giá CĐHA",
+      "priceHospitalColumn": "Giá dịch vụ không bảo hiểm",
+      "suspendedColumn": null,
+      "outsideBhytColumn": null,
+      "activeColumn": "Hoạt động",
+      "metadataColumns": [
+        "Mã loại CĐHA",
+        "Mã báo cáo",
+        "Mã báo cáo BYT",
+        "Mã dịch vụ kỹ thuật DMDC",
+        "Mã thông tư 34 50 DMDC",
+        "Mã thông tư 37 DMDC",
+        "Ngày áp dụng",
+        "% BHXH TT",
+        "Trạng thái BHYT",
+        "Tên thông tư 4350",
+        "Giá chênh lệch",
+        "Tên hiển thị"
+      ],
+      "usedForXml130": false,
+      "xml130Note": "Là báo cáo phái sinh của dm_cdha; dùng dm_cdha làm nguồn chuẩn cho XML130."
+    },
+    {
+      "catalogType": "LabTestReport",
+      "displayName": "Báo cáo danh mục xét nghiệm",
+      "description": "Bản kết xuất danh mục xét nghiệm với mã XN nội bộ, tên, chỉ số min/max và ngày áp dụng. Dùng để tra cứu tên xét nghiệm theo mã HIS khi diễn giải hồ sơ. Lưu ý header nằm ở dòng thứ 2 của file.",
+      "fileNamePatterns": [
+        "E_xet_nghiem"
+      ],
+      "headerRowIndex": 1,
+      "requiredColumns": [
+        "Mã xét nghiệm",
+        "Tên xét nghiệm",
+        "Mã loại xét nghiệm"
+      ],
+      "facilityColumn": null,
+      "codeColumn": "Mã xét nghiệm",
+      "hisCodeColumn": "Mã xét nghiệm",
+      "nameColumn": "Tên xét nghiệm",
+      "unitColumn": "DVT xét nghiệm",
+      "priceBhytColumn": null,
+      "priceHospitalColumn": "Giá dịch vụ không bảo hiểm",
+      "suspendedColumn": null,
+      "outsideBhytColumn": null,
+      "activeColumn": "Hoạt động",
+      "metadataColumns": [
+        "Mã loại xét nghiệm",
+        "Mã báo cáo",
+        "Mã dvkt DMDC",
+        "Mã TT43,50 DMDC",
+        "Mã TT37 DMDC",
+        "Ngày Áp dụng",
+        "Trạng thái Bhyt",
+        "Cấp XN",
+        "Chỉ số Min xét nghiệm",
+        "Chỉ số Max xét nghiệm",
+        "Giá chênh lệch Bhyt",
+        "Số lượng quy đổi"
+      ],
+      "usedForXml130": false,
+      "xml130Note": "Là báo cáo phái sinh của dm_xetnghiem và không có cột giá BHYT; dùng dm_xetnghiem làm nguồn chuẩn cho XML130."
+    },
+    {
+      "catalogType": "BedTypeReport",
+      "displayName": "Báo cáo danh mục loại giường bệnh",
+      "description": "Bản kết xuất danh mục loại giường bệnh với mã, tên, giá giường và mã báo cáo BYT. Dùng để tra cứu nhanh loại giường và giá ngày giường khi kiểm tra hồ sơ nội trú.",
+      "fileNamePatterns": [
+        "E_loai_giuong"
+      ],
+      "headerRowIndex": 0,
+      "requiredColumns": [
+        "Mã loại giường bệnh",
+        "Tên loại giường bệnh",
+        "Giá loại giường"
+      ],
+      "facilityColumn": null,
+      "codeColumn": "Mã loại giường bệnh",
+      "hisCodeColumn": "Mã loại giường bệnh",
+      "nameColumn": "Tên loại giường bệnh",
+      "unitColumn": null,
+      "priceBhytColumn": "Giá loại giường",
+      "priceHospitalColumn": "Giá dịch vụ",
+      "suspendedColumn": null,
+      "outsideBhytColumn": null,
+      "activeColumn": "Hoạt động",
+      "metadataColumns": [
+        "Mã báo cáo",
+        "Mã báo cáo BYT",
+        "giá chênh lệch"
+      ],
+      "usedForXml130": false,
+      "xml130Note": "Là báo cáo phái sinh của dm_loaigiuong; dùng dm_loaigiuong làm nguồn chuẩn cho XML130."
+    },
+    {
+      "catalogType": "BedReport",
+      "displayName": "Báo cáo giường bệnh theo phòng",
+      "description": "Bảng ánh xạ phòng bệnh - khoa phòng - loại giường đang bố trí. Dùng để kiểm tra tính hợp lý giữa khoa điều trị và loại giường được tính trong hồ sơ nội trú.",
+      "fileNamePatterns": [
+        "E_giuong_benh"
+      ],
+      "headerRowIndex": 0,
+      "requiredColumns": [
+        "Tên phòng bệnh",
+        "Tên phòng ban",
+        "Tên loại giường"
+      ],
+      "facilityColumn": null,
+      "codeColumn": null,
+      "hisCodeColumn": null,
+      "nameColumn": "Tên phòng bệnh",
+      "unitColumn": null,
+      "priceBhytColumn": null,
+      "priceHospitalColumn": null,
+      "suspendedColumn": null,
+      "outsideBhytColumn": null,
+      "activeColumn": null,
+      "metadataColumns": [
+        "Tên phòng ban",
+        "Tên loại giường"
+      ],
+      "usedForXml130": false,
+      "xml130Note": "File chỉ chứa tên, không có cột mã nên không dùng cho đối chiếu XML130."
+    },
+    {
+      "catalogType": "Manufacturer",
+      "displayName": "Danh mục hãng sản xuất",
+      "description": "Danh mục hãng/nhà sản xuất thuốc và vật tư. Dùng để giải mã cột MANHASX của danh mục thuốc khi cần hiển thị hoặc đối chiếu nhà sản xuất trong hồ sơ.",
+      "fileNamePatterns": [
+        "E_nha_sx"
+      ],
+      "headerRowIndex": 0,
+      "requiredColumns": [
+        "Mã nhà sản xuất",
+        "Tên nhà sản xuất"
+      ],
+      "facilityColumn": null,
+      "codeColumn": "Mã nhà sản xuất",
+      "hisCodeColumn": "Mã nhà sản xuất",
+      "nameColumn": "Tên nhà sản xuất",
+      "unitColumn": null,
+      "priceBhytColumn": null,
+      "priceHospitalColumn": null,
+      "suspendedColumn": null,
+      "outsideBhytColumn": null,
+      "activeColumn": "Trạng thái",
+      "metadataColumns": [
+        "Ghi chú"
+      ],
+      "usedForXml130": false,
+      "xml130Note": "Danh mục tham chiếu nội bộ, không có mã BHYT tương ứng trong XML130."
+    },
+    {
+      "catalogType": "Country",
+      "displayName": "Danh mục nước sản xuất",
+      "description": "Danh mục nước sản xuất thuốc và vật tư. Dùng để giải mã cột MANUOCSX của danh mục thuốc khi kiểm tra nguồn gốc xuất xứ.",
+      "fileNamePatterns": [
+        "E_nuoc_sx"
+      ],
+      "headerRowIndex": 0,
+      "requiredColumns": [
+        "Mã nước SX",
+        "Tên nước SX"
+      ],
+      "facilityColumn": null,
+      "codeColumn": "Mã nước SX",
+      "hisCodeColumn": "Mã nước SX",
+      "nameColumn": "Tên nước SX",
+      "unitColumn": null,
+      "priceBhytColumn": null,
+      "priceHospitalColumn": null,
+      "suspendedColumn": null,
+      "outsideBhytColumn": null,
+      "activeColumn": "Trạng thái",
+      "metadataColumns": [
+        "Ghi chú"
+      ],
+      "usedForXml130": false,
+      "xml130Note": "Danh mục tham chiếu nội bộ, không có mã BHYT tương ứng trong XML130."
+    },
+    {
+      "catalogType": "Supplier",
+      "displayName": "Danh mục nhà cung cấp",
+      "description": "Danh mục nhà cung cấp thuốc, vật tư. Dùng để giải mã cột MANHACC của danh mục thuốc khi truy nguyên nguồn nhập và số công văn trúng thầu.",
+      "fileNamePatterns": [
+        "E_nha_cc"
+      ],
+      "headerRowIndex": 0,
+      "requiredColumns": [
+        "Mã nhà cung cấp",
+        "Tên nhà cung cấp"
+      ],
+      "facilityColumn": null,
+      "codeColumn": "Mã nhà cung cấp",
+      "hisCodeColumn": "Mã nhà cung cấp",
+      "nameColumn": "Tên nhà cung cấp",
+      "unitColumn": null,
+      "priceBhytColumn": null,
+      "priceHospitalColumn": null,
+      "suspendedColumn": null,
+      "outsideBhytColumn": null,
+      "activeColumn": "Trạng thái",
+      "metadataColumns": [
+        "Ghi chú"
+      ],
+      "usedForXml130": false,
+      "xml130Note": "Danh mục tham chiếu nội bộ, không có mã BHYT tương ứng trong XML130."
+    },
+    {
+      "catalogType": "SupplyGroup",
+      "displayName": "Danh mục nhóm vật tư",
+      "description": "Danh mục nhóm vật tư và loại vật tư cha tương ứng. Dùng để giải mã cột MANHOMVATTU của danh mục thuốc, phục vụ phân nhóm chi phí thuốc/vật tư khi kiểm tra hồ sơ.",
+      "fileNamePatterns": [
+        "E_nhom_vat_tu"
+      ],
+      "headerRowIndex": 0,
+      "requiredColumns": [
+        "MaNhomVatTu",
+        "TenNhomVatTu",
+        "MaLoaiVatTu"
+      ],
+      "facilityColumn": null,
+      "codeColumn": "MaNhomVatTu",
+      "hisCodeColumn": "MaNhomVatTu",
+      "nameColumn": "TenNhomVatTu",
+      "unitColumn": null,
+      "priceBhytColumn": null,
+      "priceHospitalColumn": null,
+      "suspendedColumn": "TamNgung",
+      "outsideBhytColumn": null,
+      "activeColumn": null,
+      "metadataColumns": [
+        "MaLoaiVatTu"
+      ],
+      "usedForXml130": false,
+      "xml130Note": "Danh mục tham chiếu nội bộ, không có mã BHYT tương ứng trong XML130."
+    },
+    {
+      "catalogType": "SupplyType",
+      "displayName": "Danh mục loại vật tư (nguồn dược)",
+      "description": "Danh mục loại vật tư / nguồn kinh phí dược của cơ sở KCB. Dùng để phân loại nguồn thuốc, vật tư (BHYT, chương trình, dịch vụ...) khi kiểm tra chi phí trong hồ sơ.",
+      "fileNamePatterns": [
+        "E_duoc_loai_vt"
+      ],
+      "headerRowIndex": 0,
+      "requiredColumns": [
+        "Mã loại vật tư",
+        "Tên loại vật tư"
+      ],
+      "facilityColumn": "DVTT",
+      "codeColumn": "Mã loại vật tư",
+      "hisCodeColumn": "Mã loại vật tư",
+      "nameColumn": "Tên loại vật tư",
+      "unitColumn": null,
+      "priceBhytColumn": null,
+      "priceHospitalColumn": null,
+      "suspendedColumn": "Tạm ngưng",
+      "outsideBhytColumn": null,
+      "activeColumn": null,
+      "metadataColumns": [],
+      "usedForXml130": false,
+      "xml130Note": "Danh mục tham chiếu nội bộ, không có mã BHYT tương ứng trong XML130."
+    },
+    {
+      "catalogType": "Warehouse",
+      "displayName": "Danh mục kho vật tư",
+      "description": "Danh mục kho thuốc, vật tư của cơ sở KCB kèm khoa phòng quản lý và phân cấp kho. Dùng để xác định kho cấp phát khi truy nguyên xuất thuốc trong hồ sơ.",
+      "fileNamePatterns": [
+        "E_kho_vat_tu"
+      ],
+      "headerRowIndex": 0,
+      "requiredColumns": [
+        "Mã kho vạt tư",
+        "Tên kho vật tư",
+        "Mã khoa"
+      ],
+      "facilityColumn": null,
+      "codeColumn": "Mã kho vạt tư",
+      "hisCodeColumn": "Mã kho vạt tư",
+      "nameColumn": "Tên kho vật tư",
+      "unitColumn": null,
+      "priceBhytColumn": null,
+      "priceHospitalColumn": null,
+      "suspendedColumn": null,
+      "outsideBhytColumn": null,
+      "activeColumn": "ENABLE",
+      "metadataColumns": [
+        "Cấp",
+        "Mã khoa",
+        "Mã kho CHA",
+        "Trạm",
+        "Nội trú",
+        "Ký hiệu"
+      ],
+      "usedForXml130": false,
+      "xml130Note": "Danh mục tham chiếu nội bộ, không có mã BHYT tương ứng trong XML130."
+    },
+    {
+      "catalogType": "WarehouseOperation",
+      "displayName": "Danh mục nghiệp vụ theo kho vật tư",
+      "description": "Bảng khai báo các nghiệp vụ xuất/nhập được phép thực hiện tại từng kho vật tư. Dùng để kiểm tra tính hợp lệ của luồng cấp phát thuốc, vật tư khi truy nguyên hồ sơ.",
+      "fileNamePatterns": [
+        "E_kho_su_ly_nv"
+      ],
+      "headerRowIndex": 0,
+      "requiredColumns": [
+        "Tên kho vật tư",
+        "Nghiệp vụ",
+        "Mô tả nghiệp vụ"
+      ],
+      "facilityColumn": null,
+      "codeColumn": "Nghiệp vụ",
+      "hisCodeColumn": "Nghiệp vụ",
+      "nameColumn": "Mô tả nghiệp vụ",
+      "unitColumn": null,
+      "priceBhytColumn": null,
+      "priceHospitalColumn": null,
+      "suspendedColumn": null,
+      "outsideBhytColumn": null,
+      "activeColumn": null,
+      "metadataColumns": [
+        "Tên kho vật tư"
+      ],
+      "usedForXml130": false,
+      "xml130Note": "Danh mục cấu hình nghiệp vụ nội bộ, không dùng cho đối chiếu XML130."
+    },
+    {
+      "catalogType": "PharmacyOperation",
+      "displayName": "Danh mục nghiệp vụ dược",
+      "description": "Danh mục mã nghiệp vụ dược (dự trù, chuyển kho, hoàn trả...) và cấp nghiệp vụ. Dùng để diễn giải mã nghiệp vụ khi truy nguyên phiếu xuất nhập thuốc liên quan hồ sơ.",
+      "fileNamePatterns": [
+        "E_duoc_nv_duoc"
+      ],
+      "headerRowIndex": 0,
+      "requiredColumns": [
+        "Nghiệp vụ",
+        "Mô tả nghiệp vụ"
+      ],
+      "facilityColumn": null,
+      "codeColumn": "Nghiệp vụ",
+      "hisCodeColumn": "Nghiệp vụ",
+      "nameColumn": "Mô tả nghiệp vụ",
+      "unitColumn": null,
+      "priceBhytColumn": null,
+      "priceHospitalColumn": null,
+      "suspendedColumn": null,
+      "outsideBhytColumn": null,
+      "activeColumn": null,
+      "metadataColumns": [
+        "Cấp nghiệp vụ"
+      ],
+      "usedForXml130": false,
+      "xml130Note": "Danh mục cấu hình nghiệp vụ nội bộ, không dùng cho đối chiếu XML130."
+    },
+    {
+      "catalogType": "Department",
+      "displayName": "Danh mục khoa phòng",
+      "description": "Danh mục khoa phòng của cơ sở KCB kèm mã báo cáo BYT và chức năng khám chữa bệnh. Dùng để đối chiếu khoa điều trị, khoa chỉ định trong hồ sơ với cơ cấu tổ chức thực tế.",
+      "fileNamePatterns": [
+        "E_phong_ban"
+      ],
+      "headerRowIndex": 0,
+      "requiredColumns": [
+        "Mã phòng ban",
+        "Tên phòng ban",
+        "Mã đơn vị"
+      ],
+      "facilityColumn": "Mã đơn vị",
+      "codeColumn": "Mã phòng ban",
+      "hisCodeColumn": "Mã phòng ban",
+      "nameColumn": "Tên phòng ban",
+      "unitColumn": null,
+      "priceBhytColumn": null,
+      "priceHospitalColumn": null,
+      "suspendedColumn": null,
+      "outsideBhytColumn": null,
+      "activeColumn": null,
+      "metadataColumns": [
+        "Cấp phòng ban",
+        "Ký hiệu phòng ban",
+        "Chức năng khám chữa bệnh",
+        "Sử dụng tủ thuốc",
+        "Mã báo cáo"
+      ],
+      "usedForXml130": false,
+      "xml130Note": "Mã khoa phòng là mã nội bộ HIS, không phải mã danh mục dùng chung; chỉ dùng để diễn giải, không đối chiếu XML130."
+    },
+    {
+      "catalogType": "Clinic",
+      "displayName": "Danh mục phòng khám / phòng bệnh",
+      "description": "Danh mục phòng khám, phòng bệnh của cơ sở KCB. Dùng để đối chiếu nơi khám, nơi điều trị ghi trong hồ sơ với danh sách phòng thực tế.",
+      "fileNamePatterns": [
+        "E_phong_kham"
+      ],
+      "headerRowIndex": 0,
+      "requiredColumns": [
+        "Mã phòng bệnh",
+        "Tên phòng bệnh"
+      ],
+      "facilityColumn": null,
+      "codeColumn": "Mã phòng bệnh",
+      "hisCodeColumn": "Mã phòng bệnh",
+      "nameColumn": "Tên phòng bệnh",
+      "unitColumn": null,
+      "priceBhytColumn": null,
+      "priceHospitalColumn": null,
+      "suspendedColumn": null,
+      "outsideBhytColumn": null,
+      "activeColumn": null,
+      "metadataColumns": [
+        "Số dược set"
+      ],
+      "usedForXml130": false,
+      "xml130Note": "Mã phòng là mã nội bộ HIS, không dùng cho đối chiếu XML130."
+    },
+    {
+      "catalogType": "Staff",
+      "displayName": "Danh mục nhân viên y tế",
+      "description": "Danh mục nhân viên y tế kèm chức danh, trình độ và chứng chỉ hành nghề. Dùng để đối chiếu người thực hiện, bác sĩ chỉ định trong hồ sơ với chứng chỉ hành nghề hợp lệ. CẢNH BÁO: file gốc chứa dữ liệu cá nhân (số CMT, điện thoại, địa chỉ, ngày sinh) - các cột này bị loại khỏi metadataColumns và không được import.",
+      "fileNamePatterns": [
+        "E_nhan_vien"
+      ],
+      "headerRowIndex": 0,
+      "requiredColumns": [
+        "Mã nhân viên",
+        "Tên nhân viên",
+        "Chứng chỉ hành nghề"
+      ],
+      "facilityColumn": null,
+      "codeColumn": "Chứng chỉ hành nghề",
+      "hisCodeColumn": "Mã nhân viên",
+      "nameColumn": "Tên nhân viên",
+      "unitColumn": null,
+      "priceBhytColumn": null,
+      "priceHospitalColumn": null,
+      "suspendedColumn": null,
+      "outsideBhytColumn": null,
+      "activeColumn": null,
+      "metadataColumns": [
+        "Mã phòng ban",
+        "Chức danh nhân viên",
+        "Chức vụ nhân vien",
+        "Tên chức vụ",
+        "Tên chức danh",
+        "Trinh độ nhân viên"
+      ],
+      "containsPersonalData": true,
+      "usedForXml130": true,
+      "xml130Note": "Đối chiếu MA_BAC_SI / NGUOI_THUC_HIEN (số CCHN) ở bảng XML2, XML3. Chỉ chạy khi nạp kèm tham số facility."
+    },
+    {
+      "catalogType": "Transfer",
+      "displayName": "Danh mục đơn vị chuyển tuyến",
+      "description": "Danh mục cơ sở KCB chuyển đến/chuyển đi kèm tuyến, số km và tiền vận chuyển. Dùng để đối chiếu mã cơ sở nơi chuyển đến và kiểm tra chi phí vận chuyển trong hồ sơ chuyển tuyến.",
+      "fileNamePatterns": [
+        "E_chuyen_vien"
+      ],
+      "headerRowIndex": 0,
+      "requiredColumns": [
+        "Đơn vị chuyển",
+        "Tên dơn vị chuyển",
+        "Tuyến chuyển di"
+      ],
+      "facilityColumn": null,
+      "codeColumn": "Đơn vị chuyển",
+      "hisCodeColumn": "Đơn vị chuyển",
+      "nameColumn": "Tên dơn vị chuyển",
+      "unitColumn": null,
+      "priceBhytColumn": "Tiền vận chuyển",
+      "priceHospitalColumn": "Tiền vận chuyển không BHYT",
+      "suspendedColumn": null,
+      "outsideBhytColumn": null,
+      "activeColumn": "Hoạt động",
+      "metadataColumns": [
+        "Tên BV viết tắt",
+        "Số KM đơn vị chyển",
+        "Giá xăng",
+        "Tiền vận chuyển BNYC",
+        "Tuyến chuyển di",
+        "Tuyến chuẩn BV",
+        "Ngày tạo"
+      ],
+      "usedForXml130": true,
+      "xml130Note": "Đối chiếu MA_CSKCB_DEN (XML13) và MA_NOI_DEN (XML1). Chỉ chạy khi nạp kèm tham số facility."
+    },
+    {
+      "catalogType": "Surcharge",
+      "displayName": "Danh mục loại phụ thu",
+      "description": "Danh mục các khoản phụ thu ngoài BHYT (vận chuyển ngoại viện...) kèm đơn giá và ngày hiệu lực. Dùng để nhận diện khoản chi bệnh nhân tự trả, không được tính vào phần BHYT thanh toán.",
+      "fileNamePatterns": [
+        "E_phu_thu"
+      ],
+      "headerRowIndex": 0,
+      "requiredColumns": [
+        "Mã loại phụ thu",
+        "Ten loại phụ thu",
+        "Đơn giá phụ thu"
+      ],
+      "facilityColumn": null,
+      "codeColumn": "Mã loại phụ thu",
+      "hisCodeColumn": "Mã loại phụ thu",
+      "nameColumn": "Ten loại phụ thu",
+      "unitColumn": null,
+      "priceBhytColumn": null,
+      "priceHospitalColumn": "Đơn giá phụ thu",
+      "suspendedColumn": null,
+      "outsideBhytColumn": null,
+      "activeColumn": "Hoạt dộng",
+      "metadataColumns": [
+        "Ngày hoạt động"
+      ],
+      "usedForXml130": false,
+      "xml130Note": "Khoản phụ thu ngoài BHYT, không nằm trong danh mục dùng chung nên không đối chiếu XML130."
+    },
+    {
+      "catalogType": "TraditionalMedicine",
+      "displayName": "Danh mục thuốc đông y, thuốc cổ truyền",
+      "description": "Danh mục thuốc đông y / thuốc cổ truyền của cơ sở KCB. LƯU Ý: bản kết xuất hiện tại là file rỗng - workbook không chứa worksheet nào (thẻ <sheets> trống), nên chưa xác định được cấu trúc cột. Cần lấy lại bản kết xuất có dữ liệu trước khi import.",
+      "fileNamePatterns": [
+        "E_dong_y"
+      ],
+      "headerRowIndex": 0,
+      "requiredColumns": [],
+      "facilityColumn": null,
+      "codeColumn": null,
+      "hisCodeColumn": null,
+      "nameColumn": null,
+      "unitColumn": null,
+      "priceBhytColumn": null,
+      "priceHospitalColumn": null,
+      "suspendedColumn": null,
+      "outsideBhytColumn": null,
+      "activeColumn": null,
+      "metadataColumns": [],
+      "usedForXml130": false,
+      "xml130Note": "Chưa xác định được cột do file kết xuất rỗng; khi có dữ liệu, thuốc đông y đối chiếu MA_THUOC bảng XML2 giống danh mục thuốc."
+    }
+  ]
+}

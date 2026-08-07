@@ -1,0 +1,10 @@
+**/bin
+**/obj
+.git
+.github
+.vs
+_render
+tasks
+k8s
+*.md
+**/appsettings.Development.json

@@ -1,0 +1,4 @@
+{
+    "name": "Diagnosis",
+    "fields": ["maBenhNhan", "ngaySinh", "gioiTinh", "icdVao", "icdRa", "icdChuan", "chanDoan", "tenBacSi"]
+}

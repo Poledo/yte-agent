@@ -1,0 +1,56 @@
+<div class="viewer">
+  <header class="toolbar">
+    <mat-icon class="file-icon">description</mat-icon>
+    <span class="file-name" [matTooltip]="fileName()">{{ fileName() || 'File gốc' }}</span>
+
+    @if (mode() === 'excel' && sheetNames().length > 1) {
+      <nav class="sheet-tabs">
+        @for (s of sheetNames(); track s) {
+          <button
+            class="sheet-tab"
+            [class.active]="s === activeSheet()"
+            (click)="selectSheet(s)"
+          >{{ s }}</button>
+        }
+      </nav>
+    }
+
+    <span class="spacer"></span>
+    <button matButton (click)="download()">
+      <mat-icon>download</mat-icon> Tải về
+    </button>
+  </header>
+
+  <main class="content">
+    @switch (mode()) {
+      @case ('loading') {
+        <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+        <p class="status">Đang tải file...</p>
+      }
+      @case ('excel') {
+        <div class="excel-scroll" [innerHTML]="sheetHtml()"></div>
+      }
+      @case ('docx') {
+        <div class="docx-scroll"><div #docxHost class="docx-host"></div></div>
+      }
+      @case ('native') {
+        <iframe class="native-frame" [src]="nativeUrl()" title="Xem file"></iframe>
+      }
+      @case ('unsupported') {
+        <div class="status-block">
+          <mat-icon>visibility_off</mat-icon>
+          <p>Định dạng này chưa xem trực tiếp được trên trình duyệt (vd .doc Word 97-2003).</p>
+          <button matButton="filled" (click)="download()">
+            <mat-icon>download</mat-icon> Tải về để mở bằng Office
+          </button>
+        </div>
+      }
+      @case ('error') {
+        <div class="status-block">
+          <mat-icon>error_outline</mat-icon>
+          <p>{{ errorMessage() }}</p>
+        </div>
+      }
+    }
+  </main>
+</div>

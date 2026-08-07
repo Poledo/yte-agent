@@ -1,0 +1,144 @@
+# Namespace chung cho toàn hệ thống "ZeroCheck AI" trên VNPT K8s.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cbyts
+---
+# Nơi lưu file tài liệu đã upload (ContentRootPath/Storage). RWO + 1 replica:
+# file nằm trên đĩa pod nên không scale ngang được — nếu cần nhiều replica thì
+# chuyển sang VNPT Object Storage. Với demo, PVC 5Gi là đủ.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: api-storage
+  namespace: cbyts
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 5Gi
+  # storageClassName: <lấy từ VNPT Block Storage CSI add-on nếu cụm yêu cầu>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-validation
+  namespace: cbyts
+  labels:
+    app: api-validation
+spec:
+  replicas: 1                 # 1 replica vì lưu file trên PVC RWO + chạy migration
+  strategy:
+    type: Recreate           # tránh 2 pod cùng ghi PVC lúc rollout
+  selector:
+    matchLabels:
+      app: api-validation
+  template:
+    metadata:
+      labels:
+        app: api-validation
+    spec:
+      imagePullSecrets:
+        - name: ecr-pull
+      containers:
+        - name: api-validation
+          image: ecr.vnptplatform.vn/REPLACE_ECR_ID/api-validation:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Production
+            # Chuỗi kết nối VNPT PostgreSQL + API key LLM lấy từ Secret cbyts-secrets
+            - name: ConnectionStrings__KnowledgeDatabase
+              valueFrom:
+                secretKeyRef:
+                  name: cbyts-secrets
+                  key: db-connection
+            - name: LLM__ApiKey
+              valueFrom:
+                secretKeyRef:
+                  name: cbyts-secrets
+                  key: llm-apikey
+            # Embeddings: gọi Ollama chạy nội bộ trong cụm (service ollama)
+            - name: Embedding__OllamaUrl
+              value: http://ollama:11434
+            # AI Offline (hỏi–đáp bằng Ollama trong cụm) — trỏ thẳng service ollama
+            # và model chat đã pull sẵn, để bật offline là chạy được ngay.
+            - name: LLM__OfflineBaseUrl
+              value: http://ollama:11434
+            - name: LLM__OfflineModel
+              value: qwen2.5:3b-instruct
+            # Gửi email đặt lại mật khẩu (SMTP). Cấu hình không nhạy cảm để thẳng;
+            # tài khoản + App Password lấy từ secret cbyts-secrets (optional: chưa
+            # có key thì bỏ trống -> app chỉ ghi log, KHÔNG lỗi khởi động).
+            - name: Email__Host
+              valueFrom:
+                secretKeyRef:
+                  name: cbyts-secrets
+                  key: email-host
+                  optional: true
+            - name: Email__User
+              valueFrom:
+                secretKeyRef:
+                  name: cbyts-secrets
+                  key: email-user
+                  optional: true
+            - name: Email__Password
+              valueFrom:
+                secretKeyRef:
+                  name: cbyts-secrets
+                  key: email-password
+                  optional: true
+            - name: Email__From
+              valueFrom:
+                secretKeyRef:
+                  name: cbyts-secrets
+                  key: email-from
+                  optional: true
+            - name: Email__WebAppBaseUrl
+              value: https://cbyts.vnpt.vn
+          volumeMounts:
+            - name: storage
+              mountPath: /app/Storage
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          # Probe dùng /api/health — endpoint nhẹ, trả object tĩnh, KHÔNG đụng DB
+          # hay Ollama. Trước đây probe trỏ /api/assistant/embeddings/status: endpoint
+          # đó kiểm tra kết nối Ollama, khi Ollama nghẽn nó trả sau ~10s > timeout 1s
+          # mặc định → probe fail → pod NotReady → Service rỗng endpoint → nginx 502.
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 15
+            timeoutSeconds: 5
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            failureThreshold: 30    # cho phép migration DB lúc khởi động chạy lâu
+            periodSeconds: 5
+            timeoutSeconds: 5
+      volumes:
+        - name: storage
+          persistentVolumeClaim:
+            claimName: api-storage
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-validation
+  namespace: cbyts
+spec:
+  type: ClusterIP            # chỉ nội bộ — web-admin nginx proxy /api vào đây
+  selector:
+    app: api-validation
+  ports:
+    - port: 8080
+      targetPort: 8080

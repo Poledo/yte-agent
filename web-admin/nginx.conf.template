@@ -1,0 +1,114 @@
+# ===========================================================================
+# web-admin nginx: vừa serve SPA Angular, vừa proxy /api về api-validation.
+# Có 2 server:
+#   - 80  (HTTP)  : vẫn phục vụ bình thường (truy cập IP / port-forward / health).
+#   - 443 (HTTPS) : dùng chứng chỉ wildcard *.vnpt.vn nạp từ K8s secret web-admin-tls.
+# Chứng chỉ KHÔNG bake vào image — mount runtime từ secret tại /etc/nginx/ssl.
+# Khi DNS (cbyts.vnpt.vn -> LB) và inbound 443 sẵn sàng thì HTTPS chạy ngay.
+# ===========================================================================
+
+# --- Khối route dùng chung cho cả 80 và 443 ---
+# (không tách include được vì ${NGINX_LOCAL_RESOLVERS} chỉ được envsubst trong file template này)
+
+server {
+  listen 80;
+  server_name _;
+  root /usr/share/nginx/html;
+  index index.html;
+
+  # /api → chuyển tiếp về service API trong cùng namespace K8s.
+  # Nhờ vậy trình duyệt gọi cùng origin (https://cbyts.vnpt.vn/api/...),
+  # không dính CORS và không cần cấu hình apiBaseUrl tuyệt đối.
+  #
+  # Dùng biến + resolver để HOÃN phân giải DNS về lúc chạy: nginx vẫn khởi
+  # động được ngay cả khi Service api-validation chưa tồn tại (tránh crashloop
+  # khi web-admin deploy trước api). ${NGINX_LOCAL_RESOLVERS} do image nginx tự
+  # điền từ /etc/resolv.conf (trong K8s là kube-dns).
+  location /api/ {
+    resolver ${NGINX_LOCAL_RESOLVERS} valid=10s;
+    set $api_upstream http://api-validation.cbyts.svc.cluster.local:8080;
+    proxy_pass $api_upstream$request_uri;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 300s;      # nạp file lớn / chỉ mục lâu
+    client_max_body_size 50m;     # cho phép upload tài liệu lớn
+  }
+
+  # SPA: mọi route còn lại trả index.html
+  location / {
+    try_files $uri $uri/ /index.html;
+  }
+
+  # --- Cache tài nguyên tĩnh (tách 2 tầng theo tên có hash hay không) ---
+  # JS/CSS/font: tên có hash nội dung (outputHashing) → đổi tên mỗi build,
+  # cache vĩnh viễn an toàn.
+  location ~* \.(js|css|woff2?)$ {
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+  }
+
+  # Ảnh/icon từ public/ (favicon.ico, logo.png…): tên CỐ ĐỊNH nhưng nội dung
+  # có thể thay khi deploy → KHÔNG dùng immutable, luôn revalidate để bản mới
+  # hiện ngay (server trả 200 file mới hoặc 304 nếu chưa đổi).
+  location ~* \.(png|jpe?g|gif|svg|ico)$ {
+    expires -1;
+    add_header Cache-Control "no-cache";
+  }
+
+  gzip on;
+  gzip_types text/css application/javascript application/json image/svg+xml;
+}
+
+server {
+  listen 443 ssl;
+  http2 on;
+  server_name _;
+  root /usr/share/nginx/html;
+  index index.html;
+
+  # Chứng chỉ wildcard *.vnpt.vn (secret web-admin-tls, mount tại /etc/nginx/ssl).
+  ssl_certificate     /etc/nginx/ssl/tls.crt;
+  ssl_certificate_key /etc/nginx/ssl/tls.key;
+  ssl_protocols       TLSv1.2 TLSv1.3;
+  ssl_ciphers         HIGH:!aNULL:!MD5;
+  ssl_session_cache   shared:SSL:10m;
+  ssl_session_timeout 10m;
+
+  location /api/ {
+    resolver ${NGINX_LOCAL_RESOLVERS} valid=10s;
+    set $api_upstream http://api-validation.cbyts.svc.cluster.local:8080;
+    proxy_pass $api_upstream$request_uri;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 300s;
+    client_max_body_size 50m;
+  }
+
+  location / {
+    try_files $uri $uri/ /index.html;
+  }
+
+  # JS/CSS/font: tên có hash nội dung (outputHashing) → đổi tên mỗi build,
+  # cache vĩnh viễn an toàn.
+  location ~* \.(js|css|woff2?)$ {
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+  }
+
+  # Ảnh/icon từ public/ (favicon.ico, logo.png…): tên CỐ ĐỊNH nhưng nội dung
+  # có thể thay khi deploy → KHÔNG dùng immutable, luôn revalidate để bản mới
+  # hiện ngay (server trả 200 file mới hoặc 304 nếu chưa đổi).
+  location ~* \.(png|jpe?g|gif|svg|ico)$ {
+    expires -1;
+    add_header Cache-Control "no-cache";
+  }
+
+  gzip on;
+  gzip_types text/css application/javascript application/json image/svg+xml;
+}

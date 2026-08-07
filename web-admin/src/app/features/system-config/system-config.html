@@ -1,0 +1,143 @@
+<app-page-header
+  icon="settings"
+  title="Cấu hình hệ thống"
+  subtitle="Các cấu hình chung: đồng bộ dữ liệu, lịch chạy tự động..."
+></app-page-header>
+
+<div class="config-page">
+    <!-- ===== Đồng bộ danh mục ICD-10 ===== -->
+<mat-card appearance="outlined" class="config-card">
+  <div class="card-head">
+    <span class="card-title"><mat-icon>medical_information</mat-icon> Đồng bộ danh mục ICD-10</span>
+    <button matButton type="button" [disabled]="icdSyncing()" (click)="syncIcdNow()">
+      <mat-icon>sync</mat-icon>
+      {{ icdSyncing() ? 'Đang đồng bộ...' : 'Đồng bộ ngay' }}
+    </button>
+  </div>
+  <p class="card-desc">
+    Tự động lấy dữ liệu ICD từ <a href="https://tracuu-icd10.web.app/" target="_blank" rel="noopener">tracuu-icd10.web.app</a>
+    mỗi ngày vào giờ hẹn — chỉ tải khi nguồn công bố phiên bản mới (danh mục ICD một năm chỉ đổi vài lần
+    nên một mốc giờ mỗi ngày là đủ). Việc kiểm tra hồ sơ luôn dùng dữ liệu local nên nguồn có gián đoạn
+    cũng không ảnh hưởng.
+  </p>
+
+  @if (icdStatus(); as st) {
+    <div class="status-line" [class.warn]="!st.upToDate">
+      <mat-icon>{{ st.upToDate ? 'check_circle' : 'update' }}</mat-icon>
+      <span>
+        Phiên bản local: <strong>{{ st.localVersion ?? 'chưa có' }}</strong>
+        · nguồn công bố: <strong>{{ st.remoteVersion ?? 'không đọc được' }}</strong>
+        @if (!st.upToDate) { · <strong>có bản mới — bấm "Đồng bộ ngay" hoặc chờ giờ hẹn</strong> }
+      </span>
+    </div>
+  }
+  @if (icdSettings(); as s) {
+    @if (s.lastRunAt) {
+      <div class="status-line muted">
+        <mat-icon>history</mat-icon>
+        <span>Lần chạy gần nhất: {{ s.lastRunAt | date: 'dd/MM/yyyy HH:mm' }} — {{ s.lastRunResult }}</span>
+      </div>
+    }
+  }
+
+  <form [formGroup]="icdForm" (ngSubmit)="saveIcd()" class="config-form">
+    <mat-slide-toggle formControlName="enabled">
+      Cho phép lấy dữ liệu ICD tự động hằng ngày
+    </mat-slide-toggle>
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="short">
+      <mat-label>Giờ chạy (HH:mm)</mat-label>
+      <input matInput type="time" formControlName="time" />
+    </mat-form-field>
+    <div class="form-actions">
+      <button matButton="filled" color="primary" type="submit" [disabled]="icdSaving()">
+        <mat-icon>save</mat-icon> {{ icdSaving() ? 'Đang lưu...' : 'Lưu lịch' }}
+      </button>
+    </div>
+  </form>
+</mat-card>
+
+<!-- ===== Đặc tả cấu trúc XML130 (điều kiện kiểm tra hồ sơ) ===== -->
+<mat-card appearance="outlined" class="config-card">
+  <div class="card-head">
+    <span class="card-title"><mat-icon>rule</mat-icon> Đặc tả cấu trúc XML130</span>
+    <button matButton="filled" color="primary" type="button" [disabled]="specImporting()" (click)="specFile.click()">
+      <mat-icon>upload_file</mat-icon>
+      {{ specImporting() ? 'Đang nạp...' : 'Nạp file đặc tả' }}
+    </button>
+    <input #specFile type="file" hidden accept=".xls,.xlsx,.xlsm" (change)="importSpec($event)" />
+  </div>
+  <p class="card-desc">
+    Nạp lại file Excel định nghĩa cấu trúc XML130 (bảng chỉ tiêu dữ liệu theo QĐ130 + QĐ4750 + điều chỉnh 2024).
+    Hệ thống đọc mọi sheet "Bảng 1..15", cập nhật kiểu dữ liệu, kích thước, diễn giải và thêm/bớt trường theo file;
+    tự nhận diện trường ngày và danh mục giá trị từ cột diễn giải. <strong>Điều kiện kiểm tra hồ sơ đổi theo file ngay</strong> —
+    không cần build lại. Các điều kiện đã tinh chỉnh (bắt buộc, định dạng ngày, danh mục mã) của trường cũ được giữ nguyên.
+  </p>
+
+  @if (specSummary(); as s) {
+    <div class="status-line" [class.muted]="s.source === 'goc'">
+      <mat-icon>{{ s.source === 'import' ? 'cloud_done' : 'inventory_2' }}</mat-icon>
+      <span>
+        Đang dùng: <strong>{{ s.source === 'import' ? 'bản đã nạp' : 'bản gốc theo image' }}</strong>
+        · {{ s.tableCount }} bảng, {{ s.fieldCount }} trường
+        · {{ s.requiredCount }} bắt buộc, {{ s.dateFormatCount }} trường ngày, {{ s.allowedValuesCount }} trường có danh mục
+      </span>
+    </div>
+  }
+
+  @if (specResult(); as r) {
+    <div class="status-line">
+      <mat-icon>task_alt</mat-icon>
+      <span>
+        Kết quả nạp: thêm <strong>{{ r.added }}</strong>, sửa <strong>{{ r.updated }}</strong>, bỏ <strong>{{ r.removed }}</strong> trường
+        · tự nhận diện {{ r.inferredDates }} trường ngày, {{ r.inferredEnums }} trường danh mục
+        @if (r.skippedSheets.length) { · bỏ qua sheet: {{ r.skippedSheets.join(', ') }} }
+      </span>
+    </div>
+  }
+</mat-card>
+
+<!-- ===== Ngưỡng chống spam request (rate limit) ===== -->
+<mat-card appearance="outlined" class="config-card">
+  <div class="card-head">
+    <span class="card-title"><mat-icon>shield</mat-icon> Ngưỡng chống spam request</span>
+  </div>
+  <p class="card-desc">
+    Giới hạn số request tối đa <strong>mỗi phút, tính theo từng IP</strong>. Vượt ngưỡng, hệ thống trả lỗi
+    <strong>429</strong> kèm thời gian chờ. Giới hạn chung áp cho mọi request; các endpoint nhạy cảm bị siết
+    riêng (cộng dồn với giới hạn chung). <strong>Đổi là áp dụng ngay</strong> — không cần khởi động lại server.
+  </p>
+
+  <form [formGroup]="rateForm" (ngSubmit)="saveRateLimit()" class="config-form rate-grid">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Chung toàn API</mat-label>
+      <input matInput type="number" min="1" formControlName="globalPerMinute" />
+      <span matTextSuffix>req/phút/IP</span>
+    </mat-form-field>
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Đăng nhập</mat-label>
+      <input matInput type="number" min="1" formControlName="loginPerMinute" />
+      <span matTextSuffix>req/phút/IP</span>
+    </mat-form-field>
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Quên mật khẩu</mat-label>
+      <input matInput type="number" min="1" formControlName="forgotPasswordPerMinute" />
+      <span matTextSuffix>req/phút/IP</span>
+    </mat-form-field>
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Hỏi đáp AI</mat-label>
+      <input matInput type="number" min="1" formControlName="askPerMinute" />
+      <span matTextSuffix>req/phút/IP</span>
+    </mat-form-field>
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Nạp đặc tả XML130</mat-label>
+      <input matInput type="number" min="1" formControlName="importPerMinute" />
+      <span matTextSuffix>req/phút/IP</span>
+    </mat-form-field>
+    <div class="form-actions">
+      <button matButton="filled" color="primary" type="submit" [disabled]="rateSaving()">
+        <mat-icon>save</mat-icon> {{ rateSaving() ? 'Đang lưu...' : 'Lưu ngưỡng' }}
+      </button>
+    </div>
+  </form>
+</mat-card>
+</div>

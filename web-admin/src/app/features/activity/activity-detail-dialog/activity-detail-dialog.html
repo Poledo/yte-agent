@@ -1,0 +1,93 @@
+<h2 mat-dialog-title>
+  @if (detail(); as d) {
+    {{ d.eventType === 'Ask' ? '💬 Lượt hỏi đáp AI' : '📋 Lượt kiểm tra XML 130' }}
+    <span class="dlg-sub">{{ d.createdAt | date: 'dd/MM/yyyy HH:mm:ss' }} · đơn vị {{ d.facilityCode }} · {{ d.durationMs | number }} ms</span>
+  } @else {
+    Nội dung phản hồi
+  }
+</h2>
+
+<mat-dialog-content>
+  @if (loading()) {
+    <p class="muted">Đang tải...</p>
+  } @else if (parseError()) {
+    <p class="muted">Không đọc được nội dung phản hồi của lượt này.</p>
+  } @else if (ask(); as a) {
+    <div class="chat-replay">
+      <div class="bubble user">{{ a.question }}</div>
+      <div class="bubble bot">
+        <div class="answer">{{ a.answer }}</div>
+        @if (a.citations.length > 0) {
+          <div class="citations">
+            <strong>📚 Nguồn tham khảo ({{ a.citations.length }})</strong>
+            <ul>
+              @for (c of a.citations; track $index) {
+                <li>{{ c.title }}@if (c.docNumber) { <span class="muted"> — {{ c.docNumber }}</span> }</li>
+              }
+            </ul>
+          </div>
+        }
+        @if (!a.fromLlm) {
+          <p class="muted small">Câu trả lời dạng trích đoạn (thời điểm đó chưa bật AI sinh câu trả lời).</p>
+        }
+      </div>
+    </div>
+  } @else if (check(); as c) {
+    <div class="check-head">
+      <span class="pill">{{ c.hosoCount }} hồ sơ</span>
+      <span class="pill" [class.err]="c.totalIssues > 0" [class.ok]="c.totalIssues === 0">
+        {{ c.totalIssues === 0 ? 'Không phát hiện vấn đề' : c.totalIssues + ' vấn đề' }}
+      </span>
+      @if (c.xuatToanRisk) { <span class="pill risk">⚠ Nguy cơ xuất toán</span> }
+      @if (c.maCskcb) { <span class="pill">CSKCB {{ c.maCskcb }}</span> }
+    </div>
+    @if (c.summary) { <p class="summary">{{ c.summary }}</p> }
+    @if (c.aiAssessment) {
+      <div class="ai-box"><strong>🤖 Nhận định AI:</strong> {{ c.aiAssessment }}</div>
+    }
+
+    @for (r of c.results; track $index) {
+      @if (r.issues.length > 0) {
+        <div class="hoso">
+          <div class="hoso-head">
+            Hồ sơ <span class="mono">{{ r.maLk ?? '(không mã)' }}</span> — {{ r.issueCount }} vấn đề
+            @if (r.xuatToanRisk) { <span class="pill risk small-pill">⚠ xuất toán</span> }
+          </div>
+          @for (i of r.issues; track $index) {
+            <div class="issue" [class.sev-error]="i.severity === 'Error'" [class.sev-warning]="i.severity === 'Warning'">
+              <div class="issue-top">
+                <span class="sev">{{ severityLabel(i.severity) }}</span>
+                <span class="loc mono">{{ i.table }}/{{ i.field }}@if (i.row) { · dòng {{ i.row }} }</span>
+                <span class="rule mono">{{ i.ruleId }}</span>
+              </div>
+              <div class="issue-msg">{{ i.message }}</div>
+              @if (i.suggestion) { <div class="issue-fix">→ {{ i.suggestion }}</div> }
+            </div>
+          }
+        </div>
+      }
+    }
+
+    @if (c.crossIssues.length > 0) {
+      <div class="hoso">
+        <div class="hoso-head">Đối chiếu chéo giữa các hồ sơ — {{ c.crossIssues.length }} vấn đề</div>
+        @for (i of c.crossIssues; track $index) {
+          <div class="issue" [class.sev-error]="i.severity === 'Error'" [class.sev-warning]="i.severity === 'Warning'">
+            <div class="issue-top">
+              <span class="sev">{{ severityLabel(i.severity) }}</span>
+              <span class="rule mono">{{ i.ruleId }}</span>
+            </div>
+            <div class="issue-msg">{{ i.message }}</div>
+            @if (i.suggestion) { <div class="issue-fix">→ {{ i.suggestion }}</div> }
+          </div>
+        }
+      </div>
+    }
+  } @else {
+    <p class="muted">Lượt này không lưu nội dung chi tiết (chỉ có số liệu tổng hợp).</p>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button matButton mat-dialog-close>Đóng</button>
+</mat-dialog-actions>

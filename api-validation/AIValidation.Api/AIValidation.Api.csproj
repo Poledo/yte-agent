@@ -1,0 +1,78 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>aivalidation-api-cbyts</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DocumentFormat.OpenXml" Version="3.5.1" />
+    <PackageReference Include="ExcelDataReader" Version="3.9.0" />
+    <PackageReference Include="ExcelDataReader.DataSet" Version="3.9.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="10.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" Version="10.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
+    <!-- Ghim trực tiếp Microsoft.OpenApi: bản 2.0.0 mà Microsoft.AspNetCore.OpenApi
+         kéo theo dính lỗ hổng mức cao GHSA-v5pm-xwqc-g5wc (schema tham chiếu vòng
+         làm treo bộ phân tích OpenAPI), vá từ 2.7.5. Bỏ dòng này là cảnh báo NU1903
+         quay lại. -->
+    <PackageReference Include="Microsoft.OpenApi" Version="2.7.6" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
+    <PackageReference Include="PdfPig" Version="0.1.15" />
+    <!-- OCR miễn phí, chạy offline cho PDF scan: PDFtoImage render trang thành ảnh (pdfium),
+         Tesseract nhận dạng chữ (cần file vie.traineddata trong Ocr/tessdata) -->
+    <PackageReference Include="PDFtoImage" Version="4.1.1" />
+    <PackageReference Include="Tesseract" Version="5.2.0" />
+    <PackageReference Include="Scalar.AspNetCore" Version="1.2.47" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.19.2" />
+    <!-- System.Text.Encoding.CodePages KHÔNG khai báo ở đây: từ .NET 10 nó nằm sẵn
+         trong shared framework (cảnh báo NU1510). CodePagesEncodingProvider vẫn dùng
+         bình thường trong ExcelCatalogReader / DocumentTextExtractor / Xml130FieldSpecImportService
+         để đọc file Excel cũ mã hóa windows-1258. -->
+  </ItemGroup>
+
+  <!-- Copy Prompts and Knowledge folders to output directory -->
+  <ItemGroup>
+    <None Update="Prompts/**" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Knowledge/**" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Dữ liệu OCR tiếng Việt (vie.traineddata) — tải từ github.com/tesseract-ocr/tessdata_fast -->
+    <None Update="Ocr/**" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Dữ liệu ICD-10 (~7MB): PHẢI theo bản publish/container — IcdProvider đọc lúc runtime.
+         Thiếu là mọi mã ICD bị báo "không tồn tại" trên môi trường deploy. -->
+    <None Update="docs/analysis/03_Icd_data/**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="docs\analysis\02_Rules\" />
+  </ItemGroup>
+
+  <!-- Cho project test thấy các hàm internal thuần logic (vd DocumentSearchService.BuildTsQuery)
+       để kiểm thử được mà không phải nới thành public. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="AIValidation.Tests" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
+  </PropertyGroup>
+
+  <!-- Bật bộ analyzer của .NET (CAxxxx) và phân tích phong cách (IDExxxx) lúc build.
+       Mức độ từng rule khai báo ở .editorconfig tại gốc repo; CI chạy thêm
+       lệnh dotnet format (verify-no-changes, severity error) để chặn các rule đặt mức error. -->
+  <PropertyGroup>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+</Project>
+

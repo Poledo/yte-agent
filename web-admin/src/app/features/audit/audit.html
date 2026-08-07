@@ -1,0 +1,64 @@
+<app-page-header
+  icon="history"
+  title="Nhật ký kiểm toán"
+  subtitle="Lịch sử thao tác trên hệ thống"
+>
+  <mat-form-field appearance="outline" class="action-field" subscriptSizing="dynamic">
+    <mat-select [formControl]="actionFilter">
+      @for (g of actionGroups; track g.value) {
+        <mat-option [value]="g.value">{{ g.label }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+  <mat-form-field appearance="outline" class="search-field" subscriptSizing="dynamic">
+    <mat-icon matPrefix>search</mat-icon>
+    <input matInput [formControl]="search" placeholder="Tìm người thao tác / chi tiết" />
+  </mat-form-field>
+</app-page-header>
+
+<app-data-table
+  [columns]="columns"
+  [data]="logs()"
+  [loading]="loading()"
+  [pageSize]="15"
+  emptyIcon="history_toggle_off"
+  emptyTitle="Chưa có nhật ký"
+  emptyDescription="Các thao tác đăng nhập, quản lý người dùng, vai trò... sẽ được ghi lại tại đây."
+>
+  <ng-template appColumnDef="createdAt" let-row>
+    <span class="nowrap">{{ row.createdAt | date: 'dd/MM/yyyy HH:mm:ss' }}</span>
+  </ng-template>
+
+  <ng-template appColumnDef="action" let-row>
+    <mat-chip-set>
+      <mat-chip [class]="'act-' + row.action.split('.')[0].toLowerCase()">{{ row.action }}</mat-chip>
+    </mat-chip-set>
+  </ng-template>
+
+  <ng-template appColumnDef="userName" let-row>
+    @if (row.userName) {
+      <span>{{ row.userName }}</span>
+    } @else {
+      <span class="muted">Ẩn danh / hệ thống</span>
+    }
+  </ng-template>
+
+  <ng-template appColumnDef="target" let-row>
+    @if (row.entityType || row.detail) {
+      <div class="target-cell">
+        @if (row.entityType) {
+          <span class="entity">{{ row.entityType }}</span>
+        }
+        @if (row.detail) {
+          <span class="detail" [matTooltip]="row.detail">{{ row.detail }}</span>
+        }
+      </div>
+    } @else {
+      <span class="muted">—</span>
+    }
+  </ng-template>
+
+  <ng-template appColumnDef="ipAddress" let-row>
+    <span class="muted">{{ row.ipAddress || '—' }}</span>
+  </ng-template>
+</app-data-table>

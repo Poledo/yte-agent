@@ -1,0 +1,66 @@
+{
+  "page": "DiagnosisPage",
+  "trigger": {
+    "field": "diagnosis_code",
+    "event": "Change"
+  },
+  "context": {
+    "timestamp": "2024-01-15T11:45:00Z",
+    "extensionVersion": "1.0.0",
+    "sessionId": "sess_male_45_invalid",
+    "userId": "user_doctor_003"
+  },
+  "form": {
+    "patient": {
+      "id": "P003",
+      "firstName": "Lê",
+      "lastName": "Văn C",
+      "gender": "Male",
+      "dateOfBirth": "1978-12-10",
+      "age": 45,
+      "nationalId": "456789123"
+    },
+    "encounter": {
+      "id": "E003",
+      "admissionDate": "2024-01-15",
+      "admissionTime": "11:30",
+      "department": "Phòng khám Ngoại",
+      "visitType": "Regular",
+      "chiefComplaint": "Kiểm tra sức khỏe"
+    },
+    "diagnosis": [
+      {
+        "code": "O80",
+        "name": "Chuyển dạ và sinh thường",
+        "type": "Primary",
+        "icdVersion": "10",
+        "severity": "Normal",
+        "note": "LỖI: ICD O80 chỉ áp dụng cho nữ, nhưng bệnh nhân là nam"
+      }
+    ],
+    "procedure": [
+      {
+        "code": "99000",
+        "name": "Khám tổng quát",
+        "date": "2024-01-15",
+        "status": "Completed"
+      }
+    ],
+    "medicine": [
+      {
+        "code": "C02LA01",
+        "name": "Amlodipine",
+        "dose": "5mg",
+        "frequency": "1 lần/ngày",
+        "duration": "30 ngày",
+        "route": "Uống"
+      }
+    ],
+    "insurance": {
+      "code": "BHYT003",
+      "type": "Health Insurance",
+      "status": "Active",
+      "expiryDate": "2024-12-31"
+    }
+  }
+}

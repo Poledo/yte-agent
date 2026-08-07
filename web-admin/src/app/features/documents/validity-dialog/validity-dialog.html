@@ -1,0 +1,35 @@
+<h2 mat-dialog-title>Hiệu lực văn bản</h2>
+
+<mat-dialog-content>
+  <p class="doc-title">{{ data.title }}</p>
+  <p class="hint-line">
+    Nhập theo văn bản gốc; bỏ trống nếu không rõ. AI tự ngừng trích dẫn văn bản
+    chưa tới ngày hiệu lực hoặc đã quá ngày hết hiệu lực.
+  </p>
+
+  <div class="date-grid">
+    <label>
+      <span>Ngày có hiệu lực</span>
+      <input
+        type="date"
+        [value]="effective()"
+        (change)="effective.set($any($event.target).value)"
+      />
+    </label>
+    <label>
+      <span>Ngày hết hiệu lực</span>
+      <input
+        type="date"
+        [value]="expiry()"
+        (change)="expiry.set($any($event.target).value)"
+      />
+    </label>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button matButton (click)="cancel()" [disabled]="saving()">Hủy</button>
+  <button matButton="filled" color="primary" (click)="save()" [disabled]="saving()">
+    <mat-icon>save</mat-icon> {{ saving() ? 'Đang lưu...' : 'Lưu' }}
+  </button>
+</mat-dialog-actions>

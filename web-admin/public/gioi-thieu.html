@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZeroCheck AI — Chiến binh y tế số</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Chakra+Petch:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap&subset=vietnamese" rel="stylesheet">
+<style>
+:root{
+  --bg:#05070f; --bg2:#0a0e1d; --panel:rgba(17,24,45,.72); --panel2:rgba(23,32,58,.85);
+  --line:rgba(94,234,212,.14); --line2:rgba(167,139,250,.18);
+  --cyan:#22d3ee; --violet:#a78bfa; --green:#34d399; --amber:#fbbf24; --red:#f87171;
+  --text:#e7ecf6; --muted:#9aa7c2;
+  --font-body:'Be Vietnam Pro','Segoe UI',system-ui,-apple-system,sans-serif;
+  --font-head:'Chakra Petch','Be Vietnam Pro','Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',Consolas,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg); color:var(--text); font-family:var(--font-body);
+  overflow:hidden; height:100dvh;
+}
+/* ===== nền lưới robot ===== */
+body::before{
+  content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(900px 500px at 12% -10%, rgba(34,211,238,.13), transparent 60%),
+    radial-gradient(900px 550px at 95% 108%, rgba(167,139,250,.13), transparent 60%),
+    linear-gradient(rgba(148,163,184,.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148,163,184,.05) 1px, transparent 1px);
+  background-size:auto,auto,44px 44px,44px 44px;
+}
+body::after{ /* scanline mờ */
+  content:""; position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.5;
+  background:repeating-linear-gradient(0deg, transparent 0 3px, rgba(2,6,23,.16) 3px 4px);
+}
+#deck{
+  position:relative; z-index:1; height:100dvh; overflow-y:auto;
+  scroll-snap-type:y mandatory; scrollbar-width:none;
+}
+#deck::-webkit-scrollbar{display:none}
+.slide{
+  min-height:100dvh; scroll-snap-align:start; scroll-snap-stop:always;
+  display:flex; flex-direction:column; justify-content:center;
+  padding:clamp(18px,4vw,64px) clamp(16px,6vw,110px);
+  position:relative;
+}
+/* ===== khung chữ ===== */
+.kicker{
+  font-family:var(--font-mono); font-size:clamp(11.5px,1.4vw,14.5px); letter-spacing:.28em;
+  text-transform:uppercase; color:var(--cyan); margin-bottom:14px; display:flex; align-items:center; gap:10px;
+}
+.kicker::before{content:""; width:26px; height:2px; background:linear-gradient(90deg,var(--cyan),transparent)}
+h1{font-family:var(--font-head); font-weight:700; font-size:clamp(30px,6.4vw,72px); line-height:1.06; letter-spacing:.01em}
+h2{font-family:var(--font-head); font-weight:700; font-size:clamp(24px,3.8vw,46px); line-height:1.12; margin-bottom:clamp(14px,2.2vh,26px)}
+h2 em{font-style:normal; color:var(--cyan)}
+h1 .grad,h2 .grad{background:linear-gradient(92deg,var(--cyan),var(--violet),var(--cyan)); background-size:200% auto; -webkit-background-clip:text; background-clip:text; color:transparent; animation:gradmove 7s linear infinite}
+.sub{color:var(--muted); font-size:clamp(15px,2vw,21px); line-height:1.65; max-width:70ch}
+.small{font-size:clamp(12.5px,1.5vw,15px); color:var(--muted)}
+b,strong{color:#fff; font-weight:600}
+.hl-c{color:var(--cyan)} .hl-v{color:var(--violet)} .hl-g{color:var(--green)} .hl-a{color:var(--amber)} .hl-r{color:var(--red)}
+code{font-family:var(--font-mono); font-size:.86em; background:rgba(34,211,238,.08); border:1px solid rgba(34,211,238,.16); border-radius:6px; padding:1px 7px; color:#bfeef8; white-space:nowrap}
+/* ===== card ===== */
+.grid{display:grid; gap:clamp(10px,1.6vw,18px)}
+.cols2{grid-template-columns:repeat(2,1fr)} .cols3{grid-template-columns:repeat(3,1fr)} .cols4{grid-template-columns:repeat(4,1fr)}
+.card{
+  background:var(--panel); border:1px solid var(--line); border-radius:16px;
+  padding:clamp(13px,1.8vw,22px); backdrop-filter:blur(8px); position:relative; overflow:hidden;
+}
+.card::before{content:""; position:absolute; top:0; left:0; right:0; height:2px;
+  background:linear-gradient(90deg,transparent,var(--cyan),transparent); opacity:.45}
+.card.vio::before{background:linear-gradient(90deg,transparent,var(--violet),transparent)}
+.card h3{font-family:var(--font-head); font-size:clamp(16px,2vw,21px); font-weight:600; margin-bottom:8px; display:flex; align-items:center; gap:9px}
+.card p,.card li{font-size:clamp(14px,1.7vw,17px); color:var(--muted); line-height:1.65}
+.card ul{list-style:none}
+.card li{padding-left:18px; position:relative; margin-bottom:5px}
+.card li::before{content:"▸"; position:absolute; left:2px; color:var(--cyan)}
+.card.vio li::before{color:var(--violet)}
+.ico{width:30px;height:30px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;flex:none;
+  background:rgba(34,211,238,.12); border:1px solid rgba(34,211,238,.25); font-size:15px}
+.vio .ico{background:rgba(167,139,250,.12); border-color:rgba(167,139,250,.3)}
+/* ===== chip / badge ===== */
+.chips{display:flex; flex-wrap:wrap; gap:9px}
+.chip{
+  font-family:var(--font-mono); font-size:clamp(12px,1.45vw,14px); padding:6px 13px; border-radius:999px;
+  border:1px solid var(--line); background:rgba(13,20,40,.7); color:#c3d0e8; white-space:nowrap;
+}
+.chip.on{border-color:rgba(34,211,238,.5); color:var(--cyan); box-shadow:0 0 14px rgba(34,211,238,.12)}
+/* ===== số liệu ===== */
+.stat{text-align:left}
+.stat .num{font-family:var(--font-head); font-weight:700; font-size:clamp(28px,4vw,50px);
+  background:linear-gradient(92deg,var(--cyan),var(--violet)); -webkit-background-clip:text; background-clip:text; color:transparent}
+.stat .lbl{font-size:clamp(13px,1.55vw,15.5px); color:var(--muted); margin-top:3px; line-height:1.5}
+/* ===== bảng ===== */
+.tbl-wrap{overflow-x:auto; border:1px solid var(--line); border-radius:14px; background:var(--panel)}
+table{width:100%; border-collapse:collapse; font-size:clamp(13px,1.6vw,16px); min-width:520px}
+th{font-family:var(--font-head); font-weight:600; text-align:left; color:var(--cyan);
+  padding:11px 15px; border-bottom:1px solid var(--line2); font-size:.94em; white-space:nowrap}
+td{padding:9px 15px; border-bottom:1px solid rgba(148,163,184,.07); color:var(--muted); line-height:1.5}
+tr:last-child td{border-bottom:none}
+td:first-child{color:var(--text)}
+/* ===== sơ đồ kiến trúc ===== */
+.arch{display:flex; flex-direction:column; gap:10px; font-size:clamp(13px,1.6vw,16px)}
+.arch-row{display:grid; gap:10px}
+.node{
+  border:1px solid var(--line); border-radius:13px; background:var(--panel2);
+  padding:11px 15px; text-align:center; position:relative;
+}
+.node .t{font-family:var(--font-head); font-weight:600; color:var(--text); font-size:1em}
+.node .d{color:var(--muted); font-size:.84em; margin-top:3px; line-height:1.45}
+.node.hot{border-color:rgba(34,211,238,.45); box-shadow:0 0 22px rgba(34,211,238,.09)}
+.node.ai{border-color:rgba(167,139,250,.45); box-shadow:0 0 22px rgba(167,139,250,.09)}
+.flow-arrow{display:flex; justify-content:center; color:var(--cyan); opacity:.75; font-size:15px; line-height:1}
+.flow-arrow span{font-family:var(--font-mono); font-size:.68em; color:var(--muted); margin-left:8px; align-self:center}
+/* ===== pipeline ngang ===== */
+.pipe{display:flex; align-items:stretch; gap:0; flex-wrap:wrap}
+.pipe .step{
+  flex:1 1 130px; background:var(--panel); border:1px solid var(--line); border-radius:13px;
+  padding:11px 13px; position:relative; margin-right:26px; min-width:128px; margin-bottom:8px;
+}
+.pipe .step:last-child{margin-right:0}
+.pipe .step::after{
+  content:"›"; position:absolute; right:-21px; top:50%; transform:translateY(-50%);
+  color:var(--cyan); font-size:21px; font-weight:700;
+}
+.pipe .step:last-child::after{display:none}
+.pipe .n{font-family:var(--font-mono); font-size:12px; color:var(--violet); letter-spacing:.14em}
+.pipe .t{font-family:var(--font-head); font-weight:600; font-size:clamp(14px,1.7vw,17px); margin:3px 0 4px}
+.pipe .d{font-size:clamp(12.5px,1.5vw,15px); color:var(--muted); line-height:1.55}
+/* ===== code / log ===== */
+.term{
+  background:#070b18; border:1px solid var(--line); border-radius:14px; overflow:hidden;
+}
+.term-bar{display:flex; align-items:center; gap:6px; padding:9px 14px; border-bottom:1px solid var(--line); background:rgba(15,23,42,.6)}
+.term-bar i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.term-bar .lb{font-family:var(--font-mono); font-size:11px; color:var(--muted); margin-left:8px}
+.term pre{
+  padding:13px 16px; font-family:var(--font-mono); font-size:clamp(11.5px,1.4vw,14.5px);
+  line-height:1.6; color:#b6c5e0; overflow-x:auto; white-space:pre;
+}
+.term .c{color:#5b6b8c} .term .g{color:var(--green)} .term .y{color:var(--amber)} .term .p{color:var(--violet)} .term .b{color:var(--cyan)}
+/* ===== robot mascot ===== */
+.bot{filter:drop-shadow(0 0 26px rgba(34,211,238,.35))}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-13px)}}
+@keyframes blink{0%,91%,100%{transform:scaleY(1)}95%{transform:scaleY(.1)}}
+.bot-wrap{animation:float 5.2s ease-in-out infinite}
+.bot .eye{transform-origin:center; animation:blink 4.6s infinite}
+@keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
+.pulse{animation:pulse 2.4s ease-in-out infinite}
+/* ===== hero ===== */
+.hero{display:grid; grid-template-columns:1.35fr .8fr; gap:clamp(20px,4vw,60px); align-items:center}
+.hero-tags{margin-top:clamp(16px,3vh,30px)}
+.live{
+  display:inline-flex; align-items:center; gap:9px; margin-top:clamp(14px,2.6vh,24px);
+  font-family:var(--font-mono); font-size:clamp(11px,1.5vw,14px); color:var(--green);
+  border:1px solid rgba(52,211,153,.35); background:rgba(52,211,153,.07); border-radius:999px; padding:8px 17px;
+}
+.live i{width:8px;height:8px;border-radius:50%;background:var(--green); box-shadow:0 0 10px var(--green)}
+/* ===== footer từng slide ===== */
+.sfoot{
+  position:absolute; bottom:14px; left:clamp(16px,6vw,110px); right:clamp(16px,6vw,110px);
+  display:flex; justify-content:space-between; font-family:var(--font-mono);
+  font-size:10.5px; color:rgba(154,167,194,.55); letter-spacing:.12em;
+}
+/* ===== điều hướng ===== */
+#dots{position:fixed; right:14px; top:50%; transform:translateY(-50%); z-index:10; display:flex; flex-direction:column; gap:9px}
+#dots button{width:9px;height:9px;border-radius:50%;border:1px solid rgba(154,167,194,.5);background:transparent;cursor:pointer;padding:0;transition:.25s}
+#dots button.cur{background:var(--cyan); border-color:var(--cyan); box-shadow:0 0 9px rgba(34,211,238,.7)}
+#bar{position:fixed; top:0; left:0; height:3px; background:linear-gradient(90deg,var(--cyan),var(--violet)); z-index:11; width:0%; transition:width .25s}
+#pageno{
+  position:fixed; bottom:14px; right:16px; z-index:10; font-family:var(--font-mono);
+  font-size:11.5px; color:var(--muted); background:rgba(10,14,29,.8); border:1px solid var(--line);
+  padding:5px 12px; border-radius:999px;
+}
+#navhint{position:fixed; bottom:14px; left:50%; transform:translateX(-50%); z-index:10; font-family:var(--font-mono); font-size:10.5px; color:rgba(154,167,194,.65); background:rgba(10,14,29,.8); border:1px solid var(--line); padding:4px 14px; border-radius:999px; white-space:nowrap}
+/* ===== bảng tiêu chí chấm ===== */
+.crit-tbl td, .crit-tbl th { padding: 8px 13px; font-size: clamp(11.5px, 1.35vw, 14px); }
+.crit-tbl td:first-child { font-weight: 600; }
+.crit-tbl .pt {
+  font-family: var(--font-head); font-weight: 700; text-align: center;
+  color: var(--cyan); font-size: clamp(14px, 1.7vw, 18px);
+}
+/* ===== so sánh 2 cột ===== */
+.vs{display:grid; grid-template-columns:1fr 1fr; gap:clamp(10px,1.6vw,18px)}
+/* ===== cây kết quả ===== */
+.tree{font-family:var(--font-mono); font-size:clamp(11.5px,1.45vw,14.5px); line-height:1.72; color:#b6c5e0; white-space:pre; overflow-x:auto}
+.tree .k{color:var(--cyan)} .tree .w{color:var(--amber)} .tree .e{color:var(--red)}
+/* ===== mockup giao diện extension (nền sáng — theo ảnh chụp thật) ===== */
+.mock{background:#0b1224; border:1px solid var(--line); border-radius:16px; overflow:hidden; box-shadow:0 18px 50px rgba(0,0,0,.45)}
+.mock-bar{display:flex; align-items:center; gap:6px; padding:8px 12px; background:#0f172e; border-bottom:1px solid var(--line)}
+.mock-bar i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.mock-url{flex:1; margin-left:8px; font-family:var(--font-mono); font-size:11.5px; color:var(--muted); background:#0a0f22; border:1px solid rgba(148,163,184,.12); border-radius:8px; padding:4px 10px; white-space:nowrap; overflow:hidden}
+.mock-body{display:grid; grid-template-columns:1.02fr 1fr; position:relative; min-height:360px; background:#eef2f8}
+.mock-form{padding:14px 16px; background:#f6f8fc; border-right:1px solid #dde5f0}
+.mock-form h4{font-size:13px; color:#2b3550; margin-bottom:10px; font-weight:600; font-family:var(--font-head)}
+.mf{margin-bottom:10px}
+.mf label{display:block; font-size:11.5px; color:#68738d; margin-bottom:3px}
+.mf .inp{background:#fff; border:1.5px solid #ccd6e6; border-radius:8px; padding:7px 10px; font-size:12.5px; color:#1e2946; font-family:var(--font-mono)}
+.mf.err .inp{border-color:#e0524f; box-shadow:0 0 0 3px rgba(224,82,79,.12)}
+.mf.ok .inp{border-color:#3aa76d}
+.mf .tip{margin-top:5px; font-size:11.5px; color:#b3261e; background:#fdecec; border:1px solid #f2b8b5; border-left:3px solid #e0524f; border-radius:7px; padding:5px 9px; line-height:1.5}
+.ua{display:flex; flex-direction:column; background:#fff}
+.ua-head{display:flex; align-items:center; gap:8px; padding:10px 12px; background:linear-gradient(100deg,#6d28d9,#8b5cf6); color:#fff; font-family:var(--font-head); font-size:13px; font-weight:600}
+.ua-head .x{margin-left:auto; opacity:.85; font-size:12px; letter-spacing:3px}
+.ua-tabs2{display:flex; background:#fff; border-bottom:1px solid #e5eaf3}
+.ua-tab2{flex:1; text-align:center; font-size:12.3px; padding:9px 0; color:#7b869e; border-bottom:2px solid transparent}
+.ua-tab2.act{color:#2f6bff; border-bottom-color:#2f6bff; font-weight:600}
+.ua-badge{display:inline-flex; align-items:center; justify-content:center; min-width:16px; height:16px; padding:0 4px; border-radius:999px; background:#e0524f; color:#fff; font-size:10px; font-weight:700; margin-left:4px}
+.ua-chat{flex:1; height:224px; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:8px; font-size:12.3px; background:#f4f7fc; scrollbar-width:thin}
+.bub{max-width:92%; padding:7px 11px; border-radius:12px; line-height:1.55}
+.bub.bot{background:#fff; border:1px solid #e3e9f4; color:#2a3450; border-bottom-left-radius:3px; align-self:flex-start}
+.bub.usr{background:#2f6bff; color:#fff; align-self:flex-end; border-bottom-right-radius:3px}
+.bub b{color:inherit}
+.bub .file{display:inline-flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:11.5px; background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.45); border-radius:7px; padding:3px 8px; color:#fff}
+.bub .risk{margin-top:6px; font-size:11.5px; color:#8a6a12; background:#fff7e2; border:1px solid #f2d488; border-radius:7px; padding:4px 9px}
+.bub .src{margin-top:7px; padding-top:6px; border-top:1px dashed #dfe6f2; font-size:11px; color:#2f6bff}
+.bub .src .doc{color:#2b3550; font-weight:600}
+.bub .src .ex{color:#68738d; font-style:italic}
+.tp{display:inline-flex; gap:4px; padding:9px 13px; background:#fff; border:1px solid #e3e9f4; border-radius:12px; align-self:flex-start}
+.tp i{width:6px;height:6px;border-radius:50%;background:#9aa7c2;animation:tpb 1s infinite}
+.tp i:nth-child(2){animation-delay:.15s}.tp i:nth-child(3){animation-delay:.3s}
+@keyframes tpb{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-4px);opacity:1}}
+.ua-input{display:flex; align-items:center; gap:7px; margin:8px 10px 10px; background:#fff; border:1.5px solid #dfe6f2; border-radius:999px; padding:6px 12px; font-size:12.3px; color:#8a95ad}
+.ua-input .snd{margin-left:auto; width:22px; height:22px; border-radius:50%; background:#2f6bff; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:11px}
+.mock-bot{position:absolute; right:12px; bottom:12px; width:48px; height:48px; border-radius:50%; background:linear-gradient(135deg,#0ea5e9,#2563eb); display:flex; align-items:center; justify-content:center; font-size:23px; box-shadow:0 6px 18px rgba(37,99,235,.4); border:2px solid #fff; animation:float 4.5s ease-in-out infinite}
+.mock-bot i{position:absolute; top:-2px; right:-2px; width:13px; height:13px; border-radius:50%; background:#e0524f; border:2px solid #fff}
+.iface-grid{grid-template-columns:1.5fr .8fr; gap:clamp(12px,2vw,22px)}
+@media (max-width:900px){
+  .iface-grid{grid-template-columns:1fr}
+  .mock-body{grid-template-columns:1fr}
+  .mock-form{border-right:none; border-bottom:1px solid rgba(148,163,184,.08)}
+}
+/* ===== hiệu ứng động ===== */
+.reveal{opacity:0; transform:translateY(26px); transition:opacity .6s ease, transform .6s cubic-bezier(.2,.7,.3,1)}
+.slide.in .reveal{opacity:1; transform:none}
+.card{transition:transform .3s ease, border-color .3s ease, box-shadow .3s ease, opacity .6s ease}
+.card:hover{transform:translateY(-4px); border-color:rgba(34,211,238,.45); box-shadow:0 10px 32px rgba(34,211,238,.12)}
+@keyframes gradmove{to{background-position:200% center}}
+.orb{position:fixed; z-index:0; border-radius:50%; filter:blur(70px); opacity:.35; pointer-events:none}
+.o1{width:420px;height:420px; background:radial-gradient(circle,rgba(34,211,238,.5),transparent 70%); top:-120px; right:-80px; animation:drift1 16s ease-in-out infinite alternate}
+.o2{width:520px;height:520px; background:radial-gradient(circle,rgba(167,139,250,.45),transparent 70%); bottom:-160px; left:-120px; animation:drift2 20s ease-in-out infinite alternate}
+@keyframes drift1{to{transform:translate(-90px,70px) scale(1.15)}}
+@keyframes drift2{to{transform:translate(110px,-80px) scale(1.1)}}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important; transition:none!important}
+  .reveal{opacity:1!important; transform:none!important}
+}
+/* ===== responsive ===== */
+@media (max-width:900px){
+  .cols3,.cols4{grid-template-columns:repeat(2,1fr)}
+  .hero{grid-template-columns:1fr; text-align:center}
+  .hero .bot-col{order:-1}
+  .hero .kicker{justify-content:center}
+  .hero .sub{margin:0 auto}
+  .hero .chips,.hero-cta{justify-content:center}
+  .bot{width:min(38vw,190px)}
+  #dots{display:none}
+  .vs{grid-template-columns:1fr}
+  .sfoot{display:none}
+}
+@media (max-width:600px){
+  .cols2,.cols3,.cols4{grid-template-columns:1fr}
+  .slide{padding-top:34px; padding-bottom:56px; min-height:100dvh; height:auto; justify-content:flex-start}
+  .pipe .step{margin-right:0}
+  .pipe .step::after{display:none}
+}
+@media (max-height:760px){
+  .slide{justify-content:flex-start; padding-top:clamp(20px,4vh,40px)}
+}
+@media print{
+  body{overflow:visible; background:#0a0e1d}
+  #deck{height:auto; overflow:visible}
+  .slide{page-break-after:always; min-height:100vh}
+  #dots,#pageno,#navhint,#bar,.orb{display:none}
+  .reveal{opacity:1!important; transform:none!important}
+}
+</style>
+</head>
+<body>
+<div id="bar"></div>
+<div class="orb o1"></div><div class="orb o2"></div>
+<div id="deck">
+
+<!-- ============ SLIDE 1: BÌA ============ -->
+<section class="slide" id="s1">
+  <div class="hero">
+    <div>
+      <div class="kicker">VNPT AI Hackathon</div>
+      <h1>ZeroCheck AI<br><span class="grad">Chiến binh y tế số</span></h1>
+      <p class="sub" style="margin-top:16px">
+        Trợ lý AI kiểm tra hồ sơ khám chữa bệnh BHYT <b>ngay trên HIS</b> —
+        chặn lỗi nhập liệu theo thời gian thực, soát 455 chỉ tiêu XML&nbsp;130
+        và hỏi–đáp văn bản y tế có trích dẫn nguồn.
+      </p>
+      <div class="chips hero-tags">
+        <span class="chip on">Chrome Extension MV3</span>
+        <span class="chip on">.NET 10 API</span>
+        <span class="chip on">Angular 22 Admin</span>
+        <span class="chip on">PostgreSQL + pgvector</span>
+        <span class="chip on">RAG + LLM</span>
+      </div>
+      <div class="live"><i class="pulse"></i> ĐANG CHẠY THẬT · https://cbyts.vnpt.vn · VNPT Cloud K8s</div>
+    </div>
+    <div class="bot-col" style="text-align:center">
+      <div class="bot-wrap">
+      <svg class="bot" width="230" viewBox="0 0 220 250" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <line x1="110" y1="18" x2="110" y2="44" stroke="#22d3ee" stroke-width="4"/>
+        <circle cx="110" cy="14" r="8" fill="#a78bfa"><animate attributeName="opacity" values="1;.35;1" dur="2s" repeatCount="indefinite"/></circle>
+        <rect x="30" y="44" width="160" height="120" rx="28" fill="#0d1530" stroke="#22d3ee" stroke-width="3"/>
+        <rect x="48" y="66" width="124" height="56" rx="16" fill="#070b18" stroke="#1e3a5f" stroke-width="2"/>
+        <circle class="eye" cx="83" cy="94" r="11" fill="#22d3ee"><animate attributeName="opacity" values="1;.75;1" dur="3s" repeatCount="indefinite"/></circle>
+        <circle class="eye" cx="137" cy="94" r="11" fill="#22d3ee"><animate attributeName="opacity" values="1;.75;1" dur="3s" repeatCount="indefinite"/></circle>
+        <rect x="88" y="136" width="44" height="8" rx="4" fill="#a78bfa"/>
+        <rect x="12" y="86" width="14" height="34" rx="7" fill="#0d1530" stroke="#a78bfa" stroke-width="2.5"/>
+        <rect x="194" y="86" width="14" height="34" rx="7" fill="#0d1530" stroke="#a78bfa" stroke-width="2.5"/>
+        <rect x="58" y="176" width="104" height="58" rx="18" fill="#0d1530" stroke="#22d3ee" stroke-width="3"/>
+        <path d="M92 205 l12 12 l24 -26" stroke="#34d399" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+      </div>
+    </div>
+  </div>
+  <div class="sfoot"><span>ZEROCHECK AI · CHIẾN BINH Y TẾ SỐ</span><span>BÁO CÁO HỆ THỐNG · 2026</span></div>
+</section>
+
+<!-- ============ SLIDE 2: BÀI TOÁN ============ -->
+<section class="slide" id="s2">
+  <div class="kicker">01 · Bài toán</div>
+  <h2>Hồ sơ BHYT bị <em>xuất toán</em> vì những lỗi<br>hoàn toàn có thể chặn từ đầu</h2>
+  <div class="grid cols4" style="margin-bottom:clamp(12px,2vh,20px)">
+    <div class="card"><h3><span class="ico">⚠</span>Lỗi phát hiện muộn</h3>
+      <p>Sai sót nhập liệu chỉ lộ ra khi BHXH giám định — lúc hồ sơ <b>đã gửi đi</b>, cơ sở KCB chịu xuất toán, mất nguồn thu thật.</p></div>
+    <div class="card"><h3><span class="ico">📋</span>455 chỉ tiêu, 15 bảng</h3>
+      <p>Chuẩn XML 130 (QĐ 130 + QĐ 4750 + điều chỉnh 2024) gồm <b>15 bảng, ~455 trường</b> ràng buộc chéo nhau — mắt người soát không xuể.</p></div>
+    <div class="card"><h3><span class="ico">📜</span>Quy định đổi liên tục</h3>
+      <p>Công văn, thông tư, danh mục thuốc – dịch vụ – giá cập nhật hằng tháng; phần mềm cứng nhắc <b>không theo kịp</b>.</p></div>
+    <div class="card"><h3><span class="ico">🔎</span>Tra cứu thủ công</h3>
+      <p>Điều dưỡng, kế toán viện phí phải lật từng văn bản để trả lời "trường hợp này thanh toán thế nào?" — chậm và dễ nhầm.</p></div>
+  </div>
+  <div class="card vio" style="max-width:860px">
+    <h3><span class="ico">🎯</span>Mục tiêu</h3>
+    <p>Đưa một "chiến binh" AI vào <b>ngay màn hình nhập liệu HIS</b>: lỗi bị chặn <b>trước khi hồ sơ được gửi lên cổng giám định BHXH</b>, và mọi thắc mắc quy định được trả lời <b>kèm căn cứ văn bản</b>.</p>
+  </div>
+  <div class="sfoot"><span>ZEROCHECK AI</span><span>BÀI TOÁN</span></div>
+</section>
+
+<!-- ============ SLIDE 3: GIẢI PHÁP TỔNG QUAN ============ -->
+<section class="slide" id="s3">
+  <div class="kicker">02 · Giải pháp</div>
+  <h2>Một hệ sinh thái — <span class="grad">ba mảnh ghép</span></h2>
+  <div class="grid cols3" style="margin-bottom:clamp(12px,2vh,20px)">
+    <div class="card"><h3><span class="ico">🧩</span>Chrome Extension trên HIS</h3>
+      <ul>
+        <li>Chạy ngầm trên trang HIS VNPT (Manifest V3, TypeScript)</li>
+        <li>Tự nhận diện form, cảnh báo tại chỗ khi nhập sai</li>
+        <li>Khung chat: tải hồ sơ XML 130 lên, hỏi đáp nghiệp vụ</li>
+        <li>Robot mascot tùy biến hình hài từ admin</li>
+      </ul></div>
+    <div class="card vio"><h3><span class="ico">🧠</span>AI Validation API (.NET 10)</h3>
+      <ul>
+        <li>Bộ máy luật: 455 đặc tả trường + 100 luật liên trường</li>
+        <li>RAG hỏi–đáp văn bản có trích dẫn nguồn</li>
+        <li>AI nhận định nguy cơ xuất toán (bật mới chạy)</li>
+        <li>Đổi AI online (OpenRouter) ⇄ offline (Ollama)</li>
+      </ul></div>
+    <div class="card"><h3><span class="ico">🖥</span>Web Admin (Angular 22)</h3>
+      <ul>
+        <li>Kho tri thức, danh mục HIS, đặc tả XML 130</li>
+        <li>Cấu hình AI, robot, chống spam — áp dụng ngay</li>
+        <li>Phân quyền chi tiết theo vai trò + nhật ký kiểm toán</li>
+        <li>Không cần build lại khi quy định thay đổi</li>
+      </ul></div>
+  </div>
+  <div class="grid cols3">
+    <div class="card stat"><div class="num">&lt; 50 ms</div><div class="lbl">cảnh báo nhập liệu tại chỗ (luật cục bộ)</div></div>
+    <div class="card stat"><div class="num">173 ms</div><div class="lbl">p95 kiểm tra trọn một hồ sơ XML 130 (không AI) - đo bằng k6, 341 lượt, 3 cỡ hồ sơ 7/57/108 KB</div></div>
+    <div class="card stat"><div class="num">100%</div><div class="lbl">kết quả kiểm tra lần nào cũng như lần nào — AI chỉ tư vấn, không quyết định thay</div></div>
+  </div>
+  <div class="sfoot"><span>ZEROCHECK AI</span><span>GIẢI PHÁP TỔNG QUAN</span></div>
+</section>
+
+<!-- ============ SLIDE 4: KIẾN TRÚC ============ -->
+<section class="slide" id="s4">
+  <div class="kicker">03 · Kiến trúc hệ thống</div>
+  <h2>Kiến trúc <em>3 lớp</em> — cần thêm sức tải, chỉ việc thêm máy chủ</h2>
+  <div class="arch">
+    <div class="arch-row" style="grid-template-columns:1fr 1fr">
+      <div class="node hot"><div class="t">🧩 Chrome Extension (HIS VNPT)</div>
+        <div class="d">Phân tích biểu mẫu · Theo dõi thay đổi · Giám sát trang động · Quản lý cảnh báo · Khung chat</div></div>
+      <div class="node hot"><div class="t">🖥 Web Admin (Angular 22)</div>
+        <div class="d">Kho tri thức · Danh mục · Cấu hình AI/robot/chống spam · Phân quyền · Nhật ký kiểm toán</div></div>
+    </div>
+    <div class="flow-arrow">▼ <span>HTTPS / JSON · CORS · JWT</span></div>
+    <div class="arch-row" style="grid-template-columns:1fr">
+      <div class="node ai"><div class="t">⚙️ AI Validation API — ASP.NET Core (.NET 10)</div>
+        <div class="d">Phân tích XML 130 tổng quát · Kiểm tra đặc tả trường ◂ field_specs.json · 6 luật liên bảng ◂ cross_field_rules.json ·
+        Bộ máy luật ×15 · Truy hồi + xếp hạng văn bản (RAG) · Bộ chuyển mô hình AI · Chống spam · Phân quyền · Xử lý lỗi toàn cục</div></div>
+    </div>
+    <div class="flow-arrow">▼ <span>EF Core · truy vấn an toàn (chống SQL injection)</span></div>
+    <div class="arch-row" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="node"><div class="t">🐘 PostgreSQL 14+</div><div class="d">danh mục tri thức (ICD ~15.000 mã) · văn bản y tế · đoạn văn bản — chỉ mục toàn văn GIN + vector HNSW</div></div>
+      <div class="node ai"><div class="t">🤖 Nhà cung cấp mô hình AI</div><div class="d">OpenRouter (GPT/Claude/Llama…) hoặc Ollama chạy tại chỗ — đổi lúc vận hành, không sửa code</div></div>
+      <div class="node"><div class="t">☸️ VNPT Cloud K8s</div><div class="d">vùng cbyts · cổng vào TLS · ổ lưu cấu hình bền · tự kiểm tra sức khỏe dịch vụ</div></div>
+    </div>
+  </div>
+  <div class="sfoot"><span>ZEROCHECK AI</span><span>KIẾN TRÚC</span></div>
+</section>
+
+<!-- ============ SLIDE 5: TÍNH NĂNG 1 ============ -->
+<section class="slide" id="s5">
+  <div class="kicker">04 · Tính năng 1</div>
+  <h2>Cảnh báo nhập liệu <em>thời gian thực</em> trên HIS</h2>
+  <div class="grid cols2">
+    <div>
+      <div class="grid" style="grid-template-columns:1fr">
+        <div class="card"><h3><span class="ico">🔍</span>Tự nhận diện form — không cấu hình cứng</h3>
+          <p><b>Bộ phân tích biểu mẫu</b> quét trang, nhận diện trường nhập theo nhãn / gợi ý / thuộc tính — dùng được trên <b>mọi màn hình HIS</b> mà không phải khai báo từng trang.</p></div>
+        <div class="card"><h3><span class="ico">👁</span>Bắt mọi thay đổi</h3>
+          <p><b>Bộ theo dõi thay đổi + giám sát trang động</b> bắt mọi sự kiện nhập – sửa, kể cả trường do JavaScript sinh ra sau khi trang tải.</p></div>
+        <div class="card"><h3><span class="ico">⚡</span>Hai tầng kiểm tra</h3>
+          <p>Luật cục bộ (định dạng, bắt buộc, so sánh ngày) phản hồi <b class="hl-g">&lt; 50 ms</b> ngay trong trình duyệt; luật sâu (ICD, danh mục, liên trường) gọi API — <b>việc nhập liệu không bao giờ phải dừng lại chờ AI</b>.</p></div>
+      </div>
+    </div>
+    <div class="card vio">
+      <h3><span class="ico">💬</span>Cảnh báo ngay tại ô nhập</h3>
+      <ul>
+        <li>Viền <b class="hl-r">đỏ</b> (lỗi) / <b class="hl-a">vàng</b> (cảnh báo) quanh trường sai</li>
+        <li>Tooltip giải thích <b>tiếng Việt</b> + gợi ý sửa cụ thể</li>
+        <li>Âm báo tùy chọn, không che màn hình làm việc</li>
+        <li>Robot mascot ở góc màn hình — hình hài, hệ sinh hoạt cấu hình từ web admin</li>
+      </ul>
+      <div class="term" style="margin-top:14px">
+        <div class="term-bar"><i style="background:#f87171"></i><i style="background:#fbbf24"></i><i style="background:#34d399"></i><span class="lb">his.vnpt.vn — cảnh báo mẫu</span></div>
+        <pre><span class="y">⚠ [Hạn thẻ BHYT]</span> GT_THE_DEN 2026-03-01 &lt; ngày vào viện
+   <span class="g">→ Gợi ý:</span> kiểm tra lại hạn thẻ hoặc quy tắc 15 ngày nội trú</pre>
+      </div>
+    </div>
+  </div>
+  <div class="sfoot"><span>ZEROCHECK AI</span><span>TÍNH NĂNG · CẢNH BÁO REALTIME</span></div>
+</section>
+
+<!-- ============ SLIDE 5b: GIAO DIỆN EXTENSION ============ -->
+<section class="slide" id="s5b">
+  <div class="kicker">05 · Giao diện extension</div>
+  <h2>Trợ lý nổi <em>một chạm</em> — ngay trên màn hình HIS</h2>
+  <div class="grid iface-grid">
+    <div class="mock">
+      <div class="mock-bar">
+        <i style="background:#f87171"></i><i style="background:#fbbf24"></i><i style="background:#34d399"></i>
+        <span class="mock-url">🔒 his.vnpt.vn — Tiếp nhận khám chữa bệnh BHYT</span>
+      </div>
+      <div class="mock-body">
+        <div class="mock-form">
+          <h4>📋 Thông tin thẻ BHYT</h4>
+          <div class="mf ok">
+            <label>Họ và tên</label>
+            <div class="inp">NGUYỄN VĂN AN ✓</div>
+          </div>
+          <div class="mf err">
+            <label>Mã thẻ BHYT</label>
+            <div class="inp">DN489489300123</div>
+            <div class="tip">⚠ Mã thẻ thiếu 1 ký tự (14/15) — kiểm tra lại chuỗi mã trên thẻ</div>
+          </div>
+          <div class="mf err">
+            <label>Hạn thẻ đến</label>
+            <div class="inp">01/03/2026</div>
+            <div class="tip">⚠ Thẻ hết hạn trước ngày vào viện 15/07/2026 — nguy cơ xuất toán</div>
+          </div>
+          <div class="mf ok">
+            <label>Ngày vào viện</label>
+            <div class="inp">15/07/2026 08:32 ✓</div>
+          </div>
+        </div>
+        <div class="ua">
+          <div class="ua-head">🤖 ZeroCheck AI <span class="x">⤢&nbsp;&nbsp;✕</span></div>
+          <div class="ua-tabs2">
+            <span class="ua-tab2">⚠️ Cảnh báo <span class="ua-badge">2</span></span>
+            <span class="ua-tab2 act">💬 Trợ lý</span>
+          </div>
+          <div class="ua-chat" id="demoChat"></div>
+          <div class="ua-input">📎 &nbsp;+&nbsp; <span>Nhập câu hỏi nghiệp vụ BHYT...</span><span class="snd">➤</span></div>
+        </div>
+        <div class="mock-bot">🤖<i></i></div>
+      </div>
+    </div>
+    <div class="card vio">
+      <h3><span class="ico">🖱</span>Trải nghiệm</h3>
+      <ul>
+        <li><b>Một nút nổi 🤖</b> — gộp mọi thứ vào một panel 2 tab: <b>Cảnh báo</b> và <b>Trợ lý</b></li>
+        <li>Có lỗi mới → <b>tự bật tab Cảnh báo</b> + badge đếm số; đang chat thì hiện chấm đỏ, không làm phiền</li>
+        <li>Kéo thả nhiều file XML vào khung chat — khay file có nút ▶ kiểm từng hồ sơ</li>
+        <li>Từ 2 hồ sơ: <b>đối chiếu chéo</b> trùng giường, trùng giờ bác sĩ, trùng đợt điều trị</li>
+        <li>Robot có <b>cảm xúc</b>: vui khi hồ sơ sạch (pháo giấy 🎉), lo lắng khi có lỗi — hình hài tùy biến từ web admin</li>
+        <li class="hl-c">Khung bên trái đang <b>tự chạy lại hội thoại thật</b> đã ghi nhận trên cbyts.vnpt.vn</li>
+      </ul>
+    </div>
+  </div>
+  <div class="sfoot"><span>ZEROCHECK AI</span><span>GIAO DIỆN EXTENSION</span></div>
+</section>
+
+<!-- ============ SLIDE 6: TÍNH NĂNG 2 ============ -->
+<section class="slide" id="s6">
+  <div class="kicker">06 · Tính năng 2</div>
+  <h2>Soát hồ sơ XML 130 — <em>455 chỉ tiêu, 100 luật</em>, kết quả dạng cây</h2>
+  <div class="grid cols2">
+    <div class="card">
+      <h3><span class="ico">🌳</span>Cây kiểm tra 8 nhóm</h3>
+<div class="tree"><span class="k">Kiểm tra hồ sơ</span>
+├─ Thông tin bệnh nhân   <span class="c">mã thẻ · hạn thẻ · ĐKBĐ · tuổi</span>
+├─ Chẩn đoán             <span class="c">ICD chính/phụ · giới tính · độ tuổi</span>
+├─ Dịch vụ kỹ thuật      <span class="c">SL×ĐG×tỷ lệ · thời gian y lệnh</span>
+├─ Thuốc                 <span class="c">phù hợp ICD · danh mục · tuổi</span>
+├─ Thời gian             <span class="w">vào ≤ ra · khám &lt; 5 phút → cảnh báo</span>
+├─ Tài chính             <span class="c">cơ cấu nguồn · T_THUOC = Σ XML2</span>
+├─ Liên kết              <span class="c">MA_LK khớp XML1 · giấy tờ khớp</span>
+└─ Hành chính            <span class="c">chuyển tuyến XML13 · hẹn khám XML14</span></div>
+      <p style="margin-top:10px">Mỗi vấn đề: <b>mã luật · mức độ · bảng/trường/dòng · giá trị hiện tại · gợi ý sửa</b> và cờ <code>xuatToanRisk</code> → banner <span class="hl-a">"⚠ Hồ sơ có nguy cơ xuất toán"</span>.</p>
+    </div>
+    <div>
+      <div class="card vio" style="margin-bottom:12px">
+        <h3><span class="ico">🧮</span>6 luật liên trường – liên bảng</h3>
+        <div class="chips" style="margin-top:4px">
+          <span class="chip">Thẻ BHYT</span><span class="chip">Trình tự thời gian</span><span class="chip">Tài chính</span>
+          <span class="chip">Chẩn đoán</span><span class="chip">Liên kết hồ sơ</span><span class="chip">Logic nội/ngoại trú</span>
+        </div>
+        <p style="margin-top:10px">Chạy <b>độc lập, an toàn khi lỗi</b>: một luật hỏng bị ghi log và bỏ qua — không chặn luật khác, độ trễ ổn định.</p>
+      </div>
+      <div class="grid cols2">
+        <div class="card stat"><div class="num">15</div><div class="lbl">bảng XML1–XML15: thuốc, DVKT, CLS, HIV, giấy chuyển tuyến, chứng sinh…</div></div>
+        <div class="card stat"><div class="num">455</div><div class="lbl">trường kiểm theo đặc tả sinh từ Excel QĐ 130 / QĐ 4750</div></div>
+        <div class="card stat"><div class="num">100</div><div class="lbl">luật nghiệp vụ, công khai qua <code>GET /api/xml130/rules</code></div></div>
+        <div class="card stat"><div class="num">2 cách nạp</div><div class="lbl">tải file XML lên — hoặc gõ mã bệnh nhân, hệ thống tự lấy từ HIS</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="sfoot"><span>ZEROCHECK AI</span><span>TÍNH NĂNG · KIỂM TRA XML 130</span></div>
+</section>
+
+<!-- ============ SLIDE 7: TÍNH NĂNG 3 — RAG ============ -->
+<section class="slide" id="s7">
+  <div class="kicker">07 · Tính năng 3</div>
+  <h2>AI <em>học văn bản y tế</em> — hỏi đáp có trích dẫn nguồn (RAG)</h2>
+  <div class="pipe" style="margin-bottom:clamp(12px,2vh,20px)">
+    <div class="step"><div class="n">B1 · NẠP VĂN BẢN</div><div class="t">Chia đoạn thông minh</div>
+      <div class="d">Công văn/thông tư được cắt thành đoạn ~1.200 ký tự (không đứt câu), đánh chỉ mục để tìm được cả <b>theo từ</b> lẫn <b>theo nghĩa</b></div></div>
+    <div class="step"><div class="n">B2 · TÌM KIẾM</div><div class="t">Tìm 2 chiều</div>
+      <div class="d">Quét rộng 25–40 đoạn có khả năng liên quan: hiểu <b>theo nghĩa</b> (câu hỏi diễn đạt khác vẫn tìm ra) + khớp <b>theo từ khóa</b></div></div>
+    <div class="step"><div class="n">B3 · CHỌN LỌC</div><div class="t">Giữ 5 đoạn đúng nhất</div>
+      <div class="d">AI chấm điểm mức liên quan, mỗi văn bản lấy tối đa 3 đoạn — văn bản ngắn không bị văn bản dài nghìn trang lấn át</div></div>
+    <div class="step"><div class="n">B4 · TRẢ LỜI</div><div class="t">Trả lời có kiểm soát</div>
+      <div class="d">Chỉ trả lời theo trích đoạn, dẫn [Nguồn n]; thiếu căn cứ thì nói thẳng "không tìm thấy" — hạn chế bịa đặt</div></div>
+  </div>
+  <div class="grid cols2">
+    <div class="card">
+      <h3><span class="ico">💬</span>Ví dụ thật trên hệ thống đang chạy</h3>
+      <p><b>Hỏi:</b> "Thẻ BHYT hết hạn trong đợt điều trị nội trú thì chi phí sau ngày hết hạn được thanh toán thế nào?"</p>
+      <p style="margin-top:8px"><b>Đáp:</b> "…được quỹ BHYT thanh toán trong phạm vi quyền lợi đến ngày ra viện, <b>tối đa không quá 15 ngày</b> kể từ ngày thẻ hết hạn <span class="hl-c">[Nguồn 1]</span>" — trích đúng QĐ 130/QĐ-BYT.</p></div>
+    <div class="card vio">
+      <h3><span class="ico">📚</span>Kho tri thức sống</h3>
+      <ul>
+        <li>Nạp .pdf / .doc / .xls / .txt / .md — PDF scan tự OCR</li>
+        <li>Văn bản hết hiệu lực AI tự ngừng trích dẫn; gỡ nhầm khôi phục được</li>
+        <li>Danh mục HIS nạp vào kho tri thức <b>theo lựa chọn từng dòng</b></li>
+        <li>Công văn mới: nạp file là AI dùng được ngay, <b>không cần khởi động lại</b></li>
+      </ul></div>
+  </div>
+  <div class="sfoot"><span>ZEROCHECK AI</span><span>TÍNH NĂNG · RAG</span></div>
+</section>
+
+<!-- ============ SLIDE 8: TÍNH NĂNG 4 — ADMIN ============ -->
+<section class="slide" id="s8">
+  <div class="kicker">08 · Tính năng 4</div>
+  <h2>Web Admin — <em>quy định đổi, hệ thống đổi theo</em>, không chờ nâng cấp phần mềm</h2>
+  <div class="grid cols3">
+    <div class="card"><h3><span class="ico">📐</span>Nạp đặc tả XML 130</h3>
+      <p>Tải file Excel chỉ tiêu của Bộ Y tế lên → <b>điều kiện kiểm tra hồ sơ đổi theo file ngay lập tức</b>; lưu bền, khởi động lại không mất.</p></div>
+    <div class="card"><h3><span class="ico">📦</span>Danh mục HIS</h3>
+      <p>Import Excel thuốc/DVKT/vật tư… <b>tự nhận diện 26 loại</b> theo tên file & cấu trúc cột; nạp/gỡ từng danh mục vào kho tri thức bằng một nút.</p></div>
+    <div class="card"><h3><span class="ico">🔁</span>AI online ⇄ offline</h3>
+      <p>Chuyển OpenRouter (đám mây) ⇄ Ollama (tại chỗ), đổi mô hình, kiểm tra kết nối — <b>không cần khởi động lại</b>. Bệnh viện không cho dữ liệu ra ngoài vẫn dùng được AI.</p></div>
+    <div class="card"><h3><span class="ico">🛡</span>Chống spam chỉnh ngay</h3>
+      <p>Chỉnh số lần gọi tối đa mỗi phút cho từng chức năng nhạy cảm (đăng nhập, hỏi AI…) ngay trên giao diện — <b>áp dụng tức thì</b>.</p></div>
+    <div class="card"><h3><span class="ico">👥</span>Phân quyền + kiểm toán</h3>
+      <p>Người dùng – vai trò – quyền chi tiết đến từng chức năng; mọi thay đổi cấu hình đều ghi <b>nhật ký kiểm toán</b> ai-sửa-gì-lúc-nào.</p></div>
+    <div class="card"><h3><span class="ico">🤖</span>Cấu hình robot & ICD</h3>
+      <p>Tùy biến hình hài, hệ sinh hoạt robot trên HIS; lịch đồng bộ danh mục ICD-10 mỗi ngày + nút "Đồng bộ ngay".</p></div>
+  </div>
+  <div class="card vio" style="margin-top:clamp(10px,1.8vh,16px)">
+    <h3><span class="ico">💡</span>Một nguyên tắc chung</h3>
+    <p>Mọi cấu hình sửa trên web admin đều: <b>áp dụng ngay</b> (không cần khởi động lại) · <b>lưu bền</b> (máy chủ khởi động lại không mất) · <b>chỉ người có quyền mới sửa được</b>, và đều để lại vết trong nhật ký.</p>
+  </div>
+  <div class="sfoot"><span>ZEROCHECK AI</span><span>TÍNH NĂNG · WEB ADMIN</span></div>
+</section>
+
+<!-- ============ SLIDE 9: THUẬT TOÁN ============ -->
+<section class="slide" id="s9">
+  <div class="kicker">09 · Thuật toán & cách làm</div>
+  <h2>Những lựa chọn kỹ thuật <span class="grad">đáng giá</span></h2>
+  <div class="grid cols2">
+    <div class="card"><h3><span class="ico">🧬</span>Bộ phân tích tổng quát — không khai báo cứng</h3>
+      <p>Thuật toán <b>tự nhận ra từng dòng dữ liệu</b> trong file XML (quy tắc: "phần tử có toàn bộ con là nút lá") → đọc đủ 15 bảng, ~455 trường mà không phải viết mã riêng cho từng bảng. Bộ Y tế điều chỉnh chỉ tiêu? <b>Không cần sửa code.</b></p></div>
+    <div class="card"><h3><span class="ico">📖</span>Danh mục luật 2 lớp</h3>
+      <p><code>cross_field_rules.json</code> là danh mục nghiệp vụ <b>đọc được</b> (100 luật, công khai qua API); mã C# là <b>máy thực thi</b>. Đặc tả sinh bán tự động bằng AI từ 16 sheet Excel của Bộ Y tế, rà tay trường trọng yếu.</p></div>
+    <div class="card vio"><h3><span class="ico">🎯</span>RAG thay vì huấn luyện lại (fine-tune)</h3>
+      <div class="tbl-wrap" style="margin-top:6px"><table style="min-width:0">
+        <tr><th></th><th>Huấn luyện lại</th><th class="hl-g">RAG ✓</th></tr>
+        <tr><td>Công văn mới</td><td>Huấn luyện lại (giờ→ngày)</td><td>Nạp file → dùng ngay</td></tr>
+        <tr><td>Truy vết nguồn</td><td>Không thể</td><td>Trích dẫn từng đoạn</td></tr>
+        <tr><td>Bịa đặt</td><td>Khó kiểm soát</td><td>Từ chối khi thiếu căn cứ</td></tr>
+        <tr><td>Dữ liệu nhạy cảm</td><td>Trộn vào trọng số</td><td>Nằm trong DB, xóa được</td></tr>
+      </table></div></div>
+    <div class="card vio"><h3><span class="ico">⚖️</span>Luật quyết định — AI nhận định</h3>
+      <p>Cái gì kiểm <b>chắc chắn</b> được thì dùng luật — chạy lại bao nhiêu lần cũng ra đúng một kết quả, không tốn phí AI. AI chỉ tổng hợp, xếp việc cần sửa theo mức ảnh hưởng tài chính. <b>Kết luận "nguy cơ xuất toán" luôn do bộ máy luật tính</b> — AI không được phán hồ sơ đạt/không đạt. AI đặt ở chế độ trả lời ổn định nhất (<code>temperature = 0</code>).</p></div>
+  </div>
+  <div class="sfoot"><span>ZEROCHECK AI</span><span>THUẬT TOÁN & CÁCH LÀM</span></div>
+</section>
+
+<!-- ============ SLIDE 10: MINH CHỨNG AI ============ -->
+<section class="slide" id="s10">
+  <div class="kicker">10 · Minh chứng AI thật</div>
+  <h2>Nhật ký hệ thống thật — <em>không dàn dựng</em></h2>
+  <div class="grid cols2">
+    <div class="term">
+      <div class="term-bar"><i style="background:#f87171"></i><i style="background:#fbbf24"></i><i style="background:#34d399"></i>
+        <span class="lb">kubectl -n cbyts logs deployment/api-validation · 2026-07-28</span></div>
+      <pre><span class="c">16:38:24.708</span> <span class="b">IEmbeddingService</span>  POST → Ollama bge-m3
+<span class="c">16:38:24.957</span> <span class="g">← embedding trả về (248 ms)</span>
+<span class="c">16:38:24.961</span> <span class="b">EFCore</span> SELECT … document_chunks
+  WHERE "SearchVector" @@ plainto_tsquery(@q)
+  <span class="c">-- hybrid: pgvector + full-text, chỉ văn bản còn hiệu lực</span>
+<span class="c">16:38:28.984</span> <span class="p">LLMProvider</span> → OpenRouter 'openai/gpt-4o-mini'
+<span class="c">16:38:28.984</span> Sending: <span class="y">UserPromptLength=6039</span>
+<span class="c">16:38:31.877</span> <span class="g">✓ Response: CompletionTokens=169</span></pre>
+    </div>
+    <div>
+      <div class="tbl-wrap" style="margin-bottom:12px"><table style="min-width:0">
+        <tr><th>Chỉ số</th><th>Đo thật</th></tr>
+        <tr><td>Điểm gọi API</td><td><code>POST /api/assistant/ask</code> @ cbyts.vnpt.vn</td></tr>
+        <tr><td>Tìm ngữ cảnh</td><td>theo nghĩa (pgvector) + theo từ khóa (toàn văn)</td></tr>
+        <tr><td>Nội dung gửi AI</td><td>6.039 ký tự (vai trò + trích đoạn + câu hỏi)</td></tr>
+        <tr><td>Mô hình / token sinh</td><td>gpt-4o-mini · 169 token trả lời</td></tr>
+        <tr><td>Tổng độ trễ đầu–cuối</td><td>9,49 giây (đo phía người dùng)</td></tr>
+        <tr><td>Xác nhận</td><td><code>"fromLlm": true</code> + trích dẫn khớp [Nguồn 1]</td></tr>
+      </table></div>
+      <div class="card vio"><h3><span class="ico">🔍</span>Tái lập được</h3>
+        <p>Gọi API hỏi–đáp rồi mở nhật ký máy chủ — toàn bộ chuỗi xử lý (vector hóa câu hỏi → tìm đoạn → chọn lọc → AI trả lời) hiện nguyên trong log, ai cũng tự kiểm chứng được.</p></div>
+    </div>
+  </div>
+  <div class="sfoot"><span>ZEROCHECK AI</span><span>MINH CHỨNG AI</span></div>
+</section>
+
+<!-- ============ SLIDE 11: HIỆU NĂNG ============ -->
+<section class="slide" id="s11">
+  <div class="kicker">11 · Hiệu năng</div>
+  <h2>Kiểm tra tức thì — <em>AI chỉ bật khi cần</em></h2>
+  <div class="grid cols2">
+    <div class="tbl-wrap"><table>
+      <tr><th>Thao tác</th><th>Thời gian</th><th>Ghi chú</th></tr>
+      <tr><td>Kiểm tra XML 130 (bộ máy luật)</td><td class="hl-g"><b>p95 173 ms</b></td><td>phân tích + 455 đặc tả + 6 luật · đo bằng k6</td></tr>
+      <tr><td>Kiểm tra + nhận định AI</td><td>2–8 s</td><td>chỉ khi bật nhận định AI</td></tr>
+      <tr><td>Hỏi đáp có trích dẫn</td><td>2–6 s</td><td>tìm đoạn &lt; 50 ms, còn lại là AI viết câu trả lời</td></tr>
+      <tr><td>Nạp văn bản 100 trang</td><td class="hl-g"><b>&lt; 2 s</b></td><td>chia đoạn + tự đánh chỉ mục</td></tr>
+    </table></div>
+    <div class="grid" style="grid-template-columns:1fr">
+      <div class="card"><h3><span class="ico">🚀</span>Thiết kế cho tốc độ</h3>
+        <ul>
+          <li>Đặc tả trường + <b>15.000 mã ICD đệm sẵn trong bộ nhớ</b> — tra tức thời, không truy vấn CSDL trong vòng lặp luật</li>
+          <li>Tìm toàn văn qua <b>chỉ mục GIN</b> tính sẵn lúc ghi — đọc nhanh</li>
+          <li>Kiểm tra khi nhập liệu <b>không phải chờ AI</b> — luật trả kết quả ngay; AI mặc định tắt, bật mới chạy</li>
+          <li>Giới hạn upload: XML 50 MB, văn bản 20 MB — chặn phá hoại bộ nhớ</li>
+        </ul></div>
+      <div class="card vio"><h3><span class="ico">📈</span>Mở rộng</h3>
+        <p>Cần thêm sức tải chỉ việc <b>thêm máy chủ chạy song song</b> — cơ sở dữ liệu là điểm chung duy nhất. File chứa nhiều hồ sơ có thể xử lý song song khi cần kiểm cả lô lớn.</p></div>
+    </div>
+  </div>
+  <div class="sfoot"><span>ZEROCHECK AI</span><span>HIỆU NĂNG</span></div>
+</section>
+
+<!-- ============ SLIDE 12: BẢO MẬT ============ -->
+<section class="slide" id="s12">
+  <div class="kicker">12 · Bảo mật</div>
+  <h2>Dữ liệu y tế nhạy cảm — <em>phòng thủ nhiều lớp</em></h2>
+  <div class="grid cols3" style="margin-bottom:clamp(10px,1.8vh,16px)">
+    <div class="card"><h3><span class="ico">🚫</span>Không lưu hồ sơ bệnh án</h3>
+      <p>File XML 130 <b>kiểm xong là bỏ</b> — không ghi ra đĩa, không lưu vào cơ sở dữ liệu. Hệ thống chỉ lưu danh mục và văn bản quy phạm; nhật ký chỉ ghi mã hồ sơ, không ghi nội dung bệnh án.</p></div>
+    <div class="card"><h3><span class="ico">🏠</span>AI chạy tại chỗ được</h3>
+      <p>Có thể cho <b>AI chạy ngay trong bệnh viện</b> (Ollama) — dữ liệu không rời khỏi cơ sở. Nếu dùng AI đám mây, chỉ gửi phần mô tả lỗi, không gửi định danh bệnh nhân.</p></div>
+    <div class="card"><h3><span class="ico">🔐</span>Phân quyền + kiểm toán</h3>
+      <p>Đăng nhập an toàn (JWT) + quyền chi tiết đến từng chức năng; mọi thay đổi cấu hình có nhật ký ai-sửa-gì-lúc-nào; xóa chỉ là gỡ mềm, giữ vết.</p></div>
+    <div class="card"><h3><span class="ico">🧱</span>Chặn đầu vào</h3>
+      <p>Chỉ nhận đúng kiểu file khai báo; đọc XML <b>không DTD, không thực thể ngoài (an toàn XXE)</b>; truy vấn tham số hóa 100% — không ghép chuỗi SQL.</p></div>
+    <div class="card"><h3><span class="ico">🤐</span>Không lộ bí mật</h3>
+      <p>API key qua user-secrets / biến môi trường — repo không chứa key; tầng xử lý lỗi toàn cục trả mã truy vết, <b>không lộ chi tiết kỹ thuật</b>.</p></div>
+    <div class="card vio"><h3><span class="ico">🛡</span>Chống spam (rate limit)</h3>
+      <p>Đếm theo địa chỉ IP người gọi: chung <b>100 yêu cầu/phút</b>; đăng nhập <b>5</b> · quên mật khẩu <b>3</b> · hỏi AI <b>10</b> · nạp file <b>5</b>. Vượt ngưỡng bị chặn kèm thời gian chờ, thông báo tiếng Việt. Ngưỡng chỉnh được ngay trên admin.</p></div>
+  </div>
+  <div class="sfoot"><span>ZEROCHECK AI</span><span>BẢO MẬT</span></div>
+</section>
+
+<!-- ============ SLIDE 13: TRIỂN KHAI ============ -->
+<section class="slide" id="s13">
+  <div class="kicker">13 · Triển khai & vận hành</div>
+  <h2>Đang chạy thật trên <em>VNPT Cloud</em></h2>
+  <div class="grid cols2">
+    <div class="card"><h3><span class="ico">☸️</span>Hạ tầng production</h3>
+      <ul>
+        <li>Kubernetes (vùng <code>cbyts</code>) — chạy thật tại <b>https://cbyts.vnpt.vn</b></li>
+        <li>Cấu hình ghi bền qua ổ lưu PVC — sống sót khi khởi động lại pod</li>
+        <li>Kiểm tra sức khỏe <code>GET /api/health</code> cho bộ cân bằng tải</li>
+        <li>Cập nhật lược đồ CSDL tự động, chạy lại an toàn khi nâng phiên bản</li>
+        <li>Sao lưu định kỳ kho văn bản + danh mục (hồ sơ bệnh án không lưu nên không cần sao lưu)</li>
+      </ul></div>
+    <div class="card vio"><h3><span class="ico">🔄</span>Vận hành không gián đoạn</h3>
+      <ul>
+        <li>Công văn mới: nạp file → AI dùng ngay</li>
+        <li>Danh mục thuốc/giá đổi: nạp Excel → luật đối chiếu tự cập nhật</li>
+        <li>QĐ điều chỉnh chỉ tiêu: nạp Excel đặc tả → điều kiện kiểm đổi theo</li>
+        <li>Đổi mô hình AI / ngưỡng chống spam: vài giây trên web admin</li>
+        <li>Tất cả <b>không cần nâng cấp phần mềm, không gián đoạn hệ thống</b></li>
+      </ul></div>
+  </div>
+  <div class="chips" style="margin-top:clamp(10px,1.8vh,16px)">
+    <span class="chip on">.NET 10</span><span class="chip on">Angular 22</span><span class="chip on">PostgreSQL 14 + pgvector</span>
+    <span class="chip on">Ollama bge-m3</span><span class="chip on">OpenRouter</span><span class="chip on">K8s + ingress TLS</span>
+    <span class="chip on">Chrome Extension MV3</span>
+  </div>
+  <div class="sfoot"><span>ZEROCHECK AI</span><span>TRIỂN KHAI</span></div>
+</section>
+
+<!-- ============ SLIDE 14: HIỆU QUẢ ============ -->
+<section class="slide" id="s14">
+  <div class="kicker">14 · Hiệu quả mang lại</div>
+  <h2>Từ "phát hiện muộn – mất tiền"<br>sang <span class="grad">"chặn sớm – có căn cứ"</span></h2>
+  <div class="vs" style="margin-bottom:clamp(10px,1.8vh,16px)">
+    <div class="card"><h3><span class="ico" style="background:rgba(248,113,113,.12);border-color:rgba(248,113,113,.3)">✗</span>Trước</h3>
+      <ul>
+        <li>Lỗi lộ ra khi BHXH giám định — hồ sơ đã gửi, chịu xuất toán</li>
+        <li>Soát tay 455 chỉ tiêu × hàng nghìn hồ sơ</li>
+        <li>Tra văn bản thủ công, trả lời theo trí nhớ</li>
+        <li>Quy định mới → chờ nâng cấp phần mềm</li>
+      </ul></div>
+    <div class="card vio"><h3><span class="ico" style="background:rgba(52,211,153,.12);border-color:rgba(52,211,153,.3)">✓</span>Sau</h3>
+      <ul>
+        <li>Cảnh báo <b class="hl-g">&lt; 50 ms</b> ngay lúc gõ; soát trọn hồ sơ <b class="hl-g">p95 173 ms</b> trước khi gửi</li>
+        <li>100 luật + 455 đặc tả chạy tự động — kết quả ổn định, không tốn phí AI</li>
+        <li>Hỏi đáp có <b>trích dẫn nguồn</b> trong vài giây, từ chối khi thiếu căn cứ</li>
+        <li>Quy định mới = nạp file trên admin — hiệu lực tức thì</li>
+      </ul></div>
+  </div>
+  <div class="grid cols4">
+    <div class="card stat"><div class="num">13,4 triệu đ</div><div class="lbl">chi BHYT của 6 hồ sơ lỗi trong bộ thử (hồ sơ thật, nhiều tỉnh) — chặn trước khi lên cổng giám định</div></div>
+    <div class="card stat"><div class="num">11,7 triệu đ</div><div class="lbl">riêng 1 lỗi trùng lịch bác sĩ giữa 2 hồ sơ — chỉ lộ khi đối chiếu chéo lô, soát tay từng hồ sơ không thấy</div></div>
+    <div class="card stat"><div class="num">~3.500×</div><div class="lbl">nhanh hơn soát tay 455 chỉ tiêu (p95 173 ms so với ~10 phút/hồ sơ) → soát 100% hồ sơ, không còn soát mẫu</div></div>
+    <div class="card stat"><div class="num">0</div><div class="lbl">hồ sơ bệnh án lưu trên hệ thống — an toàn dữ liệu tuyệt đối</div></div>
+  </div>
+  <div class="sfoot"><span>ZEROCHECK AI</span><span>HIỆU QUẢ</span></div>
+</section>
+
+<!-- ============ SLIDE 14c: QUY ĐỔI GIÁ TRỊ ============ -->
+<section class="slide" id="s14c">
+  <div class="kicker">15 · Quy đổi giá trị</div>
+  <h2>Nếu một bệnh viện dùng thật — <span class="grad">con số là bao nhiêu?</span></h2>
+  <div class="vs" style="margin-bottom:clamp(10px,1.8vh,16px)">
+    <div class="card"><h3><span class="ico">📏</span>Số ĐÃ ĐO trên bộ hồ sơ thật</h3>
+      <ul>
+        <li>8 hồ sơ thật nhiều tỉnh → <b>6 hồ sơ lỗi, 13,4 triệu đ</b> chi BHYT</li>
+        <li>Trung bình ≈ <b>2,2 triệu đ</b> nguy cơ xuất toán / hồ sơ lỗi</li>
+        <li>Lỗi chéo lô (trùng lịch bác sĩ) <b>11,7 triệu đ</b> — soát tay từng hồ sơ không thấy được</li>
+        <li>Soát trọn hồ sơ <b class="hl-g">p95 173 ms</b>, chịu tải 20 người cùng lúc <b class="hl-g">p95 1,85 s · p99 2,12 s</b>, 15,6 hồ sơ/giây, 0% lỗi (k6, 1 máy chủ)</li>
+      </ul></div>
+    <div class="card vio"><h3><span class="ico">🧮</span>Quy đổi THẬN TRỌNG — giả định ghi rõ</h3>
+      <ul>
+        <li>Bệnh viện tuyến huyện ~<b>5.000 hồ sơ BHYT/tháng</b> (giả định)</li>
+        <li>Chỉ <b>1%</b> hồ sơ dính lỗi nguy cơ xuất toán (bộ thử chọn lọc có tỷ lệ cao hơn nhiều)</li>
+        <li>→ 50 hồ sơ lỗi × 2,2 triệu ≈ <b>110 triệu đ/tháng</b> được chặn sớm</li>
+        <li>Soát tay ~10 phút/hồ sơ ≈ <b>833 giờ công/tháng</b> → máy làm xong trong ~17 phút</li>
+      </ul></div>
+  </div>
+  <div class="grid cols4">
+    <div class="card stat"><div class="num">≈ 1,3 tỷ đ/năm</div><div class="lbl">nguy cơ xuất toán được chặn sớm tại MỘT bệnh viện — giám khảo tự kiểm được phép nhân từ giả định trên</div></div>
+    <div class="card stat"><div class="num">≈ 5 nhân sự</div><div class="lbl">giờ công soát thủ công được giải phóng mỗi tháng (833 giờ ÷ 168 giờ/người)</div></div>
+    <div class="card stat"><div class="num">×100 cơ sở</div><div class="lbl">mỗi 100 cơ sở dùng ≈ 130 tỷ đ/năm — tính năng bán kèm nâng sức cạnh tranh VNPT HIS</div></div>
+    <div class="card stat"><div class="num">~0 đ</div><div class="lbl">chi phí biên cho phần luật — không tốn phí AI, stateless, thêm máy chủ là tăng năng lực</div></div>
+  </div>
+  <div class="sfoot"><span>ZEROCHECK AI</span><span>QUY ĐỔI GIÁ TRỊ</span></div>
+</section>
+
+<!-- ============ SLIDE 14b: ĐỐI CHIẾU TIÊU CHÍ CHẤM ============ -->
+<section class="slide" id="s14b">
+  <div class="kicker">16 · Đối chiếu tiêu chí chấm</div>
+  <h2>ZeroCheck AI trả lời <em>từng tiêu chí</em> của Ban tổ chức</h2>
+  <div class="tbl-wrap crit-tbl">
+    <table>
+      <tr><th>Tiêu chí</th><th style="width:52px">Điểm</th><th>Minh chứng của ZeroCheck AI</th></tr>
+      <tr>
+        <td>Giải quyết bài toán &amp; hoàn thiện</td><td class="pt">20</td>
+        <td>Chạy thật end-to-end trên production: extension trên HIS · soát <b>455 chỉ tiêu, 100 luật</b> · hỏi–đáp trích dẫn nguồn · web admin đủ vòng đời vận hành (phân quyền, lịch sử, thống kê)</td>
+      </tr>
+      <tr>
+        <td>Ứng dụng công cụ AI trong phát triển</td><td class="pt">20</td>
+        <td>Toàn bộ dự án xây cùng <b>AI agent (Claude Code)</b>: sinh đặc tả 455 trường + 100 luật từ 16 sheet Excel QĐ 130, viết code/migration/tài liệu/slide — nhịp độ <b>nhiều tính năng, 3 lần deploy mỗi ngày</b></td>
+      </tr>
+      <tr>
+        <td>Kỹ thuật &amp; kiến trúc (Cloud Native, CI/CD, ATTT)</td><td class="pt">15</td>
+        <td>K8s VNPT Cloud + pgvector + <b>Ollama trong cụm</b> · CI/CD 2 pipeline theo tag · ATTT: <b>không lưu bệnh án</b>, RBAC từng endpoint, chống spam, an toàn XXE/SQL-injection</td>
+      </tr>
+      <tr>
+        <td>Giá trị thực tiễn với SXKD</td><td class="pt">20</td>
+        <td>Đo trên bộ hồ sơ thật nhiều tỉnh: 6 hồ sơ lỗi mang <b>13,4 triệu đ</b> chi BHYT được chặn <b>trước khi lên cổng giám định</b> — riêng lỗi chéo lô 11,7 triệu đ/2 hồ sơ · soát 455 chỉ tiêu <b>p95 173 ms</b> (k6), <b>~3.500× soát tay</b> → soát 100% hồ sơ thay vì soát mẫu · quy định đổi = nạp file, không chờ nâng cấp phần mềm</td>
+      </tr>
+      <tr>
+        <td>Trải nghiệm người dùng (UI/UX)</td><td class="pt">10</td>
+        <td>Cảnh báo ngay tại ô nhập <b>&lt; 50 ms</b>, không cắt luồng làm việc · robot 1 chạm 2 tab · admin sáng/tối hiện đại, thống nhất · 100% tiếng Việt, responsive</td>
+      </tr>
+      <tr>
+        <td>Khả thi kỹ thuật &amp; mở rộng</td><td class="pt">10</td>
+        <td>Stateless — thêm máy chủ là tăng tải · parser tổng quát: QĐ mới <b>không sửa code</b> · danh mục khai báo bằng cấu hình · đổi mô hình AI lúc vận hành · sẵn mã CSKCB cho đa cơ sở</td>
+      </tr>
+      <tr>
+        <td>Sáng tạo giải pháp kỹ thuật</td><td class="pt">5</td>
+        <td><b>Luật quyết định – AI tư vấn</b> (AI không phán đạt/rớt) · truy hồi 2 bước + đa dạng nguồn cho tiếng Việt · extension tự nhận diện form không cấu hình · Giữ kết nối TCP/HTTP mở xuyên qua Load Balancer để phục vụ các request AI có thời gian xử lý dài</td>
+      </tr>
+    </table>
+  </div>
+  <div class="sfoot"><span>ZEROCHECK AI</span><span>ĐỐI CHIẾU TIÊU CHÍ</span></div>
+</section>
+
+<!-- ============ SLIDE 15: KẾT ============ -->
+<section class="slide" id="s15">
+  <div class="hero">
+    <div>
+      <div class="kicker">Kết luận</div>
+      <h1 style="font-size:clamp(26px,5vw,56px)">Chặn lỗi <span class="grad">trước khi</span><br>hồ sơ lên cổng giám định</h1>
+      <p class="sub" style="margin-top:16px">
+        Thay vì để BHXH phát hiện sai sót sau khi đã gửi, ZeroCheck AI soát ngay lúc nhập liệu
+        và trước lúc đẩy hồ sơ lên cổng — luật quyết định, AI tư vấn, con người kiểm soát.
+        Tuân thủ QĐ 130 trở thành lớp bảo vệ <b>tự động, minh bạch, kiểm chứng được</b>.
+      </p>
+      <div class="live" style="margin-top:22px"><i class="pulse"></i> DEMO TRỰC TIẾP · https://cbyts.vnpt.vn</div>
+      <p class="small" style="margin-top:18px">Đội <b>Chiến binh y tế số</b> · VNPT AI Hackathon 2026 · Trân trọng cảm ơn Ban giám khảo!</p>
+    </div>
+    <div class="bot-col" style="text-align:center">
+      <div class="bot-wrap">
+      <svg class="bot" width="200" viewBox="0 0 220 250" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <line x1="110" y1="18" x2="110" y2="44" stroke="#a78bfa" stroke-width="4"/>
+        <circle cx="110" cy="14" r="8" fill="#22d3ee"><animate attributeName="opacity" values="1;.35;1" dur="1.6s" repeatCount="indefinite"/></circle>
+        <rect x="30" y="44" width="160" height="120" rx="28" fill="#0d1530" stroke="#a78bfa" stroke-width="3"/>
+        <rect x="48" y="66" width="124" height="56" rx="16" fill="#070b18" stroke="#312e59" stroke-width="2"/>
+        <path d="M70 100 q13 -16 26 0" stroke="#22d3ee" stroke-width="6" stroke-linecap="round" fill="none"/>
+        <path d="M124 100 q13 -16 26 0" stroke="#22d3ee" stroke-width="6" stroke-linecap="round" fill="none"/>
+        <path d="M86 138 q24 16 48 0" stroke="#a78bfa" stroke-width="7" stroke-linecap="round" fill="none"/>
+        <rect x="12" y="86" width="14" height="34" rx="7" fill="#0d1530" stroke="#22d3ee" stroke-width="2.5"/>
+        <rect x="194" y="86" width="14" height="34" rx="7" fill="#0d1530" stroke="#22d3ee" stroke-width="2.5"/>
+        <rect x="58" y="176" width="104" height="58" rx="18" fill="#0d1530" stroke="#a78bfa" stroke-width="3"/>
+        <text x="110" y="212" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="17" fill="#22d3ee" font-weight="600">♥ AI</text>
+      </svg>
+      </div>
+    </div>
+  </div>
+  <div class="sfoot"><span>ZEROCHECK AI · CHIẾN BINH Y TẾ SỐ</span><span>2026</span></div>
+</section>
+
+</div>
+
+<div id="dots"></div>
+<div id="pageno">1 / 15</div>
+<div id="navhint">◂ ▸ phím mũi tên · lăn chuột · chạm vuốt</div>
+
+<script>
+(function(){
+  var deck = document.getElementById('deck');
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var dots = document.getElementById('dots');
+  var pageno = document.getElementById('pageno');
+  var bar = document.getElementById('bar');
+  var cur = 0;
+
+  slides.forEach(function(s, i){
+    var b = document.createElement('button');
+    b.setAttribute('aria-label', 'Trang ' + (i+1));
+    b.addEventListener('click', function(){ go(i); });
+    dots.appendChild(b);
+  });
+
+  // Hiệu ứng xuất hiện lần lượt khi slide vào khung nhìn
+  slides.forEach(function(s){
+    var els = s.querySelectorAll('.card, .node, .pipe .step, .tbl-wrap, .term, .chips, .live, .sub, .flow-arrow');
+    var d = 0;
+    els.forEach(function(el){
+      el.classList.add('reveal');
+      el.style.transitionDelay = (d * 0.08) + 's';
+      el.addEventListener('transitionend', function(){ el.style.transitionDelay = '0s'; }, {once:true});
+      d++;
+    });
+  });
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); }
+    });
+  }, {root: deck, threshold: 0.2});
+  slides.forEach(function(s){ io.observe(s); });
+  var dotBtns = dots.children;
+
+  function setCur(i){
+    if(i === cur && dotBtns[i] && dotBtns[i].classList.contains('cur')) return;
+    cur = i;
+    for(var k=0;k<dotBtns.length;k++) dotBtns[k].classList.toggle('cur', k===i);
+    pageno.textContent = (i+1) + ' / ' + slides.length;
+    bar.style.width = ((i+1)/slides.length*100) + '%';
+  }
+  function go(i){
+    i = Math.max(0, Math.min(slides.length-1, i));
+    slides[i].scrollIntoView({behavior:'smooth'});
+    setCur(i);
+  }
+  deck.addEventListener('scroll', function(){
+    var mid = deck.scrollTop + deck.clientHeight/2;
+    for(var i=0;i<slides.length;i++){
+      var el = slides[i];
+      if(el.offsetTop <= mid && el.offsetTop + el.offsetHeight > mid){ setCur(i); break; }
+    }
+  }, {passive:true});
+  window.addEventListener('keydown', function(e){
+    if(e.key==='ArrowDown'||e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){ e.preventDefault(); go(cur+1); }
+    else if(e.key==='ArrowUp'||e.key==='ArrowLeft'||e.key==='PageUp'){ e.preventDefault(); go(cur-1); }
+    else if(e.key==='Home'){ e.preventDefault(); go(0); }
+    else if(e.key==='End'){ e.preventDefault(); go(slides.length-1); }
+  });
+  setCur(0);
+})();
+
+// ===== Mô phỏng hội thoại trợ lý (slide Giao diện extension) — theo phiên chạy thật =====
+(function(){
+  var chat = document.getElementById('demoChat');
+  if(!chat) return;
+  function el(html){ var d = document.createElement('div'); d.innerHTML = html; return d.firstElementChild; }
+  var SEQ = [
+    {t:700,  add:'<div class="bub bot">Xin chào! Bấm <b>+</b> chọn <b>Kiểm tra số vào viện</b> / <b>Hỏi thông tin y tế</b>, hoặc 📎 đính kèm file XML 130.</div>'},
+    {t:1400, add:'<div class="bub usr">Quốc hội ban hành luật bảo hiểm y tế?</div>'},
+    {t:700,  typing:true},
+    {t:1800, add:'<div class="bub bot">Quốc hội đã ban hành Luật bảo hiểm y tế theo Luật số <b>25/2008/QH12</b>, được thông qua ngày 14 tháng 11 năm 2008 <span style="color:#2f6bff">[Nguồn 1]</span>.'
+      + '<div class="src">▼ 📚 Nguồn tham khảo (1)<br><span class="doc">25_2008__LUAT_BAO_HIEM_Y_TE_27917 — 3 trích đoạn</span><br>'
+      + '<span class="ex">“QUỐC HỘI Luật số: 25/2008/QH12 … Quốc hội ban hành luật bảo hiểm y tế. CHƯƠNG I NHỮNG QUY ĐỊNH C…”</span></div></div>'},
+    {t:2200, add:'<div class="bub usr"><span class="file">📄 hoso_56006_072026.xml</span></div>'},
+    {t:700,  typing:true},
+    {t:1900, add:'<div class="bub bot">Đã kiểm tra <b>455 chỉ tiêu</b>: <span style="color:#d23f3b;font-weight:600">3 lỗi</span> · <span style="color:#a97a08;font-weight:600">2 cảnh báo</span>'
+      + '<div class="risk">⚠ Hồ sơ có nguy cơ xuất toán — ưu tiên sửa hạn thẻ BHYT</div></div>'},
+    {t:4200}
+  ];
+  var i = 0, tpEl = null;
+  function step(){
+    var s = SEQ[i];
+    if(!s){ i = 0; chat.innerHTML = ''; setTimeout(step, 800); return; }
+    setTimeout(function(){
+      if(tpEl){ tpEl.remove(); tpEl = null; }
+      if(s.typing){ tpEl = el('<div class="tp"><i></i><i></i><i></i></div>'); chat.appendChild(tpEl); }
+      else if(s.add){ chat.appendChild(el(s.add)); }
+      chat.scrollTop = chat.scrollHeight;
+      i++; step();
+    }, s.t);
+  }
+  step();
+})();
+</script>
+<script>
+// Che do chup hinh: mo ?slide=N thi chi hien dung slide N (1-based),
+// khop khung nhin de Chrome headless chup moi slide thanh 1 anh PNG.
+(function(){
+  var m = location.search.match(/[?&]slide=(\d+)/);
+  if(!m) return;
+  var n = parseInt(m[1], 10);
+  var slides = document.querySelectorAll('.slide');
+  Array.prototype.forEach.call(slides, function(s, i){
+    if(i === n - 1){
+      s.classList.add('in');
+      s.style.minHeight = '100vh';
+      s.style.height = '100vh';
+      Array.prototype.forEach.call(s.querySelectorAll('.reveal'), function(r){
+        r.style.opacity = 1; r.style.transform = 'none';
+      });
+    } else {
+      s.style.display = 'none';
+    }
+  });
+  var deck = document.getElementById('deck');
+  if(deck){ deck.style.height = '100vh'; deck.style.overflow = 'hidden'; }
+  ['dots','pageno','navhint','bar'].forEach(function(id){
+    var e = document.getElementById(id); if(e){ e.style.display = 'none'; }
+  });
+})();
+</script>
+</body>
+</html>

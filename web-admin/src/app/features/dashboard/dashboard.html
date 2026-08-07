@@ -1,0 +1,174 @@
+<app-page-header
+  icon="dashboard"
+  [title]="greeting() + ', ' + (user()?.fullName || user()?.email || '')"
+  subtitle="Tổng quan hệ thống ZeroCheck AI"
+></app-page-header>
+
+<div class="stat-grid">
+  @if (loading()) {
+    @for (s of skeletons; track s) {
+      <div class="stat-card skeleton">
+        <div class="sk-icon"></div>
+        <div class="sk-lines">
+          <div class="sk-line short"></div>
+          <div class="sk-line"></div>
+        </div>
+      </div>
+    }
+  } @else {
+    @for (card of stats(); track card.key) {
+      <a class="stat-card" [routerLink]="card.route">
+        <div class="stat-icon" [style.background]="card.color">
+          <mat-icon>{{ card.icon }}</mat-icon>
+        </div>
+        <div class="stat-body">
+          <span class="stat-value">{{ card.value === null ? '—' : card.value }}</span>
+          <span class="stat-label">{{ card.label }}</span>
+        </div>
+        <mat-icon class="stat-go">chevron_right</mat-icon>
+      </a>
+    }
+  }
+</div>
+
+<!-- ===== Hoạt động hệ thống: lịch sử hỏi đáp AI + kiểm tra XML 130 ===== -->
+<div class="panel usage-panel">
+  <div class="panel-head wrap">
+    <mat-icon>insights</mat-icon>
+    <h3>Hoạt động hệ thống</h3>
+    <span class="spacer"></span>
+    <div class="range-pick">
+      <button matButton="outlined" type="button" class="range-btn" [matMenuTriggerFor]="rangeMenu">
+        <mat-icon>calendar_month</mat-icon>
+        {{ rangeLabel() }}
+        <mat-icon>arrow_drop_down</mat-icon>
+      </button>
+      <mat-menu #rangeMenu="matMenu">
+        @for (p of presets; track p.key) {
+          <button mat-menu-item (click)="selectPreset(p.key)">
+            <span [class.range-on]="preset() === p.key">{{ p.label }}</span>
+          </button>
+        }
+        <button mat-menu-item (click)="picker.open()">
+          <span [class.range-on]="preset() === 'custom'">Tùy chọn khoảng ngày…</span>
+        </button>
+      </mat-menu>
+
+      <!-- Ô range ẩn — chỉ làm mỏ neo cho date-range-picker -->
+      <mat-date-range-input class="range-hidden" [rangePicker]="picker" aria-hidden="true">
+        <input matStartDate (dateChange)="onRangeStart($event.value)" tabindex="-1" />
+        <input matEndDate (dateChange)="onRangeEnd($event.value)" tabindex="-1" />
+      </mat-date-range-input>
+      <mat-date-range-picker #picker></mat-date-range-picker>
+    </div>
+  </div>
+
+  @if (usageLoading()) {
+    <div class="chart-skeleton"></div>
+  } @else if (usage(); as u) {
+    <div class="usage-totals">
+      <div class="ut">
+        <span class="ut-num c-ask">{{ u.totalAsk }}</span
+        ><span class="ut-lbl">lượt hỏi đáp AI</span>
+      </div>
+      <div class="ut">
+        <span class="ut-num c-check">{{ u.totalCheck }}</span
+        ><span class="ut-lbl">lượt kiểm tra XML 130</span>
+      </div>
+      <div class="ut">
+        <span class="ut-num">{{ u.totalHoso }}</span
+        ><span class="ut-lbl">hồ sơ đã soát</span>
+      </div>
+      <div class="ut">
+        <span class="ut-num c-err">{{ u.totalErrors }}</span
+        ><span class="ut-lbl">lỗi phát hiện</span>
+      </div>
+      <div class="ut">
+        <span class="ut-num c-risk">{{ u.totalRisk }}</span
+        ><span class="ut-lbl">lượt có nguy cơ xuất toán</span>
+      </div>
+    </div>
+
+    <div
+      class="chart"
+      role="img"
+      [attr.aria-label]="'Biểu đồ hoạt động từ ' + u.from + ' đến ' + u.to"
+    >
+      @for (p of u.points; track $index) {
+        <div
+          class="col"
+          [matTooltip]="
+            p.label +
+            ' — Hỏi đáp: ' +
+            p.ask +
+            ' · Kiểm tra: ' +
+            p.check +
+            (p.errors ? ' · Lỗi: ' + p.errors : '')
+          "
+        >
+          <div class="bars">
+            <div class="bar ask" [style.height.%]="(p.ask / chartMax()) * 100"></div>
+            <div class="bar check" [style.height.%]="(p.check / chartMax()) * 100"></div>
+          </div>
+          <span class="col-label">{{ $index % labelStep() === 0 ? p.label : '' }}</span>
+        </div>
+      }
+    </div>
+    <div class="legend">
+      <span class="lg"><i class="sw ask"></i> Hỏi đáp AI</span>
+      <span class="lg"><i class="sw check"></i> Kiểm tra XML 130</span>
+      @if (u.totalAsk + u.totalCheck === 0) {
+        <span class="lg empty">Chưa có hoạt động trong khoảng này</span>
+      }
+    </div>
+  } @else {
+    <p class="chart-error">Không tải được dữ liệu thống kê.</p>
+  }
+</div>
+
+<div class="cards-row">
+  <div class="panel">
+    <div class="panel-head">
+      <mat-icon>monitor_heart</mat-icon>
+      <h3>Trạng thái hệ thống</h3>
+    </div>
+    <div class="status-list">
+      <div class="status-row">
+        <span class="dot ok"></span>
+        <span>Máy chủ API</span>
+        <span class="status-val">Đang hoạt động</span>
+      </div>
+      <div class="status-row">
+        <span class="dot ok"></span>
+        <span>Kho tri thức RAG</span>
+        <span class="status-val">Sẵn sàng</span>
+      </div>
+      <div class="status-row">
+        <span class="dot ok"></span>
+        <span>Trợ lý AI</span>
+        <span class="status-val">Trực tuyến</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <mat-icon>bolt</mat-icon>
+      <h3>Truy cập nhanh</h3>
+    </div>
+    <div class="quick-grid">
+      <a class="quick" routerLink="/documents">
+        <mat-icon>upload_file</mat-icon><span>Nạp văn bản</span>
+      </a>
+      <a class="quick" routerLink="/catalog">
+        <mat-icon>inventory_2</mat-icon><span>Nạp danh mục</span>
+      </a>
+      <a class="quick" routerLink="/users" *appHasPermission="'User.Manage'">
+        <mat-icon>person_add</mat-icon><span>Người dùng</span>
+      </a>
+      <a class="quick" routerLink="/roles" *appHasPermission="'Role.Manage'">
+        <mat-icon>tune</mat-icon><span>Phân quyền</span>
+      </a>
+    </div>
+  </div>
+</div>

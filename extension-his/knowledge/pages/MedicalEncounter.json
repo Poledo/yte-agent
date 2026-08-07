@@ -1,0 +1,15 @@
+{
+    "name": "MedicalEncounter",
+    "fields": [
+        "maBenhNhan",
+        "ngayKham",
+        "ngayVao",
+        "ngayRa",
+        "khoa",
+        "phong",
+        "giuong",
+        "trieuChung",
+        "chanDoanBan",
+        "chanDoanPhu"
+    ]
+}

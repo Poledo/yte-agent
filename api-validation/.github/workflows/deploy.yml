@@ -1,0 +1,89 @@
+# CI/CD api-validation: build image .NET → push VNPT ECR → deploy VNPT K8s.
+#
+# Secrets cần khai báo trong GitHub repo (Settings > Secrets and variables > Actions):
+#   ECR_ID       - id repository trên VNPT ECR (vd: ecr_p1wkreqhz9a8)
+#   ECR_USER     - tài khoản ECR
+#   ECR_PASSWORD - mật khẩu tài khoản ECR
+#   KUBE_CONFIG  - kubeconfig cụm VNPT K8s, mã hóa base64 (base64 -w0 kubeconfig.yaml)
+name: Deploy api-validation
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ecr.vnptplatform.vn
+  IMAGE: ecr.vnptplatform.vn/${{ secrets.ECR_ID }}/api-validation
+
+jobs:
+  # Unit test rule engine (AIValidation.Tests) — fail là KHÔNG deploy.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cài .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Chạy unit test
+        run: dotnet test AIValidation.Tests/AIValidation.Tests.csproj -c Release --logger "console;verbosity=normal"
+
+      # Kiểm tra quy ước code theo .editorconfig ở gốc repo. Chỉ chặn các rule đặt
+      # mức error (hiện là CA2100 - nguy cơ SQL injection); rule mức warning/suggestion
+      # vẫn hiện lúc build nhưng không làm đỏ CI, để không biến việc dọn dần thành
+      # rào cản phát hành.
+      - name: Kiểm tra quy ước code
+        run: |
+          dotnet format style AIValidation.Api/AIValidation.Api.csproj --verify-no-changes --severity error
+          dotnet format analyzers AIValidation.Api/AIValidation.Api.csproj --verify-no-changes --severity error
+
+      # Chặn thư viện dính lỗ hổng đã công bố (NU1903). Dependabot mở PR nâng cấp,
+      # bước này bảo đảm không ai merge tay một bản dính CVE.
+      - name: Kiểm tra lỗ hổng thư viện
+        run: |
+          dotnet list AIValidation.Api/AIValidation.Api.csproj package --vulnerable --include-transitive \
+            | tee ket-qua-vuln.txt
+          if grep -q "has the following vulnerable packages" ket-qua-vuln.txt; then
+            echo "::error::Có thư viện dính lỗ hổng đã công bố. Xem danh sách ở trên và nâng phiên bản."
+            exit 1
+          fi
+          echo "Không có thư viện nào dính lỗ hổng đã công bố."
+
+  build-and-deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Đăng nhập VNPT ECR
+        run: echo "${{ secrets.ECR_PASSWORD }}" | docker login "$REGISTRY" -u "${{ secrets.ECR_USER }}" --password-stdin
+
+      - name: Build và push image
+        run: |
+          TAG="${GITHUB_SHA::8}"
+          docker build -t "$IMAGE:$TAG" -t "$IMAGE:latest" .
+          docker push "$IMAGE:$TAG"
+          docker push "$IMAGE:latest"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+
+      - name: Cấu hình kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Áp dụng manifest và cập nhật image
+        run: |
+          # Thay ECR ID cho TẤT CẢ manifest (postgres.yaml & ollama.yaml cũng chứa
+          # REPLACE_ECR_ID — nếu chỉ sed api-validation.yaml thì apply postgres/ollama
+          # sẽ đặt image "REPLACE_ECR_ID" sai -> ImagePullBackOff, mất DB/ollama).
+          sed -i "s|REPLACE_ECR_ID|${{ secrets.ECR_ID }}|g" k8s/*.yaml
+          kubectl apply -f k8s/postgres.yaml
+          kubectl apply -f k8s/api-validation.yaml
+          kubectl apply -f k8s/ollama.yaml
+          kubectl -n cbyts set image deployment/api-validation \
+            api-validation="$IMAGE:$TAG"
+          kubectl -n cbyts rollout status deployment/api-validation --timeout=300s

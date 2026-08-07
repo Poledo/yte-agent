@@ -1,0 +1,84 @@
+# Ollama chạy trong cụm để tạo embedding bge-m3 (tìm kiếm ngữ nghĩa).
+# CHẠY CPU — tài liệu VNPT không có node GPU. bge-m3 (~1.2GB) chạy CPU được,
+# chỉ chậm khi chỉ mục lần đầu; worker nền của API tự embed dần.
+# Nếu sau này VNPT cấp node GPU: thêm nodeSelector/resources GPU vào đây.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ollama-models
+  namespace: cbyts
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 10Gi          # chứa model đã pull (bge-m3 ~1.2GB, dư cho model khác)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama
+  namespace: cbyts
+  labels:
+    app: ollama
+  # BẬT (replicas: 1) — cụm đã nâng lên 3 node (mỗi node ~4 core/7GB) đủ chỗ cho
+  # ollama+bge-m3 (~1 core/2Gi), VÀ BTC đã mở internet egress nên postStart tự
+  # pull được bge-m3 lúc khởi động (24/07/2026). Thiếu ollama thì RAG tự rơi về
+  # tìm kiếm full-text + từ khóa (vẫn chạy), chỉ giảm khả năng truy hồi ngữ nghĩa.
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: ollama
+  template:
+    metadata:
+      labels:
+        app: ollama
+    spec:
+      # Cụm VNPT không có route ra Docker Hub -> image public được mirror vào VNPT ECR.
+      imagePullSecrets:
+        - name: ecr-pull
+      containers:
+        - name: ollama
+          image: ecr.vnptplatform.vn/REPLACE_ECR_ID/ollama:latest
+          ports:
+            - containerPort: 11434
+          env:
+            # Cho phép nhiều request embed song song (khớp Embedding:Parallel của API)
+            - name: OLLAMA_NUM_PARALLEL
+              value: "2"
+            - name: OLLAMA_KEEP_ALIVE
+              value: "-1"       # giữ model nạp sẵn, không unload giữa chừng
+          volumeMounts:
+            - name: models
+              mountPath: /root/.ollama
+          # Tự pull bge-m3 khi khởi động (một lần; lần sau đã có trong PVC).
+          lifecycle:
+            postStart:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5 && ollama pull bge-m3 || true"]
+          resources:
+            requests:
+              cpu: "1"
+              memory: 2Gi
+            limits:
+              cpu: "4"
+              memory: 6Gi
+      volumes:
+        - name: models
+          persistentVolumeClaim:
+            claimName: ollama-models
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama
+  namespace: cbyts
+spec:
+  type: ClusterIP
+  selector:
+    app: ollama
+  ports:
+    - port: 11434
+      targetPort: 11434

@@ -1,0 +1,282 @@
+/* Nội dung trong tab cách thanh tab một khoảng */
+mat-tab-group {
+  .search-panel,
+  .downloads-header {
+    margin-top: 16px;
+  }
+}
+
+.search-panel {
+  padding: 16px 18px 10px;
+  margin-bottom: 18px;
+  border-radius: 16px !important;
+}
+
+.search-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.f-field { width: 230px; }
+.f-keyword { flex: 1; min-width: 220px; }
+.f-date { width: 170px; }
+.f-eff { width: 160px; }
+
+.hint {
+  margin: 10px 2px 4px;
+  font-size: 12.5px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.searching {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 26px 8px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.result-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 13.5px;
+  color: var(--mat-sys-on-surface-variant);
+  .spacer { flex: 1; }
+}
+
+.result-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.no-result {
+  padding: 18px 8px;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 13.5px;
+}
+
+/* ---- Khu 2: văn bản đã tải ---- */
+
+.downloads-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 26px 2px 12px;
+
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .spacer { flex: 1; }
+}
+
+.dl-table {
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--mat-sys-surface);
+}
+
+.dl-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+  &:first-child { border-top: none; }
+}
+
+.dl-head {
+  background: var(--mat-sys-surface-container);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.ingested-row {
+  background: color-mix(in srgb, var(--mat-sys-primary-container) 18%, transparent);
+}
+
+.dl-title-col { flex: 1; min-width: 0; }
+
+.dl-title {
+  font-weight: 600;
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+
+.dl-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.dl-date { width: 92px; font-size: 12.5px; flex-shrink: 0; }
+.dl-size { width: 90px; font-size: 12.5px; flex-shrink: 0; text-align: right; }
+.dl-status { width: 165px; flex-shrink: 0; }
+
+/* Nút "Tải lại" (văn bản đã có trong hệ thống) — đỏ để phân biệt với "Tải về" lần đầu */
+.redownload-btn {
+  color: var(--mat-sys-error) !important;
+  border-color: var(--mat-sys-error) !important;
+  mat-icon {
+    color: var(--mat-sys-error);
+  }
+}
+
+/* Cột Hết hiệu lực khi đã quá hạn — đỏ + icon, tooltip giải thích */
+.expired-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--mat-sys-error);
+  font-weight: 600;
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+}
+
+/* Header và hàng dữ liệu phải CÙNG bề rộng cột thao tác — header là span rỗng,
+   không khóa width là mọi tiêu đề cột trôi lệch sang phải */
+.dl-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+  width: 168px;
+}
+
+.pending-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #b45309;
+  font-weight: 600;
+  font-size: 12.5px;
+  mat-icon { font-size: 15px; width: 15px; height: 15px; }
+}
+
+.result-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--mat-sys-surface);
+  border: 1px solid var(--mat-sys-outline-variant);
+  transition: box-shadow 0.15s ease;
+  &:hover { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08); }
+}
+
+.doc-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+  flex-shrink: 0;
+}
+
+.doc-body { flex: 1; min-width: 0; }
+
+.doc-title {
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.doc-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon { font-size: 15px; width: 15px; height: 15px; vertical-align: -3px; }
+
+  .tag {
+    background: var(--mat-sys-secondary-container);
+    color: var(--mat-sys-on-secondary-container);
+    border-radius: 8px;
+    padding: 1px 8px;
+    font-weight: 600;
+  }
+
+  .imported-tag {
+    color: var(--mat-sys-primary);
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+  }
+}
+
+.doc-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+
+  .ok { color: #2e7d32; }
+  .err { color: var(--mat-sys-error); }
+}
+
+/* Tag dùng chung cho cả kết quả tìm kiếm lẫn bảng đã tải */
+.tag {
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+  border-radius: 8px;
+  padding: 1px 8px;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.imported-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #2e7d32;
+  font-weight: 600;
+  font-size: 12.5px;
+  mat-icon { font-size: 15px; width: 15px; height: 15px; }
+}
+
+.expired-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--mat-sys-error);
+  font-weight: 600;
+  font-size: 12.5px;
+  mat-icon { font-size: 15px; width: 15px; height: 15px; }
+}
+
+.downloaded-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--mat-sys-primary);
+  font-weight: 600;
+  font-size: 12.5px;
+  mat-icon { font-size: 15px; width: 15px; height: 15px; }
+}

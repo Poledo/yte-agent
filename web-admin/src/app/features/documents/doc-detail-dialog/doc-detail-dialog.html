@@ -1,0 +1,40 @@
+<h2 mat-dialog-title class="dlg-title">
+  <mat-icon>article</mat-icon>
+  <span class="title-text" [matTooltip]="data.doc.title">{{ data.doc.title }}</span>
+</h2>
+
+<mat-dialog-content>
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+  } @else if (detail(); as d) {
+    <div class="meta">
+      <span class="tag">{{ d.docType }}</span>
+      @if (d.docNumber) {
+        <span class="meta-item"><mat-icon>tag</mat-icon>{{ d.docNumber }}</span>
+      }
+      @if (d.issuedBy) {
+        <span class="meta-item"><mat-icon>account_balance</mat-icon>{{ d.issuedBy }}</span>
+      }
+      <span class="meta-item"><mat-icon>segment</mat-icon>{{ d.chunkCount }} đoạn</span>
+      <span class="meta-item"><mat-icon>schedule</mat-icon>{{ d.createdAt | date: 'dd/MM/yyyy HH:mm' }}</span>
+      @if (d.sourceFileName) {
+        <span class="meta-item"><mat-icon>attach_file</mat-icon>{{ d.sourceFileName }}</span>
+      }
+      @if (!d.isActive) {
+        <span class="removed"><mat-icon>block</mat-icon>Đã gỡ — AI không tra cứu</span>
+      }
+    </div>
+
+    <p class="hint">Nội dung dưới đây là toàn văn đã trích xuất — đúng phần AI dùng để tra cứu (RAG).</p>
+    <pre class="content">{{ d.content }}</pre>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  @if (data.doc.sourceFileName) {
+    <button matButton (click)="openFile()">
+      <mat-icon>open_in_new</mat-icon> Xem file gốc
+    </button>
+  }
+  <button matButton mat-dialog-close>Đóng</button>
+</mat-dialog-actions>

@@ -1,0 +1,156 @@
+<app-page-header icon="inventory_2" title="Danh mục HIS" subtitle="Danh mục thuốc, dịch vụ, vật tư... để đối chiếu hồ sơ XML 130">
+  <mat-slide-toggle
+    [checked]="showInactive()"
+    (change)="toggleInactive($event.checked)"
+  >Hiện đã gỡ</mat-slide-toggle>
+  <mat-form-field appearance="outline" class="search-field" subscriptSizing="dynamic">
+    <mat-icon matPrefix>search</mat-icon>
+    <input matInput [formControl]="searchCtrl" placeholder="Tìm danh mục / tên file..." />
+  </mat-form-field>
+  @if (selectedCount() > 0) {
+    <button *appHasPermission="'Catalog.Knowledge'" [matButton]="'filled'" color="accent" (click)="addSelectedToKnowledge()">
+      <mat-icon>library_add</mat-icon>
+      Nạp {{ selectedCount() }} mục vào kho tri thức
+    </button>
+  }
+  <button [matButton]="'filled'" color="primary" (click)="showUpload.set(!showUpload())">
+    <mat-icon>{{ showUpload() ? 'close' : 'upload_file' }}</mat-icon>
+    {{ showUpload() ? 'Đóng' : 'Nạp danh mục' }}
+  </button>
+</app-page-header>
+
+@if (showUpload()) {
+  <mat-card class="upload-panel" appearance="outlined">
+    <p class="hint">Nạp file Excel (.xls, .xlsx). Hệ thống tự nhận diện loại danh mục theo tên file / cấu trúc cột. Chọn file xong bấm "Nạp" để bắt đầu. Import chỉ nạp vào bảng đối chiếu — muốn trợ lý hỏi–đáp tra cứu được nội dung, bấm "Nạp vào kho tri thức" ở từng dòng (hoặc chọn nhiều dòng).</p>
+    <mat-form-field appearance="outline" class="facility-field" subscriptSizing="dynamic">
+      <mat-label>Đơn vị của danh mục</mat-label>
+      <mat-select [formControl]="facilityCtrl">
+        <mat-option value="">— Theo cột mã cơ sở trong file —</mat-option>
+        @for (f of facilities(); track f.id) {
+          <mat-option [value]="f.code">{{ f.name }} ({{ f.code }})</mat-option>
+        }
+      </mat-select>
+      <mat-icon matPrefix>account_tree</mat-icon>
+      <mat-hint>
+        File có cột mã cơ sở (DVTT) thì hệ thống tự đọc, không cần chọn. Danh mục <b>Nhân viên</b> và
+        <b>Đơn vị chuyển tuyến</b> không có cột này — phải chọn đúng đơn vị, nếu không hồ sơ sẽ không
+        đối chiếu được với hai danh mục đó.
+      </mat-hint>
+    </mat-form-field>
+
+    <app-file-upload
+      accept=".xls,.xlsx"
+      [multiple]="true"
+      [uploadFn]="uploadFn"
+      (uploaded)="onUploaded()"
+    ></app-file-upload>
+  </mat-card>
+}
+
+<app-data-table
+  [columns]="columns()"
+  [data]="filtered()"
+  [loading]="loading()"
+  emptyIcon="inventory_2"
+  emptyTitle="Chưa có danh mục nào"
+  emptyDescription="Nhấn 'Nạp danh mục' để tải file Excel danh mục HIS."
+>
+  <ng-template appColumnHeaderDef="select">
+    <mat-checkbox
+      [checked]="allVisibleSelected()"
+      [indeterminate]="selectIndeterminate()"
+      (change)="toggleSelectAll()"
+      aria-label="Chọn tất cả danh mục"
+    ></mat-checkbox>
+  </ng-template>
+
+  <ng-template appColumnDef="select" let-row>
+    <mat-checkbox
+      [checked]="isSelected(row.id)"
+      (change)="toggleSelect(row.id)"
+      [aria-label]="'Chọn ' + row.displayName"
+    ></mat-checkbox>
+  </ng-template>
+
+  <ng-template appColumnDef="displayName" let-row>
+    @let fi = fileIcon(row.fileName);
+    <div class="cat-cell" [class.inactive-row]="!row.isActive">
+      <mat-icon [class]="fi.cls">{{ fi.icon }}</mat-icon>
+      <div>
+        <div class="cat-name">{{ row.displayName }}</div>
+        <div class="cat-file">{{ row.fileName }}</div>
+      </div>
+    </div>
+  </ng-template>
+
+  <ng-template appColumnDef="catalogType" let-row>
+    <span class="type-tag">{{ row.catalogType }}</span>
+  </ng-template>
+
+  <ng-template appColumnDef="facilityCode" let-row>
+    @if (row.facilityCode) {
+      @let fname = facilityName(row.facilityCode);
+      <div class="facility-cell">
+        <span class="facility-code">{{ row.facilityCode }}</span>
+        @if (fname) {
+          <span class="facility-name" [matTooltip]="fname">{{ fname }}</span>
+        }
+      </div>
+    } @else {
+      <span
+        class="facility-shared"
+        matTooltip="Danh mục không gắn cơ sở KCB nào — mọi đơn vị đều dùng chung"
+        >Dùng chung</span
+      >
+    }
+  </ng-template>
+
+  <ng-template appColumnDef="rowCount" let-row>
+    <strong>{{ row.rowCount | number }}</strong>
+  </ng-template>
+
+  <ng-template appColumnDef="importedAt" let-row>
+    {{ row.importedAt | date: 'dd/MM/yyyy' }}
+  </ng-template>
+
+  <ng-template appColumnDef="status" let-row>
+    <div class="status-cell">
+      @if (row.isActive) {
+        <span class="badge active"><mat-icon>check_circle</mat-icon> Hiệu lực</span>
+      } @else {
+        <span class="badge inactive"><mat-icon>block</mat-icon> Đã gỡ</span>
+      }
+      @if (row.inKnowledgeBase) {
+        <span class="badge knowledge" matTooltip="Trợ lý hỏi–đáp tra cứu được nội dung danh mục này">
+          <mat-icon>psychology</mat-icon> Kho tri thức
+        </span>
+      }
+    </div>
+  </ng-template>
+
+  <ng-template appColumnDef="actions" let-row>
+    <button matIconButton matTooltip="Xem nội dung" (click)="openDetail(row)">
+      <mat-icon>visibility</mat-icon>
+    </button>
+    @if (row.isActive) {
+      @if (canKnowledge()) {
+        @if (row.inKnowledgeBase) {
+          <button matIconButton matTooltip="Gỡ khỏi kho tri thức" (click)="fromKnowledge(row)">
+            <mat-icon>bookmark_remove</mat-icon>
+          </button>
+        } @else {
+          <button matIconButton matTooltip="Nạp vào kho tri thức" (click)="toKnowledge(row)">
+            <mat-icon>library_add</mat-icon>
+          </button>
+        }
+      }
+      <button matIconButton matTooltip="Gỡ bỏ (có thể khôi phục)" (click)="remove(row)">
+        <mat-icon>delete_outline</mat-icon>
+      </button>
+    } @else {
+      <button matIconButton matTooltip="Khôi phục" (click)="restore(row)">
+        <mat-icon>restore</mat-icon>
+      </button>
+    }
+  </ng-template>
+</app-data-table>

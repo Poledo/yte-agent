@@ -1,0 +1,15 @@
+{
+    "name": "PatientIntake",
+    "fields": [
+        "maBenhNhan",
+        "hoTen",
+        "ngaySinh",
+        "gioiTinh",
+        "danToc",
+        "quocGia",
+        "soBhyt",
+        "cccd",
+        "soDienThoai",
+        "diaChi"
+    ]
+}

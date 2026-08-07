@@ -1,0 +1,62 @@
+<h2 mat-dialog-title>{{ isEdit ? 'Sửa đơn vị' : 'Thêm đơn vị' }}</h2>
+<mat-dialog-content>
+  <form [formGroup]="form" class="form-grid">
+    <mat-form-field appearance="outline">
+      <mat-label>Mã cơ sở KCB</mat-label>
+      <input matInput formControlName="code" placeholder="vd 58028" />
+      <mat-icon matPrefix>tag</mat-icon>
+      <mat-hint>Trùng với MACSKCB trong file XML 130 và cột DVTT của danh mục HIS</mat-hint>
+      @if (form.controls.code.hasError('required') && form.controls.code.touched) {
+        <mat-error>Bắt buộc</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Tên đơn vị</mat-label>
+      <input matInput formControlName="name" placeholder="vd Trạm Y tế xã Phước Dinh" />
+      <mat-icon matPrefix>local_hospital</mat-icon>
+      @if (form.controls.name.hasError('required') && form.controls.name.touched) {
+        <mat-error>Bắt buộc</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Đơn vị cấp trên</mat-label>
+      <mat-select formControlName="parentId">
+        <mat-option [value]="null">— Không có (đơn vị gốc) —</mat-option>
+        @for (f of parentOptions(); track f.id) {
+          <mat-option [value]="f.id">{{ f.name }} ({{ f.code }})</mat-option>
+        }
+      </mat-select>
+      <mat-icon matPrefix>account_tree</mat-icon>
+    </mat-form-field>
+
+    <mat-slide-toggle formControlName="inheritCatalogFromParent">
+      Được dùng danh mục HIS của đơn vị cấp trên
+    </mat-slide-toggle>
+    <p class="toggle-hint">
+      Bật: loại danh mục nào đơn vị chưa tự nạp thì mượn của đơn vị cấp trên (rồi ông, cụ...).
+      Tắt: chỉ dùng danh mục của chính đơn vị này.
+    </p>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Ghi chú</mat-label>
+      <textarea matInput formControlName="note" rows="2"></textarea>
+      <mat-icon matPrefix>notes</mat-icon>
+    </mat-form-field>
+
+    @if (isEdit) {
+      <mat-slide-toggle formControlName="isActive">Đơn vị đang hoạt động</mat-slide-toggle>
+    }
+
+    @if (error()) {
+      <p class="form-error">{{ error() }}</p>
+    }
+  </form>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button matButton (click)="cancel()">Hủy</button>
+  <button [matButton]="'filled'" color="primary" (click)="save()" [disabled]="saving()">
+    {{ isEdit ? 'Lưu' : 'Thêm' }}
+  </button>
+</mat-dialog-actions>

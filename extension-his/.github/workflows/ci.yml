@@ -1,0 +1,77 @@
+name: CI extension
+
+# Không deploy đi đâu cả — extension không có server. Việc của CI ở đây là chặn
+# code hỏng lọt vào master: sai kiểu TypeScript, build gãy, thiếu file manifest
+# tham chiếu, hoặc thư mục dist/ đã commit không còn khớp mã nguồn.
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Kiểm tra kiểu và build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: extension
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: extension/package-lock.json
+
+      - name: Cài phụ thuộc
+        run: npm ci
+
+      - name: Kiểm tra kiểu TypeScript
+        run: npx tsc --noEmit
+
+      # ESLint bắt lỗi logic tsc không thấy: biểu thức viết như câu lệnh, so sánh
+      # lỏng, biến thừa. Cấu hình ở eslint.config.js không bắt định dạng.
+      - name: Kiểm tra ESLint
+        run: npm run lint
+
+      # Test đơn vị cho phần logic thuần: bộ luật cảnh báo tại form, bộ điều phối
+      # luật, dựng phiếu gửi máy chủ và tính hạn mức lô theo cấu hình máy.
+      # Test đỏ là dừng, không build tiếp.
+      - name: Chạy test đơn vị
+        run: npm test
+
+      # Chỉ soi phụ thuộc THẬT SỰ đóng gói vào extension (--omit=dev). Công cụ build
+      # (vite, esbuild) không chạy trên máy người dùng nên lỗ hổng của chúng do
+      # Dependabot xử lý dần, không chặn phát hành.
+      - name: Kiểm tra lỗ hổng thư viện phát hành
+        run: npm audit --omit=dev --audit-level=high
+
+      # Bước build tự chạy verifyManifestPlugin (vite.config.ts): thiếu bất kỳ file
+      # nào manifest trỏ tới là exit code khác 0, không phải chờ tới lúc Load unpacked.
+      - name: Build extension
+        run: npm run build
+
+      # dist/ được commit vào repo để cài Load unpacked ngay từ bản checkout. Nếu ai
+      # sửa src mà quên build lại, bản dist trong repo là bản CŨ — demo chạy code cũ
+      # mà không ai hay. Bước này bắt đúng tình huống đó.
+      - name: dist đã commit phải khớp bản vừa build
+        run: |
+          THAY_DOI=$(git status --porcelain -- dist)
+          if [ -n "$THAY_DOI" ]; then
+            echo "::error::Thư mục extension/dist trong repo đã cũ so với mã nguồn. Chạy 'npm run build' rồi commit lại dist."
+            echo "$THAY_DOI"
+            git --no-pager diff --stat -- dist
+            exit 1
+          fi
+          echo "dist khớp mã nguồn."
+
+      - name: Lưu bản chưa đóng gói để tải về cài thử
+        uses: actions/upload-artifact@v4
+        with:
+          name: zerocheck-ai-unpacked-${{ github.sha }}
+          path: extension/dist
+          retention-days: 14

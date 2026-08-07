@@ -1,0 +1,1004 @@
+{
+  "rules": [
+    {
+      "ruleId": "XML1-B001",
+      "name": "Mã thẻ BHYT sai cấu trúc",
+      "severity": "Error",
+      "tables": ["XML1"],
+      "condition": "MA_THE_BHYT không khớp regex ^[A-Z]{2}[0-9]{13}$ cho từng mã (tách theo ';'). Cấu trúc: 2 chữ cái mã đối tượng + 1 số mức hưởng + 2 số mã tỉnh + 10 số định danh (vd GD4565621432972).",
+      "message": "Mã thẻ BHYT '{MA_THE_BHYT}' sai cấu trúc (phải gồm 15 ký tự: 2 chữ cái + 13 chữ số). Hồ sơ sẽ bị Cổng giám định từ chối, nguy cơ xuất toán toàn bộ chi phí BHYT.",
+      "checkType": "custom",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML1-B002",
+      "name": "Mức hưởng trên thẻ BHYT không hợp lệ",
+      "severity": "Warning",
+      "tables": ["XML1"],
+      "condition": "Ký tự thứ 3 của MA_THE_BHYT (mã mức hưởng) không thuộc 1..5.",
+      "message": "Ký tự mức hưởng trên mã thẻ BHYT '{MA_THE_BHYT}' không thuộc 1-5 — kiểm tra lại mã thẻ trước khi gửi giám định.",
+      "checkType": "custom",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML1-B003",
+      "name": "GT_THE_TU sau GT_THE_DEN",
+      "severity": "Error",
+      "tables": ["XML1"],
+      "condition": "GT_THE_TU > GT_THE_DEN",
+      "message": "Giá trị thẻ từ ({GT_THE_TU}) sau giá trị thẻ đến ({GT_THE_DEN}) — dữ liệu thẻ BHYT không hợp lệ.",
+      "checkType": "date_compare",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML1-B004",
+      "name": "Thẻ BHYT hết hạn trước ngày vào viện",
+      "severity": "Error",
+      "tables": ["XML1"],
+      "condition": "GT_THE_DEN < date(NGAY_VAO)",
+      "message": "Thẻ BHYT hết hạn ({GT_THE_DEN}) trước thời điểm vào viện ({NGAY_VAO}) — nguy cơ xuất toán toàn bộ chi phí BHYT của hồ sơ.",
+      "checkType": "date_compare",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML1-B005",
+      "name": "Thẻ BHYT chưa có hiệu lực tại ngày vào viện",
+      "severity": "Error",
+      "tables": ["XML1"],
+      "condition": "GT_THE_TU > date(NGAY_VAO)",
+      "message": "Thẻ BHYT có hiệu lực từ {GT_THE_TU}, sau thời điểm vào viện ({NGAY_VAO}) — chi phí trước thời điểm hiệu lực không được BHYT thanh toán, nguy cơ xuất toán.",
+      "checkType": "date_compare",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML1-B006",
+      "name": "Thẻ BHYT hết hạn giữa đợt điều trị",
+      "severity": "Warning",
+      "tables": ["XML1"],
+      "condition": "date(NGAY_VAO) <= GT_THE_DEN < date(NGAY_RA)",
+      "message": "Thẻ BHYT hết hạn ({GT_THE_DEN}) trong đợt điều trị ({NGAY_VAO} - {NGAY_RA}). Chi phí sau ngày hết hạn có nguy cơ xuất toán, trừ trường hợp được gia hạn hưởng theo quy định (đang điều trị nội trú thì hưởng đến khi ra viện nhưng tối đa 15 ngày kể từ ngày thẻ hết hạn).",
+      "checkType": "date_compare",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML1-B007",
+      "name": "Ngày sinh sau ngày vào viện",
+      "severity": "Error",
+      "tables": ["XML1"],
+      "condition": "date(NGAY_SINH) > date(NGAY_VAO)",
+      "message": "Ngày sinh ({NGAY_SINH}) sau ngày vào viện ({NGAY_VAO}) — dữ liệu hành chính sai, hồ sơ sẽ bị giám định từ chối.",
+      "checkType": "date_compare",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML1-B008",
+      "name": "Tuổi người bệnh bất hợp lý",
+      "severity": "Warning",
+      "tables": ["XML1"],
+      "condition": "Tuổi tại NGAY_VAO tính từ NGAY_SINH < 0 hoặc > 120",
+      "message": "Tuổi người bệnh tính từ NGAY_SINH ({NGAY_SINH}) đến NGAY_VAO ({NGAY_VAO}) nằm ngoài khoảng 0-120 — kiểm tra lại ngày sinh.",
+      "checkType": "custom",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML1-B009",
+      "name": "Giới tính không hợp lệ",
+      "severity": "Error",
+      "tables": ["XML1"],
+      "condition": "GIOI_TINH không thuộc {1, 2, 3}",
+      "message": "GIOI_TINH = '{GIOI_TINH}' không hợp lệ (1: Nam; 2: Nữ; 3: Chưa xác định).",
+      "checkType": "enum_dependency",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML1-B010",
+      "name": "Mã nơi ĐKBĐ sai độ dài",
+      "severity": "Error",
+      "tables": ["XML1"],
+      "condition": "Mỗi mã trong MA_DKBD (tách ';') không đủ 5 ký tự",
+      "message": "Mã cơ sở KBCB đăng ký ban đầu '{MA_DKBD}' phải gồm 05 ký tự — sai cấu trúc sẽ bị Cổng giám định từ chối tiếp nhận.",
+      "checkType": "custom",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML1-B011",
+      "name": "Nam giới có chẩn đoán sản khoa/thai nghén",
+      "severity": "Error",
+      "tables": ["XML1"],
+      "condition": "GIOI_TINH = 1 và MA_BENH_CHINH hoặc MA_BENH_KT thuộc chương O00-O99 hoặc Z32-Z39 (ICD-10)",
+      "message": "Người bệnh nam (GIOI_TINH=1) nhưng có mã bệnh sản khoa/thai sản '{MA_BENH_CHINH}' — mâu thuẫn giới tính - chẩn đoán, chắc chắn bị giám định và nguy cơ xuất toán.",
+      "checkType": "enum_dependency",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML1-B012",
+      "name": "Có ghi thẻ BHYT nhưng thiếu GT_THE_TU/GT_THE_DEN",
+      "severity": "Warning",
+      "tables": ["XML1"],
+      "condition": "MA_THE_BHYT khác rỗng nhưng GT_THE_TU hoặc GT_THE_DEN rỗng (trừ thẻ QN, HC, LS, XK, CY, CA không tra cứu được)",
+      "message": "Hồ sơ có mã thẻ BHYT nhưng thiếu thời hạn thẻ (GT_THE_TU/GT_THE_DEN) — không đối chiếu được hiệu lực thẻ, nguy cơ bị treo/từ chối khi giám định.",
+      "checkType": "custom",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML1-T001",
+      "name": "Ngày vào sau ngày ra",
+      "severity": "Error",
+      "tables": ["XML1"],
+      "condition": "NGAY_VAO > NGAY_RA",
+      "message": "Thời điểm vào viện ({NGAY_VAO}) sau thời điểm ra viện ({NGAY_RA}) — dữ liệu thời gian không hợp lệ, hồ sơ bị từ chối.",
+      "checkType": "date_compare",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML1-T002",
+      "name": "Ngày thanh toán trước ngày ra viện",
+      "severity": "Warning",
+      "tables": ["XML1"],
+      "condition": "NGAY_TTOAN khác rỗng và NGAY_TTOAN < NGAY_RA",
+      "message": "Thời điểm thanh toán ({NGAY_TTOAN}) trước thời điểm ra viện ({NGAY_RA}) — bất thường về trình tự thời gian, dễ bị giám định.",
+      "checkType": "date_compare",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML1-T003",
+      "name": "SO_NGAY_DTRI không khớp công thức",
+      "severity": "Error",
+      "tables": ["XML1"],
+      "condition": "MA_LOAI_KCB thuộc {02,03,04,06} và SO_NGAY_DTRI != date(NGAY_RA) - date(NGAY_VAO) + 1; MA_LOAI_KCB thuộc {01,09} (và 07 khi chỉ nhận thuốc) mà SO_NGAY_DTRI != 0",
+      "message": "SO_NGAY_DTRI = {SO_NGAY_DTRI} không khớp công thức NGAY_RA - NGAY_VAO + 1 = {EXPECTED} (MA_LOAI_KCB = {MA_LOAI_KCB}) — sai số ngày điều trị dẫn đến sai tiền giường, nguy cơ xuất toán tiền giường chênh lệch.",
+      "checkType": "sum_check",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML1-T004",
+      "name": "Ngày vào nội trú nằm ngoài đợt điều trị",
+      "severity": "Error",
+      "tables": ["XML1"],
+      "condition": "NGAY_VAO_NOI_TRU khác rỗng và (NGAY_VAO_NOI_TRU < NGAY_VAO hoặc NGAY_VAO_NOI_TRU > NGAY_RA)",
+      "message": "Thời điểm vào nội trú ({NGAY_VAO_NOI_TRU}) nằm ngoài khoảng vào viện - ra viện ({NGAY_VAO} - {NGAY_RA}).",
+      "checkType": "date_compare",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML1-T005",
+      "name": "Thời điểm vào/ra viện ở tương lai",
+      "severity": "Error",
+      "tables": ["XML1"],
+      "condition": "NGAY_VAO hoặc NGAY_RA > thời điểm hiện tại",
+      "message": "Thời điểm vào viện/ra viện ({NGAY_VAO}/{NGAY_RA}) ở tương lai — dữ liệu không hợp lệ.",
+      "checkType": "date_compare",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML1-T006",
+      "name": "Kỳ quyết toán không hợp lệ hoặc trước ngày ra viện",
+      "severity": "Warning",
+      "tables": ["XML1"],
+      "condition": "THANG_QT không thuộc 1..12 hoặc NAM_QT < 2019 hoặc (NAM_QT, THANG_QT) < (năm, tháng) của NGAY_RA",
+      "message": "Kỳ quyết toán {THANG_QT}/{NAM_QT} không hợp lệ hoặc trước tháng ra viện ({NGAY_RA}) — hồ sơ có thể bị đưa nhầm kỳ quyết toán, chậm thanh toán.",
+      "checkType": "custom",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML1-F001",
+      "name": "Tổng chi âm",
+      "severity": "Error",
+      "tables": ["XML1"],
+      "condition": "T_TONGCHI_BV < 0 hoặc T_TONGCHI_BH < 0 hoặc T_BHTT < 0 hoặc T_BNTT < 0 hoặc T_BNCCT < 0 hoặc T_NGUONKHAC < 0",
+      "message": "Các trường tiền của XML1 không được âm (T_TONGCHI_BV={T_TONGCHI_BV}, T_TONGCHI_BH={T_TONGCHI_BH}, T_BHTT={T_BHTT}).",
+      "checkType": "sum_check",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML1-F002",
+      "name": "T_BHTT không khớp T_TONGCHI_BH - T_BNCCT",
+      "severity": "Error",
+      "tables": ["XML1"],
+      "condition": "|T_BHTT - (T_TONGCHI_BH - T_BNCCT)| > 1 (đồng), khi không có T_NGUONKHAC giảm trừ",
+      "message": "T_BHTT ({T_BHTT}) không khớp công thức T_TONGCHI_BH - T_BNCCT = {EXPECTED} — sai số tiền đề nghị BHXH thanh toán, phần chênh lệch sẽ bị xuất toán.",
+      "checkType": "sum_check",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML1-F003",
+      "name": "Cơ cấu nguồn thanh toán không khớp tổng chi",
+      "severity": "Error",
+      "tables": ["XML1"],
+      "condition": "|T_BHTT + T_BNTT + T_BNCCT + T_NGUONKHAC - T_TONGCHI_BV| > 1 (đồng)",
+      "message": "Tổng các nguồn thanh toán (T_BHTT + T_BNTT + T_BNCCT + T_NGUONKHAC = {SUM}) không khớp tổng chi T_TONGCHI_BV ({T_TONGCHI_BV}) — cơ cấu chi phí sai, hồ sơ bị giám định và nguy cơ xuất toán phần chênh.",
+      "checkType": "sum_check",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML1-F004",
+      "name": "T_THUOC không khớp tổng tiền thuốc XML2",
+      "severity": "Error",
+      "tables": ["XML1", "XML2"],
+      "condition": "|T_THUOC - Σ THANH_TIEN_BV (XML2 cùng MA_LK)| > 1 (đồng)",
+      "message": "T_THUOC ({T_THUOC}) không khớp tổng THANH_TIEN_BV các dòng thuốc XML2 ({SUM_XML2}) — chênh lệch tổng hợp - chi tiết, phần chênh có nguy cơ xuất toán.",
+      "checkType": "sum_check",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML1-F005",
+      "name": "T_VTYT không khớp tổng tiền VTYT XML3",
+      "severity": "Error",
+      "tables": ["XML1", "XML3"],
+      "condition": "|T_VTYT - Σ THANH_TIEN_BV (các dòng VTYT trong XML3 cùng MA_LK)| > 1 (đồng)",
+      "message": "T_VTYT ({T_VTYT}) không khớp tổng THANH_TIEN_BV các dòng vật tư y tế XML3 ({SUM_VTYT}) — chênh lệch tổng hợp - chi tiết, nguy cơ xuất toán phần chênh.",
+      "checkType": "sum_check",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML1-F006",
+      "name": "T_TONGCHI_BV không khớp tổng chi tiết XML2 + XML3",
+      "severity": "Error",
+      "tables": ["XML1", "XML2", "XML3"],
+      "condition": "|T_TONGCHI_BV - (Σ THANH_TIEN_BV XML2 + Σ THANH_TIEN_BV XML3)| > 1 (đồng)",
+      "message": "T_TONGCHI_BV ({T_TONGCHI_BV}) không khớp tổng THANH_TIEN_BV của XML2 + XML3 ({SUM_DETAIL}) — hồ sơ bị Cổng giám định cảnh báo chênh lệch tổng hợp/chi tiết.",
+      "checkType": "sum_check",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML1-F007",
+      "name": "T_TONGCHI_BH không khớp tổng THANH_TIEN_BH chi tiết",
+      "severity": "Error",
+      "tables": ["XML1", "XML2", "XML3"],
+      "condition": "|T_TONGCHI_BH - (Σ THANH_TIEN_BH XML2 + Σ THANH_TIEN_BH XML3)| > 1 (đồng)",
+      "message": "T_TONGCHI_BH ({T_TONGCHI_BH}) không khớp tổng THANH_TIEN_BH của XML2 + XML3 ({SUM_DETAIL}) — sai tổng chi trong phạm vi BHYT, phần chênh chắc chắn bị xuất toán.",
+      "checkType": "sum_check",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML1-F008",
+      "name": "T_BHTT tổng hợp không khớp tổng T_BHTT chi tiết",
+      "severity": "Error",
+      "tables": ["XML1", "XML2", "XML3"],
+      "condition": "|T_BHTT (XML1) - (Σ T_BHTT XML2 + Σ T_BHTT XML3)| > 1 (đồng)",
+      "message": "T_BHTT tổng hợp ({T_BHTT}) không khớp tổng T_BHTT các dòng chi tiết XML2 + XML3 ({SUM_DETAIL}) — chênh lệch số đề nghị thanh toán, nguy cơ xuất toán phần chênh.",
+      "checkType": "sum_check",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML1-F009",
+      "name": "T_NGUONKHAC tổng hợp không khớp chi tiết",
+      "severity": "Warning",
+      "tables": ["XML1", "XML2", "XML3"],
+      "condition": "|T_NGUONKHAC (XML1) - (Σ T_NGUONKHAC XML2 + Σ T_NGUONKHAC XML3)| > 1 (đồng)",
+      "message": "T_NGUONKHAC tổng hợp ({T_NGUONKHAC}) không khớp tổng nguồn khác chi tiết ({SUM_DETAIL}).",
+      "checkType": "sum_check",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML1-F010",
+      "name": "T_BHTT vượt tổng chi trong phạm vi BHYT",
+      "severity": "Error",
+      "tables": ["XML1"],
+      "condition": "T_BHTT > T_TONGCHI_BH",
+      "message": "T_BHTT ({T_BHTT}) lớn hơn T_TONGCHI_BH ({T_TONGCHI_BH}) — đề nghị thanh toán vượt tổng chi trong phạm vi BHYT, phần vượt bị xuất toán.",
+      "checkType": "sum_check",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML1-F011",
+      "name": "Miễn cùng chi trả nhưng vẫn thu T_BNCCT",
+      "severity": "Warning",
+      "tables": ["XML1"],
+      "condition": "NGAY_MIEN_CCT khác rỗng, NGAY_MIEN_CCT <= NGAY_VAO và T_BNCCT > 0",
+      "message": "Người bệnh được miễn cùng chi trả từ {NGAY_MIEN_CCT} nhưng hồ sơ vẫn có T_BNCCT = {T_BNCCT} — kiểm tra quyền lợi 5 năm liên tục/miễn cùng chi trả, tránh thu sai của người bệnh.",
+      "checkType": "custom",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML2-D001",
+      "name": "Thành tiền BV thuốc sai công thức",
+      "severity": "Error",
+      "tables": ["XML2"],
+      "condition": "|THANH_TIEN_BV - SO_LUONG × DON_GIA| > 0.5 (đồng)",
+      "message": "Dòng thuốc {TEN_THUOC}: THANH_TIEN_BV ({THANH_TIEN_BV}) khác SO_LUONG × DON_GIA = {EXPECTED} — sai công thức tính tiền, phần chênh bị xuất toán.",
+      "checkType": "sum_check",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML2-D002",
+      "name": "Thành tiền BH thuốc sai công thức",
+      "severity": "Error",
+      "tables": ["XML2"],
+      "condition": "|THANH_TIEN_BH - SO_LUONG × DON_GIA × TYLE_TT_BH/100| > 0.5 (đồng)",
+      "message": "Dòng thuốc {TEN_THUOC}: THANH_TIEN_BH ({THANH_TIEN_BH}) khác SO_LUONG × DON_GIA × TYLE_TT_BH/100 = {EXPECTED} — sai tiền trong phạm vi BHYT, nguy cơ xuất toán phần chênh.",
+      "checkType": "sum_check",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML2-D003",
+      "name": "Tỷ lệ thanh toán thuốc ngoài 0-100",
+      "severity": "Error",
+      "tables": ["XML2"],
+      "condition": "TYLE_TT_BH < 0 hoặc TYLE_TT_BH > 100",
+      "message": "TYLE_TT_BH = {TYLE_TT_BH} của thuốc {TEN_THUOC} ngoài khoảng 0-100.",
+      "checkType": "custom",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML2-D004",
+      "name": "Mức hưởng thuốc ngoài 0-100",
+      "severity": "Error",
+      "tables": ["XML2"],
+      "condition": "MUC_HUONG < 0 hoặc MUC_HUONG > 100",
+      "message": "MUC_HUONG = {MUC_HUONG} của dòng thuốc {TEN_THUOC} ngoài khoảng 0-100.",
+      "checkType": "custom",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML2-D005",
+      "name": "T_BHTT dòng thuốc vượt THANH_TIEN_BH",
+      "severity": "Error",
+      "tables": ["XML2"],
+      "condition": "T_BHTT > THANH_TIEN_BH + 0.5",
+      "message": "Dòng thuốc {TEN_THUOC}: T_BHTT ({T_BHTT}) vượt THANH_TIEN_BH ({THANH_TIEN_BH}) — đề nghị BHXH thanh toán vượt phạm vi, phần vượt bị xuất toán.",
+      "checkType": "sum_check",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML2-D006",
+      "name": "Số lượng thuốc không dương",
+      "severity": "Error",
+      "tables": ["XML2"],
+      "condition": "SO_LUONG <= 0",
+      "message": "SO_LUONG = {SO_LUONG} của thuốc {TEN_THUOC} phải lớn hơn 0.",
+      "checkType": "custom",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML2-D007",
+      "name": "T_BHTT dòng thuốc sai công thức mức hưởng",
+      "severity": "Warning",
+      "tables": ["XML2"],
+      "condition": "T_NGUONKHAC = 0 và |T_BHTT - THANH_TIEN_BH × MUC_HUONG/100| > 1 (đồng)",
+      "message": "Dòng thuốc {TEN_THUOC}: T_BHTT ({T_BHTT}) khác THANH_TIEN_BH × MUC_HUONG/100 = {EXPECTED} khi không có nguồn khác giảm trừ — kiểm tra lại cách tính, phần chênh có nguy cơ xuất toán.",
+      "checkType": "sum_check",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML2-D008",
+      "name": "T_NGUONKHAC dòng thuốc không khớp 4 nguồn thành phần",
+      "severity": "Warning",
+      "tables": ["XML2"],
+      "condition": "|T_NGUONKHAC - (T_NGUONKHAC_NSNN + T_NGUONKHAC_VTNN + T_NGUONKHAC_VTTN + T_NGUONKHAC_CL)| > 0.5",
+      "message": "Dòng thuốc {TEN_THUOC}: T_NGUONKHAC ({T_NGUONKHAC}) không bằng tổng 4 nguồn thành phần ({SUM}).",
+      "checkType": "sum_check",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML2-D009",
+      "name": "Cơ cấu tiền dòng thuốc không khớp",
+      "severity": "Error",
+      "tables": ["XML2"],
+      "condition": "|THANH_TIEN_BV - (T_BHTT + T_BNCCT + T_BNTT + T_NGUONKHAC)| > 1 (đồng)",
+      "message": "Dòng thuốc {TEN_THUOC}: THANH_TIEN_BV ({THANH_TIEN_BV}) không bằng T_BHTT + T_BNCCT + T_BNTT + T_NGUONKHAC ({SUM}) — cơ cấu chi phí dòng sai, nguy cơ xuất toán phần chênh.",
+      "checkType": "sum_check",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML2-D010",
+      "name": "Thuốc tự trả nhưng vẫn tính tiền BHYT",
+      "severity": "Error",
+      "tables": ["XML2"],
+      "condition": "PHAM_VI = 2 và (TYLE_TT_BH > 0 hoặc THANH_TIEN_BH > 0 hoặc T_BHTT > 0)",
+      "message": "Thuốc {TEN_THUOC} có PHAM_VI = 2 (người bệnh tự trả) nhưng vẫn kê tiền BHYT (TYLE_TT_BH={TYLE_TT_BH}, T_BHTT={T_BHTT}) — thanh toán sai phạm vi, chắc chắn bị xuất toán.",
+      "checkType": "enum_dependency",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML2-T001",
+      "name": "Ngày y lệnh thuốc ngoài đợt điều trị",
+      "severity": "Error",
+      "tables": ["XML1", "XML2"],
+      "condition": "NGAY_YL < NGAY_VAO hoặc NGAY_YL > NGAY_RA (so với XML1 cùng MA_LK)",
+      "message": "Ngày y lệnh thuốc {TEN_THUOC} ({NGAY_YL}) nằm ngoài đợt điều trị ({NGAY_VAO} - {NGAY_RA}) — thuốc chỉ định ngoài đợt KBCB sẽ bị xuất toán.",
+      "checkType": "date_compare",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML2-T002",
+      "name": "Thực hiện y lệnh thuốc trước khi ra y lệnh",
+      "severity": "Error",
+      "tables": ["XML2"],
+      "condition": "NGAY_TH_YL khác rỗng và NGAY_TH_YL < NGAY_YL",
+      "message": "Thời điểm thực hiện y lệnh ({NGAY_TH_YL}) trước thời điểm ra y lệnh ({NGAY_YL}) của thuốc {TEN_THUOC} — trình tự y lệnh bất hợp lý, dễ bị giám định.",
+      "checkType": "date_compare",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML2-D011",
+      "name": "Thuốc BHYT thiếu mã hoạt chất hoặc số đăng ký",
+      "severity": "Warning",
+      "tables": ["XML2"],
+      "condition": "PHAM_VI = 1 và (MA_THUOC rỗng hoặc SO_DANG_KY rỗng, trừ oxy 40.17, NO 40.573, máu/chế phẩm máu, thuốc thang, thuốc phóng xạ)",
+      "message": "Thuốc {TEN_THUOC} trong phạm vi BHYT nhưng thiếu MA_THUOC/SO_DANG_KY — không đối chiếu được danh mục, nguy cơ bị từ chối thanh toán.",
+      "checkType": "custom",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML3-D001",
+      "name": "Thành tiền BV dòng DVKT/VTYT sai công thức",
+      "severity": "Error",
+      "tables": ["XML3"],
+      "condition": "|THANH_TIEN_BV - SO_LUONG × DON_GIA_BV| > 0.5 (đồng)",
+      "message": "Dòng {TEN_DICH_VU}{TEN_VAT_TU}: THANH_TIEN_BV ({THANH_TIEN_BV}) khác SO_LUONG × DON_GIA_BV = {EXPECTED} — sai công thức tính tiền.",
+      "checkType": "sum_check",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML3-D002",
+      "name": "Thành tiền BH dòng DVKT/VTYT sai công thức",
+      "severity": "Error",
+      "tables": ["XML3"],
+      "condition": "|THANH_TIEN_BH - SO_LUONG × DON_GIA_BH × TYLE_TT_DV/100 × TYLE_TT_BH/100| > 0.5 (đồng)",
+      "message": "Dòng {TEN_DICH_VU}{TEN_VAT_TU}: THANH_TIEN_BH ({THANH_TIEN_BH}) khác SO_LUONG × DON_GIA_BH × TYLE_TT_DV/100 × TYLE_TT_BH/100 = {EXPECTED} — sai tiền trong phạm vi BHYT, phần chênh bị xuất toán.",
+      "checkType": "sum_check",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML3-D003",
+      "name": "Tỷ lệ thanh toán DVKT/VTYT ngoài 0-100",
+      "severity": "Error",
+      "tables": ["XML3"],
+      "condition": "TYLE_TT_DV hoặc TYLE_TT_BH < 0 hoặc > 100",
+      "message": "TYLE_TT_DV = {TYLE_TT_DV}, TYLE_TT_BH = {TYLE_TT_BH} của dòng {TEN_DICH_VU}{TEN_VAT_TU} phải trong khoảng 0-100.",
+      "checkType": "custom",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML3-D004",
+      "name": "Mức hưởng DVKT/VTYT ngoài 0-100",
+      "severity": "Error",
+      "tables": ["XML3"],
+      "condition": "MUC_HUONG < 0 hoặc MUC_HUONG > 100",
+      "message": "MUC_HUONG = {MUC_HUONG} của dòng {TEN_DICH_VU}{TEN_VAT_TU} ngoài khoảng 0-100.",
+      "checkType": "custom",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML3-D005",
+      "name": "T_BHTT dòng vượt THANH_TIEN_BH hoặc vượt trần",
+      "severity": "Error",
+      "tables": ["XML3"],
+      "condition": "T_BHTT > THANH_TIEN_BH + 0.5 hoặc (T_TRANTT > 0 và T_BHTT > T_TRANTT)",
+      "message": "Dòng {TEN_DICH_VU}{TEN_VAT_TU}: T_BHTT ({T_BHTT}) vượt THANH_TIEN_BH ({THANH_TIEN_BH}) hoặc vượt mức trần thanh toán T_TRANTT ({T_TRANTT}) — phần vượt trần chắc chắn bị xuất toán.",
+      "checkType": "sum_check",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML3-D006",
+      "name": "Số lượng DVKT/VTYT không dương",
+      "severity": "Error",
+      "tables": ["XML3"],
+      "condition": "SO_LUONG <= 0 (trừ trường hợp tiền giường chuyển khoa ghi 0 theo quy định TYLE_TT_DV)",
+      "message": "SO_LUONG = {SO_LUONG} của dòng {TEN_DICH_VU}{TEN_VAT_TU} phải lớn hơn 0.",
+      "checkType": "custom",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML3-D007",
+      "name": "Dòng XML3 thiếu cả mã dịch vụ lẫn mã vật tư",
+      "severity": "Error",
+      "tables": ["XML3"],
+      "condition": "MA_DICH_VU rỗng và MA_VAT_TU rỗng",
+      "message": "Dòng chi tiết XML3 (STT={STT}) không có MA_DICH_VU lẫn MA_VAT_TU — không xác định được nội dung chi, sẽ bị từ chối thanh toán.",
+      "checkType": "custom",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML3-D008",
+      "name": "Mã bệnh chỉ định DVKT không thuộc chẩn đoán XML1",
+      "severity": "Warning",
+      "tables": ["XML1", "XML3"],
+      "condition": "MA_BENH (XML3) khác rỗng và không nằm trong tập MA_BENH_CHINH + MA_BENH_KT của XML1 cùng MA_LK",
+      "message": "Mã bệnh chỉ định dịch vụ '{MA_BENH}' không có trong chẩn đoán của hồ sơ (MA_BENH_CHINH={MA_BENH_CHINH}; MA_BENH_KT={MA_BENH_KT}) — chỉ định không phù hợp chẩn đoán dễ bị giám định, nguy cơ xuất toán dịch vụ.",
+      "checkType": "link_check",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML3-D009",
+      "name": "Số ngày giường vượt số ngày điều trị",
+      "severity": "Warning",
+      "tables": ["XML1", "XML3"],
+      "condition": "Tổng SO_LUONG các dòng tiền giường (MA_NHOM nhóm giường) > SO_NGAY_DTRI của XML1",
+      "message": "Tổng số ngày giường thanh toán ({SUM_GIUONG}) vượt số ngày điều trị SO_NGAY_DTRI ({SO_NGAY_DTRI}) — tiền giường vượt sẽ bị xuất toán.",
+      "checkType": "sum_check",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML3-T001",
+      "name": "Ngày y lệnh DVKT/VTYT ngoài đợt điều trị",
+      "severity": "Error",
+      "tables": ["XML1", "XML3"],
+      "condition": "NGAY_YL < NGAY_VAO hoặc NGAY_YL > NGAY_RA (so với XML1 cùng MA_LK)",
+      "message": "Ngày y lệnh ({NGAY_YL}) của dòng {TEN_DICH_VU}{TEN_VAT_TU} nằm ngoài đợt điều trị ({NGAY_VAO} - {NGAY_RA}) — dịch vụ ngoài đợt KBCB sẽ bị xuất toán.",
+      "checkType": "date_compare",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML3-T002",
+      "name": "Thực hiện y lệnh DVKT trước khi ra y lệnh",
+      "severity": "Error",
+      "tables": ["XML3"],
+      "condition": "NGAY_TH_YL khác rỗng và NGAY_TH_YL < NGAY_YL",
+      "message": "Thời điểm thực hiện ({NGAY_TH_YL}) trước thời điểm ra y lệnh ({NGAY_YL}) của dòng {TEN_DICH_VU}{TEN_VAT_TU} — trình tự bất hợp lý, dễ bị giám định.",
+      "checkType": "date_compare",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML3-T003",
+      "name": "Ngày trả kết quả trước ngày y lệnh",
+      "severity": "Error",
+      "tables": ["XML3"],
+      "condition": "NGAY_KQ khác rỗng và NGAY_KQ < NGAY_YL",
+      "message": "Ngày có kết quả ({NGAY_KQ}) trước ngày y lệnh ({NGAY_YL}) của dịch vụ {TEN_DICH_VU} — bất thường trình tự cận lâm sàng.",
+      "checkType": "date_compare",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML3-D010",
+      "name": "PTTT có gây mê/gây tê nhưng thiếu PP_VO_CAM",
+      "severity": "Warning",
+      "tables": ["XML3"],
+      "condition": "Dòng là phẫu thuật/thủ thuật (MA_NHOM nhóm PTTT) và PP_VO_CAM rỗng",
+      "message": "Dòng phẫu thuật/thủ thuật {TEN_DICH_VU} thiếu phương pháp vô cảm (PP_VO_CAM) — thiếu thông tin bắt buộc khi thực hiện PTTT có vô cảm.",
+      "checkType": "enum_dependency",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "LNK-001",
+      "name": "MA_LK bảng con không khớp XML1",
+      "severity": "Error",
+      "tables": ["XML1", "XML2", "XML3", "XML4", "XML5", "XML6", "XML7", "XML8", "XML9", "XML10", "XML11", "XML12", "XML13", "XML14", "XML15"],
+      "condition": "Tồn tại bản ghi bảng con có MA_LK không có trong danh sách MA_LK của XML1",
+      "message": "MA_LK '{MA_LK}' của bảng {TABLE} không khớp với bất kỳ hồ sơ XML1 nào — dữ liệu chi tiết mồ côi, toàn bộ chi phí liên quan không được ghi nhận thanh toán.",
+      "checkType": "link_check",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "LNK-002",
+      "name": "MA_CSKCB không thống nhất giữa các bảng",
+      "severity": "Error",
+      "tables": ["XML1", "XML6", "XML13", "XML14", "XML15"],
+      "condition": "MA_CSKCB của bảng con khác MA_CSKCB của XML1 cùng MA_LK",
+      "message": "MA_CSKCB '{MA_CSKCB_CON}' của bảng {TABLE} khác mã cơ sở KBCB trên XML1 ('{MA_CSKCB}') — dữ liệu không nhất quán, hồ sơ bị từ chối tiếp nhận.",
+      "checkType": "link_check",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "LNK-003",
+      "name": "Có tiền thuốc nhưng thiếu chi tiết XML2",
+      "severity": "Error",
+      "tables": ["XML1", "XML2"],
+      "condition": "T_THUOC > 0 và không có dòng XML2 nào cùng MA_LK",
+      "message": "XML1 kê T_THUOC = {T_THUOC} nhưng không có dòng chi tiết thuốc XML2 — thiếu chứng từ chi tiết, toàn bộ tiền thuốc bị xuất toán.",
+      "checkType": "link_check",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "LNK-004",
+      "name": "Có tiền VTYT nhưng thiếu chi tiết XML3",
+      "severity": "Error",
+      "tables": ["XML1", "XML3"],
+      "condition": "T_VTYT > 0 và không có dòng VTYT (MA_VAT_TU khác rỗng) trong XML3 cùng MA_LK",
+      "message": "XML1 kê T_VTYT = {T_VTYT} nhưng không có dòng vật tư y tế trong XML3 — thiếu chi tiết, tiền VTYT bị xuất toán.",
+      "checkType": "link_check",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "LNK-005",
+      "name": "Chuyển tuyến nhưng thiếu thông tin giấy chuyển tuyến",
+      "severity": "Warning",
+      "tables": ["XML1", "XML13"],
+      "condition": "MA_LOAI_RV thuộc {2, 5} và không có XML13 cùng MA_LK và GIAY_CHUYEN_TUYEN (XML1) rỗng và MA_NOI_DEN rỗng",
+      "message": "Hồ sơ có MA_LOAI_RV = {MA_LOAI_RV} (chuyển tuyến/chuyển cơ sở KBCB) nhưng thiếu XML13/số giấy chuyển tuyến/mã nơi đến — cơ sở tiếp nhận sẽ không chứng minh được đúng tuyến, nguy cơ giảm mức hưởng và xuất toán chênh lệch.",
+      "checkType": "link_check",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "LNK-006",
+      "name": "Tử vong nhưng có hẹn khám lại",
+      "severity": "Error",
+      "tables": ["XML1", "XML14"],
+      "condition": "KET_QUA_DTRI thuộc {5, 8} và (NGAY_TAI_KHAM khác rỗng hoặc tồn tại XML14 cùng MA_LK)",
+      "message": "Người bệnh có kết quả điều trị tử vong (KET_QUA_DTRI={KET_QUA_DTRI}) nhưng hồ sơ vẫn có ngày tái khám/giấy hẹn khám lại — mâu thuẫn logic nghiêm trọng, chắc chắn bị giám định.",
+      "checkType": "enum_dependency",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "LNK-007",
+      "name": "Điều trị nội trú nhưng thiếu giấy ra viện/tóm tắt HSBA",
+      "severity": "Info",
+      "tables": ["XML1", "XML7", "XML8"],
+      "condition": "MA_LOAI_KCB thuộc {03, 04} và không có XML7 và không có XML8 cùng MA_LK",
+      "message": "Hồ sơ nội trú (MA_LOAI_KCB={MA_LOAI_KCB}) chưa kèm giấy ra viện (XML7) hoặc tóm tắt hồ sơ bệnh án (XML8) — bổ sung để phục vụ giám định và giải quyết chế độ BHXH.",
+      "checkType": "link_check",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "LNK-008",
+      "name": "STT bảng chi tiết trùng lặp",
+      "severity": "Warning",
+      "tables": ["XML2", "XML3"],
+      "condition": "Trong cùng MA_LK tồn tại 2 dòng trùng STT hoặc trùng hoàn toàn (mã, ngày y lệnh, số lượng, đơn giá)",
+      "message": "Phát hiện dòng chi tiết trùng lặp (STT={STT}, {TEN}) trong cùng hồ sơ — nguy cơ thanh toán trùng, chắc chắn bị xuất toán phần trùng.",
+      "checkType": "custom",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "DX-001",
+      "name": "Mã bệnh chính sai định dạng ICD-10",
+      "severity": "Error",
+      "tables": ["XML1"],
+      "condition": "MA_BENH_CHINH không khớp regex ^[A-Z][0-9]{2}(\\.[0-9]{1,2})?$",
+      "message": "Mã bệnh chính '{MA_BENH_CHINH}' sai định dạng ICD-10 (chữ cái + 2 số, có thể kèm '.' và số phân nhóm) — hồ sơ bị từ chối tiếp nhận.",
+      "checkType": "custom",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "DX-002",
+      "name": "Mã bệnh kèm theo trùng mã bệnh chính",
+      "severity": "Warning",
+      "tables": ["XML1"],
+      "condition": "MA_BENH_KT (tách ';') chứa mã trùng MA_BENH_CHINH",
+      "message": "Mã bệnh kèm theo chứa mã '{MA_BENH_CHINH}' trùng với mã bệnh chính — chẩn đoán trùng lặp, cần loại bỏ.",
+      "checkType": "custom",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "DX-003",
+      "name": "Quá 12 mã bệnh kèm theo hoặc mã kèm theo sai định dạng",
+      "severity": "Error",
+      "tables": ["XML1"],
+      "condition": "MA_BENH_KT tách ';' có > 12 mã, hoặc có mã không đúng định dạng ICD-10",
+      "message": "MA_BENH_KT '{MA_BENH_KT}' vượt quá 12 mã hoặc chứa mã sai định dạng ICD-10 — vi phạm quy định ghi mã bệnh kèm theo.",
+      "checkType": "custom",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "DX-004",
+      "name": "Có mã bệnh nhưng thiếu chẩn đoán ra viện dạng chữ",
+      "severity": "Warning",
+      "tables": ["XML1"],
+      "condition": "MA_BENH_CHINH khác rỗng và CHAN_DOAN_RV rỗng",
+      "message": "Hồ sơ có mã bệnh chính '{MA_BENH_CHINH}' nhưng CHAN_DOAN_RV để trống — chẩn đoán ra viện phải mô tả đầy đủ bệnh chính và bệnh kèm theo, thiếu sẽ bị giám định trả về.",
+      "checkType": "custom",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "KCB-001",
+      "name": "Mã loại KCB không hợp lệ",
+      "severity": "Error",
+      "tables": ["XML1"],
+      "condition": "MA_LOAI_KCB không thuộc {01..09}",
+      "message": "MA_LOAI_KCB = '{MA_LOAI_KCB}' không hợp lệ (01-09 theo bộ mã DMDC) — hồ sơ bị từ chối tiếp nhận.",
+      "checkType": "enum_dependency",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "KCB-002",
+      "name": "Kết quả điều trị không hợp lệ",
+      "severity": "Error",
+      "tables": ["XML1"],
+      "condition": "KET_QUA_DTRI không thuộc {1..8}",
+      "message": "KET_QUA_DTRI = '{KET_QUA_DTRI}' không hợp lệ (1: Khỏi; 2: Đỡ; 3: Không thay đổi; 4: Nặng hơn; 5: Tử vong tại cơ sở KBCB; 6: Tiên lượng nặng xin về; 7: Chưa xác định; 8: Tử vong ngoại viện).",
+      "checkType": "enum_dependency",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "KCB-003",
+      "name": "Mã loại ra viện không hợp lệ",
+      "severity": "Error",
+      "tables": ["XML1"],
+      "condition": "MA_LOAI_RV không thuộc {1..5}",
+      "message": "MA_LOAI_RV = '{MA_LOAI_RV}' không hợp lệ (1: Ra viện; 2: Chuyển tuyến theo yêu cầu chuyên môn; 3: Trốn viện; 4: Xin ra viện; 5: Chuyển tuyến theo yêu cầu người bệnh).",
+      "checkType": "enum_dependency",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "KCB-004",
+      "name": "Mã tai nạn thương tích không hợp lệ",
+      "severity": "Warning",
+      "tables": ["XML1"],
+      "condition": "MA_TAI_NAN khác rỗng và không thuộc danh mục mã tai nạn thương tích 1 chữ số (Phụ lục 4 QĐ 5937/QĐ-BYT)",
+      "message": "MA_TAI_NAN = '{MA_TAI_NAN}' không thuộc danh mục mã tai nạn thương tích theo Phụ lục 4 QĐ 5937/QĐ-BYT — hồ sơ tai nạn có thể bị giám định về nguyên nhân (TNGT, TNLĐ ảnh hưởng trách nhiệm chi trả).",
+      "checkType": "enum_dependency",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "KCB-005",
+      "name": "Khám ngoại trú nhưng có số ngày điều trị/vào nội trú",
+      "severity": "Error",
+      "tables": ["XML1"],
+      "condition": "MA_LOAI_KCB = 01 và (SO_NGAY_DTRI != 0 hoặc NGAY_VAO_NOI_TRU khác rỗng)",
+      "message": "Hồ sơ khám bệnh (MA_LOAI_KCB=01) nhưng SO_NGAY_DTRI = {SO_NGAY_DTRI} khác 0 hoặc có NGAY_VAO_NOI_TRU — mâu thuẫn hình thức KCB, nguy cơ xuất toán tiền giường/ngày điều trị.",
+      "checkType": "enum_dependency",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "KCB-006",
+      "name": "Thời gian khám ngoại trú quá ngắn (< 5 phút)",
+      "severity": "Warning",
+      "tables": ["XML1"],
+      "condition": "MA_LOAI_KCB = 01 và (NGAY_RA - NGAY_VAO) < 5 phút",
+      "message": "Thời gian khám từ {NGAY_VAO} đến {NGAY_RA} chỉ {MINUTES} phút — khám quá nhanh, thuộc nhóm hồ sơ bị Hệ thống giám định BHXH cảnh báo (nguy cơ bị giám định tập trung, xuất toán tiền công khám).",
+      "checkType": "date_compare",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "KCB-007",
+      "name": "Nội trú nhưng thiếu thời điểm vào nội trú",
+      "severity": "Warning",
+      "tables": ["XML1"],
+      "condition": "MA_LOAI_KCB thuộc {03, 04, 09} và NGAY_VAO_NOI_TRU rỗng",
+      "message": "Hồ sơ điều trị nội trú/nội trú ban ngày (MA_LOAI_KCB={MA_LOAI_KCB}) nhưng thiếu NGAY_VAO_NOI_TRU — thiếu căn cứ tính tiền giường, nguy cơ xuất toán tiền giường.",
+      "checkType": "enum_dependency",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "KCB-008",
+      "name": "Khám/ngoại trú nhưng có tiền giường",
+      "severity": "Error",
+      "tables": ["XML1", "XML3"],
+      "condition": "MA_LOAI_KCB thuộc {01, 02} và XML3 có dòng tiền giường điều trị nội trú (MA_NHOM nhóm giường nội trú)",
+      "message": "Hồ sơ khám/điều trị ngoại trú (MA_LOAI_KCB={MA_LOAI_KCB}) nhưng có dòng tiền giường nội trú trong XML3 — chi phí giường không phù hợp hình thức KCB, chắc chắn bị xuất toán.",
+      "checkType": "link_check",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "KCB-009",
+      "name": "Điều trị nội trú kéo dài bất thường",
+      "severity": "Info",
+      "tables": ["XML1"],
+      "condition": "SO_NGAY_DTRI > 100",
+      "message": "Số ngày điều trị {SO_NGAY_DTRI} vượt 100 ngày — hồ sơ điều trị dài ngày thuộc diện giám định trọng điểm, chuẩn bị đầy đủ hồ sơ bệnh án.",
+      "checkType": "custom",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "KCB-010",
+      "name": "Tử vong nhưng loại ra viện là ra viện thường/trốn viện",
+      "severity": "Warning",
+      "tables": ["XML1"],
+      "condition": "KET_QUA_DTRI = 5 và MA_LOAI_RV thuộc {3} hoặc (KET_QUA_DTRI = 1 và MA_LOAI_RV = 3)",
+      "message": "KET_QUA_DTRI ({KET_QUA_DTRI}) mâu thuẫn với MA_LOAI_RV ({MA_LOAI_RV}) — ví dụ tử vong nhưng ghi trốn viện; kiểm tra lại logic kết quả điều trị và loại ra viện.",
+      "checkType": "enum_dependency",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML7-001",
+      "name": "Giấy ra viện lệch thời gian với XML1",
+      "severity": "Error",
+      "tables": ["XML1", "XML7"],
+      "condition": "NGAY_VAO/NGAY_RA của XML7 khác NGAY_VAO/NGAY_RA của XML1 cùng MA_LK",
+      "message": "Giấy ra viện (XML7) có thời gian vào/ra ({NGAY_VAO_7} - {NGAY_RA_7}) không khớp XML1 ({NGAY_VAO} - {NGAY_RA}) — giấy tờ không nhất quán, ảnh hưởng giải quyết chế độ BHXH của người bệnh.",
+      "checkType": "link_check",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML7-002",
+      "name": "Đình chỉ thai nghén thiếu tuổi thai/nguyên nhân",
+      "severity": "Error",
+      "tables": ["XML7"],
+      "condition": "MA_DINH_CHI_THAI = 1 và (TUOI_THAI rỗng hoặc TUOI_THAI < 1 hoặc TUOI_THAI > 42 hoặc NGUYENNHAN_DINHCHI rỗng)",
+      "message": "Hồ sơ đình chỉ thai nghén (MA_DINH_CHI_THAI=1) bắt buộc ghi TUOI_THAI (1-42 tuần) và NGUYENNHAN_DINHCHI — thiếu sẽ không giải quyết được chế độ thai sản.",
+      "checkType": "enum_dependency",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML7-003",
+      "name": "Khoảng nghỉ ngoại trú sau ra viện không hợp lệ",
+      "severity": "Warning",
+      "tables": ["XML7"],
+      "condition": "NGOAITRU_TUNGAY > NGOAITRU_DENNGAY, hoặc SO_NGAY_NGHI != (NGOAITRU_DENNGAY - NGOAITRU_TUNGAY + 1), hoặc NGOAITRU_TUNGAY < date(NGAY_RA)",
+      "message": "Thông tin nghỉ ngoại trú sau ra viện không hợp lệ (từ {NGOAITRU_TUNGAY} đến {NGOAITRU_DENNGAY}, SO_NGAY_NGHI={SO_NGAY_NGHI}) — sai lệch sẽ ảnh hưởng chế độ nghỉ hưởng BHXH.",
+      "checkType": "date_compare",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML9-001",
+      "name": "Ngày sinh con ngoài đợt điều trị",
+      "severity": "Warning",
+      "tables": ["XML1", "XML9"],
+      "condition": "NGAY_SINH_CON < NGAY_VAO hoặc NGAY_SINH_CON > NGAY_RA (so với XML1 cùng MA_LK)",
+      "message": "Ngày sinh con ({NGAY_SINH_CON}) trên giấy chứng sinh nằm ngoài đợt điều trị ({NGAY_VAO} - {NGAY_RA}) — kiểm tra lại thời điểm sinh.",
+      "checkType": "date_compare",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML9-002",
+      "name": "Hồ sơ sinh con nhưng người bệnh không phải nữ",
+      "severity": "Error",
+      "tables": ["XML1", "XML9"],
+      "condition": "Tồn tại XML9 cùng MA_LK và GIOI_TINH (XML1) = 1",
+      "message": "Hồ sơ có giấy chứng sinh (XML9) nhưng người bệnh là nam (GIOI_TINH=1) — mâu thuẫn dữ liệu nghiêm trọng, chắc chắn bị giám định.",
+      "checkType": "link_check",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML9-003",
+      "name": "Số con sống vượt số con sinh",
+      "severity": "Warning",
+      "tables": ["XML9"],
+      "condition": "SO_CON khác rỗng và SO_CON_SONG > SO_CON + (số con trước đó không xác định) — kiểm tra SO_CON <= 0 hoặc CAN_NANG_CON bất thường (< 300g hoặc > 7000g)",
+      "message": "Thông tin sinh con bất thường (SO_CON={SO_CON}, SO_CON_SONG={SO_CON_SONG}, CAN_NANG_CON={CAN_NANG_CON}g) — kiểm tra lại giấy chứng sinh.",
+      "checkType": "custom",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML10-001",
+      "name": "Khoảng nghỉ dưỡng thai không hợp lệ",
+      "severity": "Error",
+      "tables": ["XML10"],
+      "condition": "TU_NGAY > DEN_NGAY hoặc SO_NGAY != (DEN_NGAY - TU_NGAY + 1)",
+      "message": "Giấy nghỉ dưỡng thai: khoảng nghỉ từ {TU_NGAY} đến {DEN_NGAY} không khớp SO_NGAY = {SO_NGAY} — sai lệch sẽ bị BHXH từ chối giải quyết chế độ.",
+      "checkType": "date_compare",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML11-001",
+      "name": "Khoảng nghỉ hưởng BHXH không hợp lệ",
+      "severity": "Error",
+      "tables": ["XML11"],
+      "condition": "TU_NGAY > DEN_NGAY hoặc SO_NGAY_NGHI != (DEN_NGAY - TU_NGAY + 1)",
+      "message": "Giấy nghỉ việc hưởng BHXH: khoảng nghỉ từ {TU_NGAY} đến {DEN_NGAY} không khớp SO_NGAY_NGHI = {SO_NGAY_NGHI} — chứng từ sai sẽ bị BHXH từ chối.",
+      "checkType": "date_compare",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML11-002",
+      "name": "Nghỉ hưởng BHXH quá 30 ngày cho một lần cấp",
+      "severity": "Warning",
+      "tables": ["XML11"],
+      "condition": "SO_NGAY_NGHI > 30",
+      "message": "Số ngày nghỉ hưởng BHXH ({SO_NGAY_NGHI}) vượt 30 ngày cho một lần cấp giấy (quy định Thông tư 18/2022/TT-BYT) — giấy chứng nhận có thể không được BHXH chấp nhận.",
+      "checkType": "custom",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML11-003",
+      "name": "Ngày nghỉ hưởng BHXH bắt đầu trước ngày vào viện",
+      "severity": "Warning",
+      "tables": ["XML1", "XML11"],
+      "condition": "TU_NGAY (XML11) < date(NGAY_VAO) của XML1 cùng MA_LK",
+      "message": "Ngày bắt đầu nghỉ hưởng BHXH ({TU_NGAY}) trước ngày vào viện ({NGAY_VAO}) — chứng từ nghỉ không khớp đợt KBCB.",
+      "checkType": "date_compare",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML13-001",
+      "name": "Giấy chuyển tuyến thiếu mã nơi chuyển đến",
+      "severity": "Error",
+      "tables": ["XML13"],
+      "condition": "Tồn tại XML13 mà MA_NOI_DEN rỗng hoặc không đủ 5 ký tự",
+      "message": "Giấy chuyển tuyến (XML13) thiếu MA_NOI_DEN hoặc mã không đủ 5 ký tự — không xác định được nơi tiếp nhận, giấy chuyển tuyến không hợp lệ, người bệnh có nguy cơ bị tính trái tuyến (giảm mức hưởng, xuất toán chênh lệch).",
+      "checkType": "custom",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML13-002",
+      "name": "Thông tin hành chính XML13 không khớp XML1",
+      "severity": "Error",
+      "tables": ["XML1", "XML13"],
+      "condition": "HO_TEN, NGAY_SINH, GIOI_TINH, MA_THE_BHYT hoặc GT_THE_DEN của XML13 khác giá trị tương ứng trên XML1 cùng MA_LK",
+      "message": "Thông tin hành chính trên giấy chuyển tuyến (XML13) không khớp XML1 (họ tên/ngày sinh/giới tính/mã thẻ/hạn thẻ) — giấy tờ không nhất quán, dễ bị từ chối khi giám định.",
+      "checkType": "link_check",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML13-003",
+      "name": "Có XML13 nhưng XML1 không ghi nhận chuyển tuyến",
+      "severity": "Warning",
+      "tables": ["XML1", "XML13"],
+      "condition": "Tồn tại XML13 cùng MA_LK nhưng MA_LOAI_RV (XML1) không thuộc {2, 5} và MA_NOI_DEN (XML1) rỗng",
+      "message": "Hồ sơ có giấy chuyển tuyến (XML13) nhưng XML1 không ghi nhận chuyển tuyến (MA_LOAI_RV={MA_LOAI_RV}, MA_NOI_DEN trống) — dữ liệu không nhất quán.",
+      "checkType": "link_check",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML13-004",
+      "name": "Chuyển tuyến theo yêu cầu người bệnh",
+      "severity": "Info",
+      "tables": ["XML13"],
+      "condition": "MA_LYDO_CT = 3",
+      "message": "Chuyển tuyến theo yêu cầu của người bệnh (MA_LYDO_CT=3) — người bệnh tự chịu phần chênh lệch mức hưởng trái tuyến tại nơi đến; lưu ý khi tính MUC_HUONG.",
+      "checkType": "enum_dependency",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML13-005",
+      "name": "Mã bệnh chính trên giấy chuyển tuyến không khớp XML1",
+      "severity": "Warning",
+      "tables": ["XML1", "XML13"],
+      "condition": "MA_BENH_CHINH (XML13) khác MA_BENH_CHINH (XML1) cùng MA_LK",
+      "message": "Mã bệnh chính trên giấy chuyển tuyến ('{MA_BENH_CHINH_13}') khác XML1 ('{MA_BENH_CHINH}') — chẩn đoán không nhất quán giữa giấy chuyển tuyến và hồ sơ tổng hợp.",
+      "checkType": "link_check",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML14-001",
+      "name": "Ngày hẹn khám lại không sau ngày ra viện",
+      "severity": "Error",
+      "tables": ["XML1", "XML14"],
+      "condition": "NGAY_HEN_KL <= date(NGAY_RA) của XML1 cùng MA_LK",
+      "message": "Ngày hẹn khám lại ({NGAY_HEN_KL}) không sau ngày ra viện ({NGAY_RA}) — giấy hẹn khám lại không hợp lệ.",
+      "checkType": "date_compare",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML14-002",
+      "name": "Thông tin hành chính XML14 không khớp XML1",
+      "severity": "Warning",
+      "tables": ["XML1", "XML14"],
+      "condition": "HO_TEN, NGAY_SINH, GIOI_TINH, MA_THE_BHYT hoặc MA_BENH_CHINH của XML14 khác XML1 cùng MA_LK",
+      "message": "Thông tin trên giấy hẹn khám lại (XML14) không khớp XML1 (họ tên/ngày sinh/giới tính/mã thẻ/mã bệnh) — giấy hẹn không hợp lệ, lần khám lại theo hẹn có nguy cơ bị tính trái tuyến.",
+      "checkType": "link_check",
+      "xuatToanRisk": true
+    },
+    {
+      "ruleId": "XML14-003",
+      "name": "Ngày hẹn khám lại quá xa ngày ra viện",
+      "severity": "Info",
+      "tables": ["XML1", "XML14"],
+      "condition": "NGAY_HEN_KL - date(NGAY_RA) > 90 ngày",
+      "message": "Ngày hẹn khám lại ({NGAY_HEN_KL}) cách ngày ra viện ({NGAY_RA}) hơn 90 ngày — kiểm tra tính hợp lý của lịch hẹn (giấy hẹn khám lại chỉ có giá trị sử dụng 01 lần trong 10 ngày làm việc kể từ ngày hẹn).",
+      "checkType": "date_compare",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML4-T001",
+      "name": "Ngày kết quả CLS ngoài đợt điều trị",
+      "severity": "Warning",
+      "tables": ["XML1", "XML4"],
+      "condition": "NGAY_KQ (XML4) < NGAY_VAO hoặc > NGAY_RA + 7 ngày (cho phép trả kết quả muộn sau ra viện)",
+      "message": "Ngày trả kết quả cận lâm sàng ({NGAY_KQ}) nằm ngoài đợt điều trị ({NGAY_VAO} - {NGAY_RA}) quá 7 ngày — kiểm tra tính hợp lý của kết quả CLS.",
+      "checkType": "date_compare",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML4-L001",
+      "name": "Có dịch vụ CLS trong XML3 nhưng thiếu kết quả XML4",
+      "severity": "Info",
+      "tables": ["XML3", "XML4"],
+      "condition": "XML3 có dòng xét nghiệm/CĐHA (MA_NHOM thuộc nhóm XN, CĐHA) nhưng không có bản ghi XML4 tương ứng MA_DICH_VU cùng MA_LK",
+      "message": "Dịch vụ cận lâm sàng {MA_DICH_VU} có trong XML3 nhưng không có kết quả trong XML4 — theo QĐ 130 phải gửi kèm chỉ số kết quả CLS, thiếu sẽ bị yêu cầu bổ sung.",
+      "checkType": "link_check",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML5-T001",
+      "name": "Thời điểm diễn biến lâm sàng ngoài đợt điều trị",
+      "severity": "Warning",
+      "tables": ["XML1", "XML5"],
+      "condition": "THOI_DIEM_DBLS < NGAY_VAO hoặc > NGAY_RA (so với XML1 cùng MA_LK)",
+      "message": "Thời điểm diễn biến lâm sàng ({THOI_DIEM_DBLS}) nằm ngoài đợt điều trị ({NGAY_VAO} - {NGAY_RA}).",
+      "checkType": "date_compare",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML15-T001",
+      "name": "Ngày điều trị lao không hợp lệ",
+      "severity": "Warning",
+      "tables": ["XML15"],
+      "condition": "NGAYKT_DTRI_LAO khác rỗng và NGAYKT_DTRI_LAO < NGAYBD_DTRI_LAO",
+      "message": "Ngày kết thúc điều trị lao ({NGAYKT_DTRI_LAO}) trước ngày bắt đầu ({NGAYBD_DTRI_LAO}) — dữ liệu điều trị lao không hợp lệ.",
+      "checkType": "date_compare",
+      "xuatToanRisk": false
+    },
+    {
+      "ruleId": "XML6-T001",
+      "name": "Ngày bắt đầu ARV trước ngày khẳng định HIV",
+      "severity": "Warning",
+      "tables": ["XML6"],
+      "condition": "BDDT_ARV khác rỗng và NGAYKD_HIV khác rỗng và BDDT_ARV < NGAYKD_HIV",
+      "message": "Ngày bắt đầu điều trị ARV ({BDDT_ARV}) trước ngày khẳng định nhiễm HIV ({NGAYKD_HIV}) — kiểm tra lại trình tự chẩn đoán - điều trị HIV.",
+      "checkType": "date_compare",
+      "xuatToanRisk": false
+    }
+  ]
+}

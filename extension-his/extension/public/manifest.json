@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "ZeroCheck AI",
+  "description": "Tiện ích mở rộng hỗ trợ giúp kiểm tra và xác thực dữ liệu đầu vào trên phần mềm HIS",
+  "version": "1.0.0",
+  "icons": {
+    "16": "assets/icon16.png",
+    "32": "assets/icon32.png",
+    "48": "assets/icon48.png",
+    "128": "assets/icon128.png"
+  },
+  "permissions": ["storage", "scripting", "webRequest"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background/index.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.vnpthis.vn/*"],
+      "js": ["content/index.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://*.vnpthis.vn/*"],
+      "js": ["page/PaymentListSniffer.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/index.html",
+    "default_title": "ZeroCheck AI"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["robot3d/index.js", "robot3d/RobotExpressive.glb", "robot3d/vnpt-logo.png"],
+      "matches": ["https://*.vnpthis.vn/*"]
+    }
+  ]
+}

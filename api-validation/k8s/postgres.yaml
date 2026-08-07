@@ -1,0 +1,93 @@
+# PostgreSQL 16 + pgvector chạy NGAY TRONG cụm cbyts.
+# Vì sao đặt trong cụm thay vì dùng VNPT Managed PostgreSQL:
+#   - Image pgvector/pgvector:pg16 đã kèm sẵn extension "vector" -> chắc chắn có
+#     pgvector cho tìm kiếm ngữ nghĩa (HNSW cosine), không phụ thuộc add-on của VNPT.
+#   - PG16 khớp phiên bản cụm muốn triển khai; app tương thích hoàn toàn.
+#   - Tự chứa, không cần chuỗi kết nối ngoài. Muốn chuyển sang managed PG sau này
+#     chỉ cần đổi 'db-connection' trong secret cbyts-secrets, không sửa app.
+# Dữ liệu nằm trên PVC RWO 21Gi. EF migrations của API tự tạo schema lúc khởi động;
+# app tự dựng lại embedding_vec từ cột bytea nên không phải embed lại.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data
+  namespace: cbyts
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 21Gi          # đã nở từ 5Gi để chứa dữ liệu RAG (71 docs/106k chunks ~2.6G + index HNSW + WAL). PVC live đang 21Gi, KHÔNG hạ xuống được.
+  # storageClassName: <lấy từ VNPT Block Storage CSI add-on nếu cụm yêu cầu>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: cbyts
+  labels:
+    app: postgres
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate          # 1 pod ghi PVC RWO, tránh 2 pod tranh đĩa lúc rollout
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      # Cụm VNPT không có route ra Docker Hub -> image public được mirror vào VNPT ECR.
+      imagePullSecrets:
+        - name: ecr-pull
+      containers:
+        - name: postgres
+          image: ecr.vnptplatform.vn/REPLACE_ECR_ID/pgvector:pg16
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: hackathon_ai
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cbyts-secrets
+                  key: db-password
+            # Ghi dữ liệu vào thư mục con để tránh lỗi "lost+found" trên volume mount
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres", "-d", "hackathon_ai"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: postgres-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: cbyts
+spec:
+  type: ClusterIP           # chỉ nội bộ — chỉ api-validation truy cập
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432

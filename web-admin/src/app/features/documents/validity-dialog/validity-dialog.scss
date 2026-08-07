@@ -1,0 +1,43 @@
+.doc-title {
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+
+.hint-line {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant);
+  line-height: 1.55;
+}
+
+.date-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  input[type='date'] {
+    height: 40px;
+    padding: 0 12px;
+    border-radius: 10px;
+    border: 1px solid var(--mat-sys-outline-variant);
+    background: var(--mat-sys-surface-container-low);
+    color: var(--mat-sys-on-surface);
+    font-family: inherit;
+    font-size: 14px;
+    color-scheme: inherit;
+  }
+}
+
+@media (max-width: 480px) {
+  .date-grid {
+    grid-template-columns: 1fr;
+  }
+}

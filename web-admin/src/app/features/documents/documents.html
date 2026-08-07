@@ -1,0 +1,160 @@
+<app-page-header icon="menu_book" title="Kho tri thức" subtitle="Văn bản y tế cho trợ lý AI tra cứu (RAG)">
+  <mat-slide-toggle
+    [checked]="showInactive()"
+    (change)="toggleInactive($event.checked)"
+  >Hiện đã gỡ</mat-slide-toggle>
+  <mat-form-field appearance="outline" class="search-field" subscriptSizing="dynamic">
+    <mat-icon matPrefix>search</mat-icon>
+    <input matInput [formControl]="searchCtrl" placeholder="Tìm văn bản / tên file..." />
+  </mat-form-field>
+  @if (expiredCount() > 0) {
+    <button [matButton]="'outlined'" class="expired-btn" (click)="removeExpired()"
+      matTooltip="Gỡ mềm các văn bản đã quá ngày hết hiệu lực (AI vốn đã không trích dẫn chúng)">
+      <mat-icon>auto_delete</mat-icon>
+      Gỡ hết hạn ({{ expiredCount() }})
+    </button>
+  }
+  <button [matButton]="'outlined'" (click)="rebuildEmbeddings()" [disabled]="indexing()"
+    matTooltip="Đồng bộ vector sang pgvector + tạo chỉ mục ngữ nghĩa cho các đoạn chưa có (cần Ollama + model bge-m3 chạy local) — giúp AI hiểu câu hỏi diễn đạt khác từ ngữ trong văn bản">
+    <mat-icon>{{ indexing() ? 'hourglass_top' : 'psychology' }}</mat-icon>
+    {{ indexing()
+      ? 'Đang tạo chỉ mục...' + (indexingRemaining() !== null ? ' (còn ' + indexingRemaining() + ')' : '')
+      : 'Chỉ mục ngữ nghĩa' }}
+  </button>
+  <button [matButton]="'outlined'" (click)="openIngestFromLegal()"
+    matTooltip="Chọn nạp từ các văn bản đã tải ở màn Tải văn bản (không cần chọn file từ máy)">
+    <mat-icon>cloud_download</mat-icon>
+    Nạp từ văn bản đã tải
+  </button>
+  <button [matButton]="'filled'" color="primary" (click)="showUpload.set(!showUpload())">
+    <mat-icon>{{ showUpload() ? 'close' : 'upload_file' }}</mat-icon>
+    {{ showUpload() ? 'Đóng' : 'Nạp văn bản' }}
+  </button>
+</app-page-header>
+
+@if (embStatus(); as st) {
+  <div class="emb-status" [class.warn]="st.ollama !== 'OK' || !!st.dbError">
+    <span class="emb-item" [matTooltip]="st.ollama === 'OK' ? 'Ollama đang chạy — tầng ngữ nghĩa hoạt động' : st.ollama">
+      <mat-icon [class.ok]="st.ollama === 'OK'" [class.err]="st.ollama !== 'OK'">
+        {{ st.ollama === 'OK' ? 'check_circle' : 'error' }}
+      </mat-icon>
+      Ollama: {{ st.ollama === 'OK' ? 'OK' : 'lỗi' }}
+    </span>
+    <span class="emb-item" matTooltip="Nơi lưu và cách tìm vector ngữ nghĩa">
+      <mat-icon>hub</mat-icon>
+      {{ st.index }}
+    </span>
+    <span class="emb-item"
+      [matTooltip]="st.remaining > 0
+        ? 'Còn ' + st.remaining + ' đoạn chưa có chỉ mục — bấm nút Chỉ mục ngữ nghĩa'
+        : 'Toàn bộ các đoạn đã có chỉ mục ngữ nghĩa'">
+      <mat-icon [class.ok]="st.remaining === 0" [class.err]="st.remaining > 0">
+        {{ st.remaining === 0 ? 'task_alt' : 'pending' }}
+      </mat-icon>
+      Chỉ mục: {{ st.embedded | number }}/{{ st.totalChunks | number }} đoạn
+      @if (st.remaining > 0) { (còn {{ st.remaining | number }}) }
+    </span>
+    @if (st.dbError) {
+      <span class="emb-item err-text" [matTooltip]="st.dbError"><mat-icon class="err">storage</mat-icon> Lỗi DB</span>
+    }
+    <button matIconButton class="emb-refresh" matTooltip="Làm mới trạng thái"
+      (click)="loadEmbeddingsStatus()" [disabled]="embStatusLoading()">
+      <mat-icon>refresh</mat-icon>
+    </button>
+  </div>
+}
+
+@if (showUpload()) {
+  <mat-card class="upload-panel" appearance="outlined">
+    <app-file-upload
+      accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.md"
+      [multiple]="true"
+      [uploadFn]="uploadFn"
+      (uploaded)="onUploaded()"
+    ></app-file-upload>
+  </mat-card>
+}
+
+<app-data-table
+  [columns]="columns"
+  [data]="filtered()"
+  [loading]="loading()"
+  emptyIcon="menu_book"
+  emptyTitle="Chưa có văn bản nào"
+  emptyDescription="Nạp file .pdf, .doc/.docx, .xls/.xlsx, .txt hoặc .md để trợ lý AI học và tra cứu. PDF scan sẽ tự OCR."
+>
+  <ng-template appColumnDef="title" let-row>
+    @let fi = fileIcon(row.sourceFileName);
+    <div class="doc-cell" [class.inactive-row]="!row.isActive">
+      <mat-icon [class]="fi.cls">{{ fi.icon }}</mat-icon>
+      <div>
+        <div class="doc-name">{{ row.title }}</div>
+        @if (row.sourceFileName) {
+          <div class="doc-file">{{ row.sourceFileName }}</div>
+        }
+      </div>
+    </div>
+  </ng-template>
+
+  <ng-template appColumnDef="docType" let-row>
+    <span class="type-tag">{{ row.docType }}</span>
+    @if (row.docNumber) {
+      <div class="doc-num">{{ row.docNumber }}</div>
+    }
+  </ng-template>
+
+  <ng-template appColumnDef="validity" let-row>
+    <button
+      type="button"
+      class="validity-btn"
+      matTooltip="Bấm để nhập/sửa ngày hiệu lực"
+      (click)="editValidity(row)"
+    >
+      @if (isExpired(row.expiryDate)) {
+        <span class="expired-tag">
+          <mat-icon>block</mat-icon> {{ validityText(row) }}
+        </span>
+      } @else if (validityText(row)) {
+        <span class="validity-cell">{{ validityText(row) }}</span>
+      } @else {
+        <span class="validity-empty"><mat-icon>edit_calendar</mat-icon> Nhập hiệu lực</span>
+      }
+    </button>
+  </ng-template>
+
+  <ng-template appColumnDef="chunkCount" let-row>
+    <strong>{{ row.chunkCount | number }}</strong>
+  </ng-template>
+
+  <ng-template appColumnDef="createdAt" let-row>
+    {{ row.createdAt | date: 'dd/MM/yyyy' }}
+  </ng-template>
+
+  <ng-template appColumnDef="status" let-row>
+    @if (row.isActive) {
+      <span class="badge active"><mat-icon>check_circle</mat-icon> Hiệu lực</span>
+    } @else {
+      <span class="badge inactive"><mat-icon>block</mat-icon> Đã gỡ</span>
+    }
+  </ng-template>
+
+  <ng-template appColumnDef="actions" let-row>
+    <button matIconButton matTooltip="Xem nội dung" (click)="openDetail(row)">
+      <mat-icon>visibility</mat-icon>
+    </button>
+    @if (row.sourceFileName) {
+      <button matIconButton matTooltip="Xem file gốc" (click)="openFile(row)">
+        <mat-icon>open_in_new</mat-icon>
+      </button>
+    }
+    @if (row.isActive) {
+      <button matIconButton matTooltip="Gỡ bỏ (có thể khôi phục)" (click)="remove(row)">
+        <mat-icon>delete_outline</mat-icon>
+      </button>
+    } @else {
+      <button matIconButton matTooltip="Khôi phục" (click)="restore(row)">
+        <mat-icon>restore</mat-icon>
+      </button>
+    }
+  </ng-template>
+</app-data-table>

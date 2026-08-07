@@ -1,0 +1,65 @@
+<div class="editor">
+  <div class="editor-head">
+    <div class="head-info">
+      <h3>Phân quyền · {{ role().name }}</h3>
+      <p>Đã chọn <strong>{{ selectedCount() }}</strong> / {{ totalCount() }} quyền</p>
+    </div>
+    <div class="head-actions">
+      <button matButton (click)="selectAll()"><mat-icon>done_all</mat-icon> Chọn tất cả</button>
+      <button matButton (click)="clearAll()"><mat-icon>remove_done</mat-icon> Bỏ hết</button>
+    </div>
+  </div>
+
+  <div class="overall-bar">
+    <div class="fill" [style.width.%]="totalCount() ? (selectedCount() / totalCount()) * 100 : 0"></div>
+  </div>
+
+  <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
+    <mat-icon matPrefix>search</mat-icon>
+    <input matInput [formControl]="searchCtrl" placeholder="Tìm nhanh quyền..." />
+  </mat-form-field>
+
+  <mat-accordion multi class="groups">
+    @for (g of filteredGroups(); track g.group) {
+      <mat-expansion-panel [expanded]="!!searchCtrl.value">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            <mat-checkbox
+              [checked]="groupAllChecked(g)"
+              [indeterminate]="groupIndeterminate(g)"
+              (change)="toggleGroup(g, $event.checked)"
+              (click)="$event.stopPropagation()"
+            ></mat-checkbox>
+            <mat-icon class="g-icon">{{ groupIcon(g.group) }}</mat-icon>
+            <span class="g-name">{{ groupLabel(g.group) }}</span>
+          </mat-panel-title>
+          <mat-panel-description>
+            <span class="g-count">{{ groupSelectedCount(g) }}/{{ g.permissions.length }}</span>
+            <span class="g-bar"><span class="g-fill" [style.width.%]="groupProgress(g)"></span></span>
+          </mat-panel-description>
+        </mat-expansion-panel-header>
+
+        <div class="perm-grid">
+          @for (p of g.permissions; track p.code) {
+            <label class="perm" [class.on]="isChecked(p.code)">
+              <mat-checkbox
+                [checked]="isChecked(p.code)"
+                (change)="toggle(p.code, $event.checked)"
+              ></mat-checkbox>
+              <div class="perm-text">
+                <span class="perm-name">{{ p.displayName }}</span>
+                <span class="perm-code">{{ p.code }}</span>
+              </div>
+            </label>
+          }
+        </div>
+      </mat-expansion-panel>
+    }
+  </mat-accordion>
+
+  <div class="editor-foot">
+    <button [matButton]="'filled'" color="primary" (click)="save()" [disabled]="saving()">
+      <mat-icon>save</mat-icon> Lưu quyền
+    </button>
+  </div>
+</div>

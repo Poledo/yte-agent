@@ -1,0 +1,86 @@
+{
+  "page": "DiagnosisPage",
+  "trigger": {
+    "field": "diagnosis_code",
+    "event": "Change"
+  },
+  "context": {
+    "timestamp": "2024-01-15T14:20:00Z",
+    "extensionVersion": "1.0.0",
+    "sessionId": "sess_female_28_pregnancy",
+    "userId": "user_doctor_002"
+  },
+  "form": {
+    "patient": {
+      "id": "P002",
+      "firstName": "Trần",
+      "lastName": "Thị B",
+      "gender": "Female",
+      "dateOfBirth": "1996-03-20",
+      "age": 28,
+      "nationalId": "987654321"
+    },
+    "encounter": {
+      "id": "E002",
+      "admissionDate": "2024-01-15",
+      "admissionTime": "14:00",
+      "department": "Phòng khám Sản Phụ Khoa",
+      "visitType": "Regular",
+      "chiefComplaint": "Kiểm tra thai kỳ"
+    },
+    "diagnosis": [
+      {
+        "code": "O80",
+        "name": "Chuyển dạ và sinh thường",
+        "type": "Primary",
+        "icdVersion": "10",
+        "severity": "Normal"
+      },
+      {
+        "code": "Z34",
+        "name": "Thai kỳ bình thường",
+        "type": "Secondary",
+        "icdVersion": "10",
+        "severity": "Normal"
+      }
+    ],
+    "procedure": [
+      {
+        "code": "76702",
+        "name": "Siêu âm thai",
+        "date": "2024-01-15",
+        "status": "Completed"
+      }
+    ],
+    "medicine": [
+      {
+        "code": "A11CA",
+        "name": "Vitamin D",
+        "dose": "400IU",
+        "frequency": "1 lần/ngày",
+        "duration": "Suốt thai kỳ",
+        "route": "Uống"
+      },
+      {
+        "code": "B05XA",
+        "name": "Acid folic",
+        "dose": "400mcg",
+        "frequency": "1 lần/ngày",
+        "duration": "Suốt thai kỳ",
+        "route": "Uống"
+      }
+    ],
+    "insurance": {
+      "code": "BHYT002",
+      "type": "Health Insurance",
+      "status": "Active",
+      "expiryDate": "2024-12-31"
+    },
+    "pregnancy": {
+      "gestationalWeeks": 28,
+      "expectedDeliveryDate": "2024-04-20",
+      "previousPregnancies": 0,
+      "complication": "None"
+    }
+  }
+}

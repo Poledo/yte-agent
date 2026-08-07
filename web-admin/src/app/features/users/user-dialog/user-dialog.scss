@@ -1,0 +1,10 @@
+.form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 380px;
+  padding-top: 8px;
+}
+mat-slide-toggle {
+  margin: 4px 0 8px;
+}

@@ -1,0 +1,110 @@
+<app-page-header
+  icon="manage_search"
+  title="Lịch sử hoạt động"
+  subtitle="Các lượt hỏi đáp AI và kiểm tra hồ sơ XML 130 — bấm xem lại nội dung phản hồi"
+>
+  <!-- Lọc theo loại -->
+  <button matButton="outlined" class="pill-btn" [matMenuTriggerFor]="typeMenu">
+    <mat-icon>filter_list</mat-icon>
+    {{ typeOptions.find(t => t.key === typeFilter())?.label }}
+    <mat-icon>arrow_drop_down</mat-icon>
+  </button>
+  <mat-menu #typeMenu="matMenu">
+    @for (t of typeOptions; track t.key) {
+      <button mat-menu-item (click)="setType(t.key)">
+        <mat-icon>{{ t.icon }}</mat-icon>
+        <span [class.range-on]="typeFilter() === t.key">{{ t.label }}</span>
+      </button>
+    }
+  </mat-menu>
+
+  <!-- Chọn khoảng thời gian -->
+  <div class="range-pick">
+    <button matButton="outlined" class="pill-btn" [matMenuTriggerFor]="rangeMenu">
+      <mat-icon>calendar_month</mat-icon>
+      {{ rangeLabel() }}
+      <mat-icon>arrow_drop_down</mat-icon>
+    </button>
+    <mat-menu #rangeMenu="matMenu">
+      @for (p of presets; track p.key) {
+        <button mat-menu-item (click)="selectPreset(p.key)">
+          <span [class.range-on]="preset() === p.key">{{ p.label }}</span>
+        </button>
+      }
+      <button mat-menu-item (click)="picker.open()">
+        <span [class.range-on]="preset() === 'custom'">Tùy chọn khoảng ngày…</span>
+      </button>
+    </mat-menu>
+    <mat-date-range-input class="range-hidden" [rangePicker]="picker" aria-hidden="true">
+      <input matStartDate (dateChange)="onRangeStart($event.value)" tabindex="-1" />
+      <input matEndDate (dateChange)="onRangeEnd($event.value)" tabindex="-1" />
+    </mat-date-range-input>
+    <mat-date-range-picker #picker></mat-date-range-picker>
+  </div>
+
+  <button matIconButton matTooltip="Làm mới" (click)="load()">
+    <mat-icon>refresh</mat-icon>
+  </button>
+</app-page-header>
+
+<app-data-table
+  [columns]="columns"
+  [data]="rows()"
+  [loading]="loading()"
+  emptyIcon="manage_search"
+  emptyTitle="Chưa có hoạt động nào trong khoảng này"
+  emptyDescription="Hỏi trợ lý AI hoặc kiểm tra một file XML 130 để hệ thống ghi nhận lịch sử."
+>
+  <ng-template appColumnDef="createdAt" let-row>
+    <div class="when">
+      <span>{{ row.createdAt | date: 'dd/MM/yyyy' }}</span>
+      <span class="when-time">{{ row.createdAt | date: 'HH:mm:ss' }}</span>
+    </div>
+  </ng-template>
+
+  <ng-template appColumnDef="eventType" let-row>
+    @if (row.eventType === 'Ask') {
+      <span class="type-badge ask"><mat-icon>forum</mat-icon> Hỏi đáp AI</span>
+    } @else {
+      <span class="type-badge check"><mat-icon>rule</mat-icon> Kiểm tra XML</span>
+    }
+  </ng-template>
+
+  <ng-template appColumnDef="preview" let-row>
+    <span class="preview" [matTooltip]="row.preview ?? ''">{{ row.preview ?? '—' }}</span>
+  </ng-template>
+
+  <ng-template appColumnDef="facilityCode" let-row>
+    <span class="mono">{{ row.facilityCode }}</span>
+  </ng-template>
+
+  <ng-template appColumnDef="result" let-row>
+    @if (row.eventType === 'Ask') {
+      <span class="muted">—</span>
+    } @else {
+      <div class="result-cell">
+        @if (row.errorCount > 0) { <span class="cnt err">{{ row.errorCount }} lỗi</span> }
+        @if (row.warningCount > 0) { <span class="cnt warn">{{ row.warningCount }} cảnh báo</span> }
+        @if (row.errorCount === 0 && row.warningCount === 0) { <span class="cnt ok">Sạch</span> }
+        @if (row.xuatToanRisk) {
+          <mat-icon class="risk" matTooltip="Có nguy cơ xuất toán">report</mat-icon>
+        }
+      </div>
+    }
+  </ng-template>
+
+  <ng-template appColumnDef="durationMs" let-row>
+    <span class="muted">{{ row.durationMs | number }} ms</span>
+  </ng-template>
+
+  <ng-template appColumnDef="actions" let-row>
+    <button
+      matIconButton
+      matTooltip="Xem nội dung phản hồi"
+      [disabled]="!row.hasDetail"
+      (click)="openDetail(row)"
+    >
+      <mat-icon>visibility</mat-icon>
+    </button>
+  </ng-template>
+</app-data-table>
