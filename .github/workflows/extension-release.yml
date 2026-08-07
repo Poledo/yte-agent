@@ -73,7 +73,7 @@ jobs:
       # Chỉ tạo Release khi chạy từ tag. Bấm tay (workflow_dispatch) thì dừng ở artifact.
       - name: Đính .zip vào GitHub Release
         if: github.ref_type == 'tag'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: ${{ env.TEN_FILE }}
           name: ZeroCheck AI ${{ github.ref_name }}
