@@ -30,7 +30,7 @@
     <PackageReference Include="PdfPig" Version="0.1.15" />
     <!-- OCR miễn phí, chạy offline cho PDF scan: PDFtoImage render trang thành ảnh (pdfium),
          Tesseract nhận dạng chữ (cần file vie.traineddata trong Ocr/tessdata) -->
-    <PackageReference Include="PDFtoImage" Version="4.1.1" />
+    <PackageReference Include="PDFtoImage" Version="5.3.0" />
     <PackageReference Include="Tesseract" Version="5.2.0" />
     <PackageReference Include="Scalar.AspNetCore" Version="1.2.47" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.19.2" />
