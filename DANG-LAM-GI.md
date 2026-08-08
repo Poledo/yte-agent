@@ -111,8 +111,8 @@ Việc của riêng monorepo:
   **Mỗi lần push lên `master` là deploy thẳng lên cụm production** - đã kiểm chứng ở commit
   `57c0d44`: build image → push ECR (tag `57c0d448` + `latest`) → `kubectl apply` →
   `deployment "api-validation"/"web-admin" successfully rolled out`, <https://cbyts.vnpt.vn> trả 200.
-- **⚠ Phải xoay khóa ECR**: ngày 08/08/2026 Secret Key ECR bị in ra chat. Cần đổi khóa ở portal
-  ECR rồi cập nhật lại secret `ECR_PASSWORD` ở cả 4 kho (monorepo + 3 repo cũ).
+- Khóa ECR từng bị in ra chat ngày 08/08/2026; người dùng đã cân nhắc và **quyết định không xoay
+  khóa** (kho private, chat không công khai). Không nhắc lại việc này nữa.
 - Tag phát hành extension đổi tiền tố: `extension-v1.2.3` (hồi tách repo chỉ là `v1.2.3`),
   vì một kho giờ chứa 3 thành phần.
 - **Nâng thư viện lên major còn treo** (commit `57c0d44` chỉ lấy patch/minor cùng major):
