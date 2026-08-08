@@ -15,10 +15,18 @@ Chỉ chép mã nguồn hiện tại, **không mang lịch sử commit** - link 
 | `web-admin/` | Angular 20 (standalone, signals, Material) | |
 | `extension-his/` | Tiện ích Chrome cắm vào HIS | `CLAUDE.md`, `ARCHITECTURE.md` |
 
-Còn nằm ngoài kho, ở workspace cũ `D:\VNPT\hackathon` (chưa chép sang, chưa quyết định):
-`nop-btc/` (bản nộp BTC - **không tạo thêm file .md**), `report/` (video + slide),
-`data-import/`, `vnpt-cloud/`, `kich-ban-demo/` (**dữ liệu bệnh nhân thật, cố ý không commit**),
-`notes/` (**chứa bí mật, không commit, không đọc lên chat**), và các script `gen-*.mjs`.
+**Workspace cũ `D:\VNPT\hackathon` đã xóa ngày 08/08/2026** - mọi thứ đã chuyển hết sang đây.
+Trước khi xóa đã đối chiếu: source 3 thành phần không thiếu file nào, `master` + tag
+`release-v2-final`/`release-v2.1` của cả 3 repo khớp y hệt remote GitHub, nhánh lạc đã merge,
+không có stash. Lịch sử commit trước 08/08/2026 tra ở 3 repo cũ trên GitHub (link cuối README).
+
+Ngoài mã nguồn, kho giờ có thêm: `nop-btc/` (bản nộp BTC - **không tạo thêm file .md**),
+`report/` (báo cáo, video, slide, ảnh minh chứng), 3 script `gen-*.mjs`, và `.claude/launch.json`.
+
+Bốn nhóm **nằm trên đĩa nhưng cố ý không commit** (khai kèm lý do trong `.gitignore` ở gốc):
+`notes/` + `vnpt-cloud/` (khóa, mật khẩu), `kich-ban-demo/` + `data-import/` (dữ liệu bệnh nhân
+và dữ liệu thật của khách hàng), `backup-git/` (lịch sử trước filter-repo, còn bí mật đã gỡ).
+**Chúng chỉ có trên máy này, GitHub không giữ bản sao - cần thì phải tự sao lưu ra ngoài.**
 
 Cổng hay dùng khi chạy local: 44350 (API HTTPS), 5075 (API HTTP), 4200 (web admin), 11434 (Ollama).
 Xong việc thì **tắt server**, kiểm tra 4 cổng trên đã trống.
@@ -121,8 +129,9 @@ Việc của riêng monorepo:
   Microsoft.NET.Test.Sdk 17→18, xunit.runner.visualstudio 2→3, `node:22-alpine`→25,
   và các GitHub Action (checkout 4→7, setup-node 4→7, setup-dotnet 4→6, upload-artifact 4→7,
   action-gh-release 2→3). Làm từng cụm một, đừng gộp - mỗi cụm có breaking change riêng.
-- Quyết định có chép nốt `nop-btc/`, `report/`, `data-import/`, `vnpt-cloud/` sang không.
-- Khi đã chắc chắn, người dùng tự xóa workspace cũ `D:\VNPT\hackathon`.
+- Còn đúng `D:\VNPT\hackathon\vnpt-cloud` chưa chuyển (bộ lọc quyền chặn thao tác trên thư mục
+  chứa credential). Người dùng tự chạy: `mv D:/VNPT/hackathon/vnpt-cloud D:/VNPT/yte-agent/`
+  rồi xóa nốt thư mục rỗng `D:\VNPT\hackathon`.
 
 ## Ràng buộc bắt buộc nhớ
 

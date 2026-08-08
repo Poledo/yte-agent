@@ -14,6 +14,20 @@ từ 08/08/2026 gộp về đây để phát triển chung một nơi.
 | [`web-admin/`](web-admin) | Web Admin — dashboard, kho tri thức, danh mục HIS, người dùng/vai trò/quyền, cấu hình AI | Angular 20, Material 3 | [`README`](web-admin/README.md) |
 | [`extension-his/`](extension-his) | Chrome Extension cắm vào HIS — cảnh báo nhập liệu, chat kiểm tra hồ sơ, nạp danh mục | TypeScript, Vite | [`README`](extension-his/README.md), [`CLAUDE.md`](extension-his/CLAUDE.md), [`ARCHITECTURE`](extension-his/ARCHITECTURE.md) |
 
+Ngoài mã nguồn, kho còn giữ hồ sơ dự thi (chuyển từ workspace cũ sang 08/08/2026):
+
+| Thư mục | Nội dung |
+|---|---|
+| [`nop-btc/`](nop-btc) | Bản nộp BTC: 11 mục docx + pdf, slide báo cáo, phản hồi rà soát. **Không tạo thêm file .md ở đây** |
+| [`report/`](report) | Báo cáo tiến độ, kịch bản demo, video hướng dẫn + phụ đề, ảnh minh chứng vibe code, script sinh pptx/video |
+| `gen-*.mjs` | 3 script sinh tài liệu docx/pptx |
+
+Còn một số thư mục **nằm trên đĩa nhưng cố ý không đưa vào git** - lý do ghi rõ trong
+[`.gitignore`](.gitignore): `notes/` và `vnpt-cloud/` (khóa, mật khẩu), `kich-ban-demo/` và
+`data-import/` (dữ liệu bệnh nhân và dữ liệu thật của khách hàng - luật thi cấm),
+`backup-git/` (bản lịch sử trước khi viết lại, còn nguyên bí mật đã gỡ).
+**Những thư mục này chỉ tồn tại trên máy, GitHub không có bản sao - muốn an toàn phải tự sao lưu.**
+
 Đang làm gì / còn nợ gì: xem [`DANG-LAM-GI.md`](DANG-LAM-GI.md).
 
 ## Chạy tại máy
