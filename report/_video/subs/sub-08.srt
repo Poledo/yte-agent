@@ -1,0 +1,8 @@
+1
+00:00:00,100 --> 00:00:03,541
+Phần hai: trang quản trị Web Admin.
+
+2
+00:00:03,491 --> 00:00:08,682
+Đây là nơi quản trị viên chuẩn bị bộ não cho hệ thống và cấu hình vận hành.
+

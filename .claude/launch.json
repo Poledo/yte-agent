@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web-admin",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "web-admin", "start"],
+      "port": 4200
+    },
+    {
+      "name": "robot-preview",
+      "runtimeExecutable": "D:/VNPT/yte-agent/extension-his/extension/node_modules/.bin/vite.cmd",
+      "runtimeArgs": ["D:/VNPT/yte-agent/extension-his/extension", "--port", "8123", "--strictPort"],
+      "port": 8123
+    }
+  ]
+}

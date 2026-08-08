@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hỏi đáp BGK - ZeroCheck AI</title>
+<style>
+*{box-sizing:border-box}
+:root{
+  --bg:#f4f6f9; --card:#fff; --line:#dfe4ec; --ink:#182230; --dim:#5b6676;
+  --blue:#1f4e79; --blue2:#2f6ea8; --red:#a03020; --amber:#8a5a00; --amberbg:#fff8e6;
+  --hit:#ffe98a;
+}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);
+  font:15px/1.55 "Segoe UI",-apple-system,Roboto,Arial,sans-serif;
+  padding-top:var(--hh,118px)}
+header{position:fixed;top:0;left:0;right:0;z-index:50;background:var(--blue);
+  box-shadow:0 2px 12px rgba(0,0,0,.18)}
+.hwrap{max-width:1120px;margin:0 auto;padding:10px 16px 12px}
+.htop{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.htop h1{margin:0;font-size:17px;color:#fff;font-weight:700;letter-spacing:.2px}
+.htop span{color:#bcd6ec;font-size:12.5px}
+.sbox{position:relative;margin-top:8px}
+#q{width:100%;padding:11px 108px 11px 40px;border:0;border-radius:9px;
+  font-size:15.5px;outline:0;box-shadow:0 0 0 2px transparent}
+#q:focus{box-shadow:0 0 0 3px #7fb2dd}
+.ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);
+  color:#8a95a4;font-size:15px}
+#clr{position:absolute;right:74px;top:50%;transform:translateY(-50%);
+  border:0;background:#e6eaf0;color:#5b6676;border-radius:6px;cursor:pointer;
+  padding:4px 9px;font-size:12px;display:none}
+#cnt{position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  color:#5b6676;font-size:12px;font-variant-numeric:tabular-nums}
+nav{max-width:1120px;margin:0 auto;padding:0 16px 9px;display:flex;gap:6px;
+  flex-wrap:wrap;overflow-x:auto}
+nav a{color:#d6e6f5;text-decoration:none;font-size:12px;padding:3px 9px;
+  border-radius:20px;background:rgba(255,255,255,.11);white-space:nowrap}
+nav a:hover{background:rgba(255,255,255,.26);color:#fff}
+main{max-width:1120px;margin:0 auto;padding:16px}
+section{margin-bottom:26px;scroll-margin-top:calc(var(--hh,118px) + 14px)}
+.card,h3.sub{scroll-margin-top:calc(var(--hh,118px) + 14px)}
+h2.sec{font-size:16px;color:var(--blue);margin:0 0 10px;padding-bottom:6px;
+  border-bottom:2px solid var(--blue2)}
+h3.sub{font-size:14.5px;color:var(--blue2);margin:18px 0 8px}
+.card{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--blue2);
+  border-radius:7px;padding:11px 14px;margin-bottom:9px}
+.card .qq{font-weight:700;color:var(--red);margin-bottom:5px;cursor:pointer;
+  display:flex;gap:7px;align-items:flex-start}
+.card .qq .cx{color:#9aa5b4;font-size:11px;margin-top:4px;flex:0 0 auto;
+  transition:transform .15s}
+.card.closed .body{display:none}
+.card.closed .cx{transform:rotate(-90deg)}
+.card .aa{margin:0 0 5px}
+.card ul{margin:5px 0 0;padding-left:20px}
+.card li{margin:2px 0;color:#2c3846}
+.note{background:var(--amberbg);border-left:3px solid #e0a92b;color:var(--amber);
+  padding:6px 10px;border-radius:5px;margin-top:8px;font-size:13.5px}
+.note b{color:#734a00}
+p.txt{margin:6px 0}
+p.txt.ind{padding-left:16px}
+p.txt.it{color:var(--dim);font-style:italic;font-size:13.5px}
+.tw{overflow-x:auto;background:var(--card);border:1px solid var(--line);
+  border-radius:7px;margin:8px 0 12px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th{background:#eef3f8;color:var(--blue);text-align:left;font-weight:700;
+  padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:7px 10px;border-bottom:1px solid #eef1f5;vertical-align:top}
+tr:last-child td{border-bottom:0}
+tr.hide{display:none}
+mark{background:var(--hit);padding:0 1px;border-radius:2px}
+.empty{display:none;text-align:center;color:var(--dim);padding:40px 10px;font-size:15px}
+.hide{display:none}
+@media(max-width:640px){
+  #q{padding-right:96px}
+}
+@media print{
+  header{position:static}body{padding-top:0 !important}
+  .card.closed .body{display:block}nav,.sbox{display:none}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="hwrap">
+    <div class="htop">
+      <h1>Chuẩn bị hỏi đáp Ban giám khảo</h1>
+      <span>ZeroCheck AI - Chiến binh Y tế số - 40 câu - 01/08/2026</span>
+    </div>
+    <div class="sbox">
+      <span class="ico">&#128269;</span>
+      <input id="q" type="search" autocomplete="off" spellcheck="false"
+             placeholder="Gõ để tìm nhanh: rule, danh mục, k6, CORS, xuất toán, RRF... (gõ không dấu cũng được)">
+      <button id="clr" type="button">Xóa</button>
+      <span id="cnt"></span>
+    </div>
+  </div>
+  <nav id="nav"></nav>
+</header>
+<main id="main"></main>
+<div class="empty" id="empty">Không tìm thấy nội dung nào khớp.</div>
+<script>
+const DATA = [{"id": "s1", "title": "A. BẢNG SỐ LIỆU CHỐT - LIẾC MỘT CÁI LÀ TRẢ LỜI ĐƯỢC", "blocks": [{"t": "table", "header": ["Nội dung", "Con số chốt"], "rows": [["Phạm vi chuẩn XML 130", "15 bảng, 455 trường"], ["Kiểm tra cấp trường", "756 phép kiểm tra trên mỗi dòng dữ liệu"], ["Luật liên trường / liên bảng", "100 luật (61 Lỗi, 34 Cảnh báo, 5 Thông tin)"], ["Luật gắn cờ nguy cơ xuất toán", "48 / 100"], ["Đối chiếu chéo giữa các hồ sơ", "5 luật (giường, giờ bác sĩ, đợt điều trị, dịch vụ, cấp lại thuốc)"], ["Danh mục HIS đọc được", "25 loại, 7 loại dùng đối chiếu XML 130"], ["Danh mục ICD-10", "khoảng 15.000 mã"], ["Kiểm thử tự động", "103 test (API 49, extension 38, web admin 16)"], ["Cảnh báo tại chỗ trên HIS", "dưới 50 ms (luật chạy trong trình duyệt)"], ["Soát trọn 1 hồ sơ - máy dev", "p95 172,94 ms (k6, 341 lượt, 0% lỗi)"], ["Soát trọn 1 hồ sơ - cụm K8s 1 pod", "p95 251 ms, 5,00 hồ sơ/giây"], ["20 người dùng đồng thời - 1 pod", "p95 6,99 s, 3,63 hồ sơ/giây, 0% lỗi"], ["20 người dùng đồng thời - 3 pod", "p95 3,87 s, 10,83 hồ sơ/giây, 0% lỗi"], ["Bằng chứng scale ngang", "1 pod lên 3 pod: nhanh gấp 2,98 lần"], ["Địa chỉ chạy thật", "https://cbyts.vnpt.vn (VNPT Cloud, vùng cbyts)"], ["Mốc nộp trên GitHub", "tag release-v2-final ở cả 3 repo"]]}, {"t": "p", "text": "Ba câu chốt nếu chỉ được nói một lần:", "italic": false, "indent": false}, {"t": "p", "text": "1. Sản phẩm đang chạy thật trên VNPT Cloud, không phải bản trình diễn dựng riêng cho hội thi.", "italic": false, "indent": true}, {"t": "p", "text": "2. Kết quả kiểm tra là luật, không phải AI đoán - chạy 100 lần cho 100 kết quả giống nhau. AI chỉ làm hai việc: tóm tắt nguy cơ và trả lời câu hỏi quy định kèm trích dẫn.", "italic": false, "indent": true}, {"t": "p", "text": "3. Khi quy định thay đổi, sửa dữ liệu trên web admin là xong - không phải build lại phần mềm.", "italic": false, "indent": true}]}, {"id": "s2", "title": "B. NHÓM 1 - BÀI TOÁN VÀ GIÁ TRỊ MANG LẠI", "blocks": [{"t": "card", "q": "Sản phẩm giải quyết vấn đề gì, ai là người dùng?", "a": "Hồ sơ khám chữa bệnh BHYT bị BHXH xuất toán vì những lỗi nhập liệu hoàn toàn có thể chặn từ đầu, nhưng chỉ lộ ra khi hồ sơ đã gửi đi giám định. Người dùng trực tiếp là nhân viên tiếp nhận, điều dưỡng, kế toán viện phí và cán bộ tổng hợp hồ sơ tại cơ sở khám chữa bệnh.", "li": ["Ba nhóm việc: cảnh báo tại chỗ khi đang nhập trên HIS; soát trọn hồ sơ XML 130 trước khi gửi cổng giám định; hỏi đáp quy định có trích dẫn văn bản.", "Đặc điểm khác biệt: chạy ngay trong màn hình HIS đang dùng, không bắt người dùng mở thêm phần mềm thứ hai."], "note": ""}, {"t": "card", "q": "Lợi ích đo được là gì? Có con số không?", "a": "Đội xin nói thẳng: chưa có số liệu vận hành thật tại một cơ sở trong thời gian đủ dài, nên không đưa ra con số tiết kiệm chi phí. Cái đội đo được và có bằng chứng là năng lực kỹ thuật.", "li": ["Một hồ sơ XML 130 được soát 455 trường và 100 luật trong khoảng 250 ms - việc mà rà tay phải mất nhiều phút cho mỗi hồ sơ.", "Mỗi vấn đề được chỉ đích danh: bảng nào, trường nào, dòng thứ mấy, giá trị hiện tại là gì, sửa thế nào - nên người nhập sửa được ngay chứ không phải đi dò.", "48 trong 100 luật được gắn cờ nguy cơ xuất toán, tức là đội đã phân loại sẵn lỗi nào ảnh hưởng tiền, lỗi nào chỉ là sai sót hình thức."], "note": "Không được bịa tỷ lệ giảm xuất toán. Nói thật là chưa đo được thì mạnh hơn nói số không có căn cứ."}, {"t": "card", "q": "Đã triển khai ở cơ sở y tế nào chưa?", "a": "Chưa triển khai chính thức tại cơ sở nào. Hệ thống đang chạy trên môi trường thật của VNPT Cloud tại https://cbyts.vnpt.vn, dùng danh mục và hồ sơ thật đã ẩn danh để kiểm chứng. Bước tiếp theo là chạy thử có kiểm soát tại một cơ sở.", "li": [], "note": ""}]}, {"id": "s3", "title": "C. NHÓM 2 - BỘ LUẬT KIỂM TRA: 455 TRƯỜNG THÀNH LUẬT NHƯ THẾ NÀO", "blocks": [{"t": "p", "text": "Đây là nhóm câu hỏi khả năng bị hỏi sâu nhất. Phần mô tả đầy đủ cơ chế nằm ở Phụ lục 1 cuối tài liệu.", "italic": true, "indent": false}, {"t": "card", "q": "455 trường của Quyết định 130 được đưa vào hệ thống bằng cách nào?", "a": "455 trường không phải viết tay thành 455 đoạn mã. Đội tách phần ĐẶC TẢ ra khỏi phần MÃ NGUỒN. Toàn bộ đặc tả nằm trong một file dữ liệu (field_specs.json) gồm 15 bảng; mỗi trường khai 7 thuộc tính: tên trường, kiểu dữ liệu, độ dài tối đa, có bắt buộc không, định dạng ngày, danh sách giá trị cho phép, và mô tả nguyên văn theo quyết định.", "li": ["Chỉ có MỘT lớp mã nguồn đọc file đặc tả đó rồi sinh ra phép kiểm tra cho mọi trường - thêm trường mới hay đổi độ dài chỉ cần sửa dữ liệu, không đụng vào mã.", "Đặc tả này được nhập từ chính file phụ lục của Quyết định 130 và có màn hình quản trị trên web admin để xem, sửa, nạp lại."], "note": ""}, {"t": "card", "q": "Vậy cụ thể một trường sinh ra bao nhiêu phép kiểm tra?", "a": "Mỗi trường sinh ra tối đa 5 phép kiểm tra, tùy trường đó khai gì trong đặc tả. Cộng lại trên toàn bộ 455 trường là 756 phép kiểm tra cho mỗi dòng dữ liệu.", "li": ["Bắt buộc mà để trống - áp dụng cho 97 trường.", "Vượt độ dài tối đa - áp dụng cho 388 trường.", "Phải là số nhưng không phải số - áp dụng cho 118 trường.", "Sai định dạng ngày yyyyMMdd hoặc yyyyMMddHHmm - áp dụng cho 98 trường.", "Giá trị nằm ngoài danh mục cho phép - áp dụng cho 55 trường.", "Một hồ sơ có nhiều dòng (nhiều thuốc, nhiều dịch vụ) thì phép kiểm tra chạy lại cho từng dòng."], "note": ""}, {"t": "card", "q": "Kiểm tra từng trường riêng lẻ thì chưa đủ. Còn ràng buộc giữa các trường thì sao?", "a": "Đó là tầng thứ hai: 100 luật liên trường và liên bảng, cũng khai bằng dữ liệu (cross_field_rules.json), mỗi luật có mã riêng, mức độ, thông điệp tiếng Việt và cờ nguy cơ xuất toán. Chúng được chia thành 5 kiểu kiểm tra.", "li": ["So sánh ngày - 26 luật. Ví dụ ngày ra viện phải sau ngày vào viện; thẻ BHYT phải còn hạn tại ngày vào viện.", "Cộng dồn và đối chiếu tiền - 21 luật. Ví dụ tổng tiền thuốc ở bảng tổng hợp phải bằng tổng số lượng nhân đơn giá của tất cả dòng thuốc; cơ cấu nguồn chi trả phải cộng đúng tổng.", "Ràng buộc giữa các trường mã - 14 luật. Ví dụ mã bệnh sản phụ khoa không được xuất hiện trên bệnh nhân nam; mã bệnh phải phù hợp độ tuổi.", "Liên kết giữa các bảng - 15 luật. Ví dụ mã đợt điều trị ở mọi bảng phải khớp với bảng tổng hợp.", "Luật nghiệp vụ riêng - 24 luật. Ví dụ cấu trúc mã thẻ BHYT 15 ký tự, thời gian khám dưới 5 phút, đối chiếu danh mục thuốc và dịch vụ của cơ sở."], "note": ""}, {"t": "card", "q": "Ai viết ra 100 luật đó, căn cứ vào đâu?", "a": "Căn cứ là Quyết định 130/QĐ-BYT, Quyết định 4750/QĐ-BYT, các thông tư về giá dịch vụ và đơn thuốc, cộng với danh mục lỗi mà giám định BHXH thường bắt. Luật do người viết ra và ghi vào hồ sơ đặc tả rule (docs/analysis/RULE_CATALOG.md), AI không tự sinh luật.", "li": [], "note": "Nếu bị hỏi 'AI có tự học ra luật không' thì trả lời dứt khoát là KHÔNG - và đó là chủ ý thiết kế, vì kết quả kiểm tra phải giải thích được và lặp lại được."}, {"t": "card", "q": "Nếu quy định thay đổi thì mất bao lâu để cập nhật?", "a": "Ba mức, theo mức độ thay đổi:", "li": ["Đổi độ dài, thêm giá trị hợp lệ, thêm trường: sửa đặc tả trên web admin, có hiệu lực ngay, không build lại.", "Thêm luật cùng kiểu với 5 kiểu đã có: thêm một mục vào file luật, không build lại.", "Thêm luật có logic hoàn toàn mới: viết thêm một lớp mã nguồn, đây là trường hợp cần lập trình. Kiến trúc cho phép cắm thêm mà không sửa những luật cũ.", "Danh mục thuốc, dịch vụ, giá của cơ sở: tải file lên web admin, dùng được ngay."], "note": ""}, {"t": "card", "q": "Có phân biệt lỗi nặng nhẹ không? Người dùng có bị ngập trong cảnh báo không?", "a": "Có ba mức: Lỗi, Cảnh báo, Thông tin. Ngoài ra mỗi vấn đề có thêm một cờ riêng là nguy cơ xuất toán, đây mới là thứ người dùng quan tâm nhất.", "li": ["Kết quả trình bày theo cây 8 nhóm: thông tin bệnh nhân, chẩn đoán, dịch vụ kỹ thuật, thuốc, thời gian, tài chính, liên kết bảng, hành chính - nên người dùng mở đúng nhóm cần xem.", "Nếu có bất kỳ vấn đề nào gắn cờ nguy cơ xuất toán, hệ thống hiện banner cảnh báo riêng ở trên cùng."], "note": ""}, {"t": "card", "q": "Nếu một luật chạy lỗi thì cả hệ thống có chết không?", "a": "Không. Mỗi luật chạy độc lập và được bọc bắt lỗi riêng: một luật hỏng thì được ghi log và bỏ qua, 99 luật còn lại vẫn chạy và vẫn trả kết quả. Đây là lựa chọn có chủ ý cho hệ thống trợ giúp nghiệp vụ - thà thiếu một luật còn hơn không kiểm được hồ sơ.", "li": [], "note": ""}]}, {"id": "s4", "title": "D. NHÓM 3 - ĐỐI CHIẾU VỚI DANH MỤC CỦA HIS", "blocks": [{"t": "card", "q": "Hệ thống đối chiếu hồ sơ với danh mục của bệnh viện bằng cách nào?", "a": "Cơ sở khám chữa bệnh xuất danh mục từ HIS ra file Excel rồi tải lên web admin. Hệ thống nhận diện loại danh mục theo tên file, đọc theo hồ sơ mô tả cột (catalog_profiles.json) và lưu thành hai bảng: nguồn danh mục và từng dòng mục.", "li": ["25 loại danh mục đã khai sẵn: thuốc và vật tư, dịch vụ kỹ thuật, chẩn đoán hình ảnh, xét nghiệm, loại giường, nhân viên y tế, đơn vị chuyển tuyến, khoa phòng, kho, nhà cung cấp...", "7 loại được dùng trực tiếp để đối chiếu hồ sơ XML 130, số còn lại phục vụ tra cứu và hỏi đáp.", "Muốn thêm loại danh mục mới chỉ cần khai thêm một mục JSON mô tả cột, không sửa mã nguồn."], "note": ""}, {"t": "card", "q": "Đối chiếu theo mã nào? Mã của bệnh viện hay mã của Bộ Y tế?", "a": "Theo mã danh mục dùng chung của Bộ Y tế - vì đó chính là mã mà hồ sơ XML 130 phải khai và cổng giám định dùng để đối chiếu. Trong file danh mục HIS, đó là các cột như MAHOATCHAT_DMDC cho thuốc, MA_DICHVU_KYTHUAT_DMDC cho dịch vụ. Mã nội bộ của HIS được lưu song song để tra ngược khi cần chỉ cho người dùng biết dòng nào trong HIS gây ra lỗi.", "li": [], "note": ""}, {"t": "card", "q": "Với thuốc thì kiểm những gì?", "a": "Bốn phép kiểm tra, chạy cho từng dòng thuốc trong bảng XML2:", "li": ["Mã hoạt chất có trong danh mục của chính cơ sở đó không - không có là Lỗi, có nguy cơ xuất toán.", "Thuốc có đang tạm ngưng sử dụng không.", "Thuốc có nằm ngoài phạm vi thanh toán BHYT không.", "Đơn giá kê khai có khớp đơn giá trong danh mục không, dung sai 1 đồng cho sai số làm tròn."], "note": ""}, {"t": "p", "text": "Điểm tinh tế nên chủ động nói: một mã hoạt chất ứng với nhiều biệt dược khác giá. Hệ thống lấy TẤT CẢ dòng cùng mã rồi mới kết luận - chỉ báo tạm ngưng khi mọi biệt dược cùng mã đều tạm ngưng, và chỉ báo lệch giá khi đơn giá không khớp bất kỳ biệt dược nào. Nếu so với một dòng duy nhất thì sẽ báo sai hàng loạt.", "italic": true, "indent": true}, {"t": "card", "q": "Nếu cơ sở chưa nạp danh mục thì sao? Có báo sai hàng loạt không?", "a": "Không. Mọi luật đối chiếu danh mục đều kiểm tra trước: nếu chưa có danh mục của đúng cơ sở ghi trong hồ sơ (theo mã cơ sở MA_CSKCB) thì luật đó tự bỏ qua và ghi log, không phát ra một cảnh báo nào. Đây là nguyên tắc thà bỏ sót còn hơn báo sai - vì một cảnh báo sai sẽ khiến người dùng mất lòng tin vào toàn bộ công cụ.", "li": [], "note": "Đây là câu trả lời gây ấn tượng tốt, nên chủ động nói ra chứ đừng đợi hỏi."}, {"t": "card", "q": "Dữ liệu HIS thực tế rất bẩn, hệ thống xử lý thế nào?", "a": "Đội gặp và xử lý đúng các trường hợp đó khi làm với danh mục thật:", "li": ["Số chứng chỉ hành nghề trong hồ sơ có số 0 ở đầu (004840/KH-CCHN) còn danh mục HIS thì không (4840/KH-CCHN) - hệ thống chuẩn hóa bỏ số 0 đầu trước khi so.", "Danh mục nhân viên thường khai thiếu chứng chỉ hành nghề cho một phần nhân sự, nên luật này chỉ để mức Cảnh báo chứ không phải Lỗi.", "File danh mục có tiêu đề không nằm ở dòng đầu - hồ sơ mô tả cột khai rõ dòng tiêu đề nằm ở đâu.", "Tên cột giữa các bản xuất khác nhau - nhận diện bằng danh sách cột bắt buộc chứ không chỉ dựa vào tên file."], "note": ""}]}, {"id": "s5", "title": "E. NHÓM 4 - PHẦN AI: TRỢ LÝ HỎI ĐÁP VÀ NHẬN ĐỊNH", "blocks": [{"t": "card", "q": "AI đóng vai trò gì? Kết quả kiểm tra có phải do AI quyết định không?", "a": "Không. Đây là ranh giới quan trọng nhất của sản phẩm. Kết quả kiểm tra hồ sơ hoàn toàn do bộ luật quyết định - cùng một hồ sơ chạy bao nhiêu lần cũng ra đúng kết quả đó. AI làm hai việc tách rời và đều tùy chọn bật tắt:", "li": ["Viết nhận định tổng hợp về mức độ nguy cơ xuất toán và ba việc cần ưu tiên sửa, dựa trên danh sách vấn đề mà bộ luật đã tìm ra.", "Trả lời câu hỏi nghiệp vụ về quy định BHYT, kèm trích dẫn văn bản gốc.", "Nếu tắt AI hoặc mô hình AI ngừng hoạt động, phần kiểm tra hồ sơ vẫn chạy đầy đủ."], "note": ""}, {"t": "card", "q": "Trợ lý hỏi đáp hoạt động thế nào? Làm sao biết nó không bịa?", "a": "Dùng kỹ thuật truy hồi rồi mới sinh câu trả lời. Hệ thống tìm trong kho văn bản pháp quy đã nạp, lấy các đoạn liên quan, đưa cho mô hình ngôn ngữ và yêu cầu chỉ trả lời dựa trên các đoạn đó, kèm trích dẫn tên văn bản. Nếu không tìm thấy căn cứ, hệ thống trả lời là không tìm thấy chứ không suy diễn.", "li": ["Bốn tầng tìm kiếm chạy song song: tìm theo ngữ nghĩa bằng vector, tìm toàn văn, tìm theo biến thể từ khóa, tìm nguyên cụm từ.", "Kết quả 4 tầng trộn bằng thuật toán Reciprocal Rank Fusion - đây là cách chuẩn mà Elasticsearch, Azure AI Search, Weaviate và Qdrant đều dùng, vì điểm số của các tầng khác thang đo nên không cộng trực tiếp được, chỉ so được thứ hạng.", "Sau đó một lượt xếp hạng lại bằng mô hình ngôn ngữ, giới hạn tối đa 3 đoạn cho mỗi văn bản để câu trả lời không bị một văn bản chiếm hết.", "Mọi câu trả lời hiển thị kèm nguồn - người dùng bấm vào xem được đoạn văn bản gốc."], "note": ""}, {"t": "card", "q": "Dùng mô hình AI nào? Có phụ thuộc nhà cung cấp nước ngoài không?", "a": "Hệ thống có lớp trung gian cho phép đổi nhà cung cấp lúc đang vận hành, không sửa mã, không build lại. Hiện chạy qua OpenRouter để chọn mô hình phù hợp, nhưng cũng chạy được hoàn toàn tại chỗ bằng Ollama - đã cài sẵn trên cụm. Với cơ sở y tế yêu cầu dữ liệu không ra khỏi hạ tầng nội bộ thì chuyển sang chế độ chạy tại chỗ là dùng được ngay.", "li": ["Phần tạo vector cho kho tri thức đang dùng mô hình bge-m3 chạy tại chỗ bằng Ollama, không gửi văn bản ra ngoài."], "note": ""}, {"t": "card", "q": "AI trả lời sai thì sao? Đội có kiểm chứng không?", "a": "Có, và đội xin báo cả phần chưa đạt. Đội có bộ 9 câu hỏi nghiệp vụ dùng để kiểm tra sau mỗi lần thay đổi phần truy hồi, chạy trực tiếp trên hệ thống thật.", "li": ["Lần kiểm tra gần nhất ngày 31/07: 7 trên 9 câu trả lời đúng và có trích dẫn.", "Hai câu chưa đạt và đội biết chính xác lý do: một câu hỏi về bảng chỉ tiêu của Quyết định 130 mà kho tri thức mới có bản tóm tắt chưa nạp toàn văn phụ lục; một câu gõ tiếng Việt không dấu mà hệ thống chưa bật khả năng bỏ dấu khi tìm.", "Cả hai đều đã ghi vào tài liệu quyết định thiết kế cùng hướng khắc phục cụ thể."], "note": "Chủ động nói ra hai câu chưa đạt. Ban giám khảo đánh giá cao đội biết rõ giới hạn của mình hơn là đội nói mọi thứ đều hoàn hảo."}, {"t": "card", "q": "Vì sao kho tri thức chưa có toàn văn Quyết định 130 mà vẫn kiểm được 455 trường?", "a": "Vì đó là hai hệ thống tách biệt. Việc KIỂM TRA hồ sơ dùng file đặc tả 455 trường đã nhập đầy đủ từ phụ lục Quyết định 130 - phần này hoàn chỉnh. Việc HỎI ĐÁP dùng kho văn bản pháp quy - trong kho đó Quyết định 130 mới có bản tóm tắt. Nói cách khác, hệ thống kiểm tra đúng nhưng chưa kể lại được đầy đủ nội dung quyết định khi được hỏi.", "li": [], "note": "Câu này rất dễ bị bắt bẻ nếu ban giám khảo demo thử trợ lý. Nắm chắc để trả lời gọn."}]}, {"id": "s6", "title": "F. NHÓM 5 - KIẾN TRÚC, TRIỂN KHAI, HIỆU NĂNG", "blocks": [{"t": "card", "q": "Kiến trúc hệ thống gồm những gì?", "a": "Ba cấu phần, ba kho mã nguồn riêng:", "li": ["Chrome Extension chạy trên màn hình HIS - TypeScript, Manifest V3. Tự nhận diện biểu mẫu, cảnh báo tại chỗ, khung chat để tải hồ sơ và hỏi đáp.", "API kiểm tra - ASP.NET Core .NET 10. Bộ máy luật, truy hồi văn bản, lớp chuyển đổi mô hình AI, phân quyền, chống spam.", "Web admin - Angular 22. Quản lý kho tri thức, danh mục HIS, đặc tả 455 trường, cấu hình AI, phân quyền theo vai trò, nhật ký kiểm toán.", "Dữ liệu: PostgreSQL có pgvector - chỉ mục toàn văn GIN và chỉ mục vector HNSW.", "Hạ tầng: VNPT Cloud Kubernetes, vùng riêng cbyts, cổng vào TLS, tự kiểm tra sức khỏe dịch vụ."], "note": ""}, {"t": "card", "q": "Vì sao cảnh báo nhập liệu nhanh dưới 50 ms trong khi gọi API mất hàng trăm ms?", "a": "Vì có hai tầng kiểm tra. Những luật kiểm được ngay trong trình duyệt - định dạng, bắt buộc, so sánh ngày - chạy tại chỗ nên phản hồi tức thì. Những luật cần dữ liệu máy chủ - danh mục ICD, danh mục thuốc dịch vụ, ràng buộc liên bảng - gọi API và trả về sau. Người nhập liệu không bao giờ phải dừng tay chờ.", "li": [], "note": ""}, {"t": "card", "q": "Hệ thống chịu được bao nhiêu người dùng cùng lúc?", "a": "Đội đo bằng k6, có file kết xuất thô do chính k6 sinh ra chứ không phải bảng gõ tay, và đo trên chính cụm K8s theo đề nghị của ban tổ chức vòng rà soát.", "li": ["1 người dùng, 1 pod: p95 251 ms, 5 hồ sơ mỗi giây, 0% lỗi.", "20 người dùng đồng thời, 1 pod: p95 6,99 s, 3,63 hồ sơ mỗi giây, 0% lỗi.", "20 người dùng đồng thời, 3 pod: p95 3,87 s, 10,83 hồ sơ mỗi giây - nhanh gấp 2,98 lần.", "Con số 2,98 lần là bằng chứng thực nghiệm cho khả năng scale ngang, không còn là suy luận kiến trúc."], "note": "Nếu bị hỏi vì sao 20 người dùng lại chậm tới 6,99 giây: mỗi pod chỉ được cấp 1 CPU theo đúng khai báo tài nguyên, và đây là 20 người CÙNG LÚC bấm soát trọn một hồ sơ - không phải 20 người đang gõ. Cách xử lý là thêm pod, và số đo đã chứng minh thêm pod thì nhanh lên."}, {"t": "card", "q": "Phép đo có chạy vào hệ thống đang phục vụ thật không?", "a": "Không, và đây là ranh giới đội cố tình giữ. Đội dựng một vùng riêng cbyts-loadtest trên cùng cụm, cùng image, cùng hạn mức tài nguyên, có cơ sở dữ liệu riêng; đo xong xóa cả vùng. Vùng phục vụ thật không nhận một yêu cầu nào của phép đo. Toàn bộ manifest dựng lại môi trường đo nằm trong repo để ban giám khảo chạy lại được.", "li": [], "note": ""}, {"t": "card", "q": "Có tự động mở rộng khi tải cao không?", "a": "Có cấu hình HPA cho web admin, áp dụng được ngay vì đó là dịch vụ tĩnh không giữ trạng thái. Với API, đội để cấu hình HPA sẵn trong cùng file nhưng đang tạm khóa, kèm ghi rõ hai điều kiện phải làm trước: chuyển ổ lưu trữ sang chế độ nhiều pod ghi chung, và tách bước nâng cấp cơ sở dữ liệu ra công việc riêng.", "li": [], "note": "Đội chọn ghi thẳng điều kiện thay vì áp dụng một cấu hình sẽ hỏng khi nhân bản. Đây là lựa chọn kỹ thuật có lý do, không phải chưa làm."}, {"t": "card", "q": "Triển khai như thế nào? Có tự động không?", "a": "Có. Cả 3 repo đều có quy trình CI/CD trên GitHub Actions. Đẩy mã lên nhánh chính là tự động chạy kiểm thử, kiểm tra quy ước mã, quét bí mật, quét lỗ hổng thư viện, rồi build image và triển khai lên cụm - khoảng 8 đến 9 phút. Kiểm thử đỏ là không triển khai.", "li": [], "note": ""}]}, {"id": "s7", "title": "G. NHÓM 6 - BẢO MẬT VÀ DỮ LIỆU BỆNH NHÂN", "blocks": [{"t": "card", "q": "Dữ liệu bệnh nhân được xử lý thế nào? Có gửi ra ngoài không?", "a": "Hồ sơ được kiểm tra bằng bộ luật chạy trong hệ thống, không gửi đi đâu. Chỉ khi người dùng chủ động bật phần nhận định AI thì danh sách VẤN ĐỀ (mã luật, tên bảng, tên trường, thông điệp) mới được gửi cho mô hình - không gửi nguyên hồ sơ bệnh nhân.", "li": ["Muốn tuyệt đối không ra khỏi hạ tầng nội bộ thì chuyển sang mô hình chạy tại chỗ bằng Ollama, đổi trong cấu hình, không sửa mã.", "Dữ liệu đội đưa lên cụm để đo tải và trình diễn đều đã ẩn danh: họ tên, địa chỉ, điện thoại, số thẻ, mã bệnh nhân thay bằng ký tự giả giữ nguyên độ dài, nên khối lượng xử lý không đổi mà hồ sơ thật không rời máy phát triển."], "note": ""}, {"t": "card", "q": "Quản lý bí mật, mật khẩu như thế nào?", "a": "Không có bí mật nào nằm trong mã nguồn. Chuỗi kết nối và khóa API nạp bằng biến môi trường hoặc Secret của Kubernetes; API dừng ngay lúc khởi động kèm thông báo tiếng Việt nếu thiếu, thay vì chạy nửa vời với giá trị mặc định.", "li": ["Cả 3 repo có quy trình quét bí mật gitleaks chạy mỗi lần đẩy mã, mỗi pull request và một lượt định kỳ hằng tuần.", "Ở vòng rà soát trước, đội đã thu hồi khóa API cũ trước, rồi mới viết lại toàn bộ lịch sử git để gỡ bí mật khỏi mọi commit - đúng thứ tự ban tổ chức yêu cầu."], "note": ""}, {"t": "card", "q": "Phân quyền và truy vết ra sao?", "a": "Đăng nhập bằng JWT, phân quyền chi tiết theo vai trò và theo từng quyền, không phải chỉ có quản trị viên và người dùng. Mọi thao tác quản trị được ghi nhật ký kiểm toán: ai, lúc nào, làm gì, trên đối tượng nào - xem trực tiếp trên web admin.", "li": ["Truy vấn cơ sở dữ liệu đi qua EF Core, tham số hóa nên không có bề mặt SQL injection.", "Có chống spam theo IP, mặc định 100 yêu cầu mỗi phút, chỉnh được từ web admin."], "note": ""}, {"t": "card", "q": "Extension chạy trên trang HIS thì có rủi ro gì không?", "a": "Extension chỉ đọc nội dung biểu mẫu để kiểm tra, không ghi đè dữ liệu người dùng đang nhập và không gửi dữ liệu đi đâu ngoài API của chính hệ thống. Phạm vi hoạt động khai trong manifest giới hạn ở tên miền HIS. Chính sách CORS của API được tách hai lớp: các màn hình quản trị chỉ chấp nhận đúng danh sách nguồn cấu hình sẵn, chỉ 4 điểm cuối phục vụ extension mới mở rộng - vì mã định danh của extension đổi theo từng máy cài nên không thể khai danh sách cứng.", "li": [], "note": ""}]}, {"id": "s8", "title": "H. NHÓM 7 - ĐỘI NGŨ, QUY TRÌNH, HỒ SƠ DỰ THI", "blocks": [{"t": "card", "q": "Đội mấy người, phân công thế nào?", "a": "Ba người: một lập trình viên, một quản trị dự án, một phân tích nghiệp vụ. Hai vị trí sau đồng thời làm kiểm thử. Vì chỉ có một lập trình viên nên lịch sử commit trên cả 3 repo chỉ có một tác giả - đội đã báo cáo rõ điều này với ban tổ chức ở vòng rà soát.", "li": [], "note": "Không né câu này. Nói thẳng: một tác giả commit không có nghĩa mã nguồn không ai kiểm - phần kiểm thử, nghiệm thu kịch bản nghiệp vụ và đối chiếu quy định do hai vị trí kia làm, chỉ là không để lại dấu vết commit vì không phải mã nguồn."}, {"t": "card", "q": "Đội dùng AI để làm sản phẩm ở mức nào?", "a": "Đội dùng AI hỗ trợ lập trình một cách có kiểm soát và ghi lại đầy đủ. Trong hồ sơ có nhật ký prompt trích nguyên văn từ các phiên làm việc, giữ nguyên cả lỗi chính tả, kèm ngày tháng khớp lịch sử commit.", "li": ["Những phần đội KHÔNG giao cho AI và tự làm: xác định nội dung 100 luật nghiệp vụ, đọc và đối chiếu văn bản pháp quy, nghiệm thu kết quả trên hồ sơ thật, quyết định kiến trúc và ranh giới an toàn dữ liệu.", "Mỗi quyết định kỹ thuật đều ghi kèm lý do vào tài liệu ngay tại thời điểm quyết định."], "note": ""}, {"t": "card", "q": "Chất lượng mã nguồn được bảo đảm thế nào?", "a": "103 kiểm thử tự động trên cả 3 repo, đều chạy trong CI và chặn triển khai nếu đỏ. Cả 3 repo có cấu hình quy ước mã và bộ phân tích tĩnh chạy thật, không dùng cờ nới lỏng để cho qua.", "li": ["Việc dựng các cổng kiểm tra này đã bắt được lỗi thật: 3 lỗi trong mã extension và một lỗ hổng bảo mật mức cao ở thư viện Microsoft.OpenApi kéo theo gián tiếp, đã nâng phiên bản để vá.", "Phụ thuộc phát hành của web admin và extension hiện 0 lỗ hổng."], "note": ""}, {"t": "card", "q": "Ban giám khảo xem mã nguồn ở đâu?", "a": "Ba repo private trên GitHub, tài khoản ban tổ chức đã được mời. Mốc nộp là tag release-v2-final ở cả 3 repo.", "li": [], "note": "Nếu ban giám khảo nói tag không đúng nội dung: nhắc họ chạy lệnh git fetch --tags --force. Lý do là repo API đã viết lại lịch sử để gỡ bí mật nên tag cũ trỏ vào commit đã mất, máy nào tải về từ trước sẽ giữ tag cũ nếu không ép cập nhật."}]}, {"id": "s9", "title": "I. NHÓM 8 - CÂU HỎI KHÓ VÀ CÁCH TRẢ LỜI", "blocks": [{"t": "card", "q": "Cái này khác gì phần kiểm tra sẵn có của cổng giám định BHXH?", "a": "Khác ở thời điểm. Cổng giám định kiểm tra SAU khi hồ sơ đã gửi đi, lúc đó cơ sở đã chịu rủi ro xuất toán và phải làm lại thủ tục. ZeroCheck AI kiểm tra NGAY LÚC NHẬP và trước khi gửi, ngay trong màn hình HIS người dùng đang làm việc. Thêm nữa, cổng giám định trả về mã lỗi kỹ thuật; sản phẩm này trả về câu tiếng Việt kèm gợi ý sửa cụ thể và trích dẫn văn bản.", "li": [], "note": ""}, {"t": "card", "q": "Sao không chờ HIS sửa thẳng vào phần mềm cho xong?", "a": "Vì mỗi thay đổi trong HIS là một chu kỳ phát hành phần mềm, trong khi quy định và danh mục thay đổi hằng tháng. Cách tiếp cận của đội là tách phần thay đổi nhanh (đặc tả trường, luật, danh mục, văn bản) ra thành dữ liệu quản trị được, và cắm vào HIS qua extension mà không phải sửa HIS. Cơ sở nào dùng HIS khác vẫn dùng được vì extension nhận diện biểu mẫu tự động chứ không khai báo cứng từng màn hình.", "li": [], "note": ""}, {"t": "card", "q": "Extension đã lên Chrome Web Store chưa?", "a": "Chưa. Hiện cài ở chế độ tải thủ công theo hướng dẫn kèm hồ sơ. Việc đưa lên cửa hàng cần tài khoản nhà phát triển và quy trình duyệt của Google, đội xếp vào giai đoạn sau khi có cơ sở triển khai chính thức.", "li": [], "note": ""}, {"t": "card", "q": "Sản phẩm mới làm trong thời gian ngắn, có phải đồ trình diễn không?", "a": "Đội mời ban giám khảo kiểm chứng ba điểm không thể dựng giả trong thời gian ngắn: hệ thống đang chạy thật trên VNPT Cloud và truy cập được ngay bây giờ; quy trình CI/CD tự động có lịch sử chạy trên GitHub; và số đo hiệu năng có file kết xuất thô do công cụ k6 sinh ra, chạy lại được bằng manifest trong repo.", "li": [], "note": ""}, {"t": "card", "q": "Hạn chế lớn nhất của sản phẩm hiện nay là gì?", "a": "Đội xin nêu thẳng bốn điểm:", "li": ["Chưa có số liệu vận hành thật tại một cơ sở, nên chưa chứng minh được hiệu quả bằng tiền.", "Kho tri thức mới có bản tóm tắt Quyết định 130, chưa nạp toàn văn phụ lục bảng chỉ tiêu.", "Trợ lý hỏi đáp chưa xử lý được câu hỏi gõ tiếng Việt không dấu.", "Chưa bật tự động mở rộng cho API, còn hai điều kiện hạ tầng phải làm trước."], "note": "Nêu đủ bốn điểm và kèm hướng khắc phục cụ thể cho từng điểm. Đội biết rõ giới hạn của mình là một điểm cộng, không phải điểm trừ."}, {"t": "card", "q": "Nếu được đầu tư tiếp thì làm gì?", "a": "Ba việc theo thứ tự: chạy thử có kiểm soát tại một cơ sở khám chữa bệnh để lấy số liệu thật về tỷ lệ lỗi chặn được; nạp đầy đủ toàn văn các văn bản và tự động cập nhật khi có văn bản mới; mở rộng bộ luật theo phản hồi thực tế của giám định viên và đưa extension lên Chrome Web Store.", "li": [], "note": ""}]}, {"id": "s10", "title": "PHỤ LỤC 1. CƠ CHẾ KIỂM TRA - MÔ TẢ CHI TIẾT", "blocks": [{"t": "p", "text": "Phần này để đọc trước, không phải để đọc trong phòng thi. Mục tiêu là nắm chắc đường đi của một hồ sơ từ lúc tải lên tới lúc ra danh sách vấn đề.", "italic": true, "indent": false}, {"t": "h2", "text": "1. Đường đi của một hồ sơ XML 130"}, {"t": "p", "text": "Bước 1. Nhận file. Người dùng kéo file XML vào khung chat của extension, hoặc tải lên qua API.", "italic": false, "indent": true}, {"t": "p", "text": "Bước 2. Bóc tách. Bộ phân tích đọc file, tách ra danh sách hồ sơ; mỗi hồ sơ gồm tối đa 15 bảng, mỗi bảng gồm nhiều dòng, mỗi dòng là một tập cặp tên trường - giá trị. Bộ phân tích viết theo hướng tổng quát: không khai cứng tên trường, nên bảng nào có trường lạ vẫn đọc được.", "italic": false, "indent": true}, {"t": "p", "text": "Bước 3. Lọc hồ sơ rỗng. File tải được nhưng không có hồ sơ hợp lệ thì trả về trạng thái không đủ thông tin để kiểm tra - phân biệt rõ với trạng thái hồ sơ đạt.", "italic": false, "indent": true}, {"t": "p", "text": "Bước 4. Tầng 1 - kiểm tra cấp trường theo đặc tả 455 trường.", "italic": false, "indent": true}, {"t": "p", "text": "Bước 5. Tầng 2 - chạy 100 luật liên trường và liên bảng, gồm cả đối chiếu danh mục HIS.", "italic": false, "indent": true}, {"t": "p", "text": "Bước 6. Tầng 3 - đối chiếu chéo giữa các hồ sơ trong cùng file (chỉ chạy khi file có từ 2 hồ sơ).", "italic": false, "indent": true}, {"t": "p", "text": "Bước 7. Sắp xếp và tóm tắt. Lỗi lên trước cảnh báo, gom theo bảng và dòng; sinh câu tóm tắt bằng luật.", "italic": false, "indent": true}, {"t": "p", "text": "Bước 8. Tùy chọn - nhận định AI. Chỉ khi người dùng bật, và chỉ gửi danh sách vấn đề chứ không gửi hồ sơ.", "italic": false, "indent": true}, {"t": "h2", "text": "2. Tầng 1 - từ 455 trường thành 756 phép kiểm tra"}, {"t": "p", "text": "Mỗi trường trong file đặc tả khai như sau (ví dụ trường mã đợt điều trị của bảng XML1):", "italic": false, "indent": false}, {"t": "p", "text": "tên MA_LK; kiểu string; độ dài tối đa 100; bắt buộc true; định dạng null; giá trị cho phép null; mô tả \"Là mã đợt điều trị duy nhất dùng để liên kết giữa bảng tổng hợp và các bảng còn lại trong một lần khám bệnh, chữa bệnh\".", "italic": true, "indent": true}, {"t": "p", "text": "Một lớp mã nguồn duy nhất duyệt qua toàn bộ đặc tả và sinh phép kiểm tra:", "italic": false, "indent": false}, {"t": "table", "header": ["Phép kiểm tra", "Điều kiện phát sinh", "Số trường áp dụng", "Mã lỗi"], "rows": [["Bắt buộc để trống", "trường khai bắt buộc", "97", "SPEC-REQUIRED"], ["Vượt độ dài", "trường khai độ dài tối đa", "388", "SPEC-MAXLEN"], ["Không phải số", "kiểu dữ liệu là number", "118", "SPEC-NUMBER"], ["Sai định dạng ngày", "trường khai định dạng ngày", "98", "SPEC-DATE"], ["Ngoài danh mục cho phép", "trường khai danh sách giá trị", "55", "SPEC-ENUM"]]}, {"t": "p", "text": "Cộng lại: 756 phép kiểm tra cho mỗi dòng dữ liệu. Thông điệp trả về luôn kèm tên bảng, tên trường, số dòng, giá trị hiện tại và phần mô tả nguyên văn trong quyết định để người dùng biết trường đó phải ghi gì.", "italic": false, "indent": false}, {"t": "p", "text": "Hai điểm xử lý riêng đáng nói: định dạng ngày chấp nhận trường hợp ngày sinh không rõ ngày tháng (ghi 0000) theo đúng quy định; và trường bắt buộc chỉ báo lỗi khi hồ sơ CÓ khai thẻ đó nhưng để rỗng, tránh báo nhầm với hồ sơ không thuộc phạm vi bảng đó.", "italic": false, "indent": false}, {"t": "h2", "text": "3. Tầng 2 - 100 luật liên trường, chia theo 5 kiểu kiểm tra"}, {"t": "table", "header": ["Kiểu", "Số luật", "Ví dụ cụ thể"], "rows": [["So sánh ngày", "26", "Thẻ BHYT hết hạn trước ngày vào viện - nguy cơ xuất toán toàn bộ chi phí"], ["Cộng dồn tiền", "21", "Tổng tiền thuốc ở bảng tổng hợp phải bằng tổng số lượng nhân đơn giá ở bảng thuốc"], ["Ràng buộc mã", "14", "Mã bệnh không phù hợp giới tính hoặc độ tuổi bệnh nhân"], ["Liên kết bảng", "15", "Mã đợt điều trị ở mọi bảng phải khớp bảng tổng hợp"], ["Nghiệp vụ riêng", "24", "Mã thẻ BHYT phải đúng cấu trúc 2 chữ cái cộng 13 chữ số"]]}, {"t": "p", "text": "Mỗi luật khai đầy đủ: mã luật, tên, mức độ, các bảng liên quan, điều kiện, thông điệp tiếng Việt có chỗ điền giá trị thật, kiểu kiểm tra và cờ nguy cơ xuất toán. Về thi hành, các luật cùng nhóm nghiệp vụ được gom vào một lớp mã nguồn - hiện có 11 lớp: thẻ BHYT, chẩn đoán, thời gian, tài chính, logic khám chữa bệnh, liên kết bảng, trùng dòng, và bốn lớp đối chiếu danh mục.", "italic": false, "indent": false}, {"t": "p", "text": "Riêng nhóm chẩn đoán có 12 luật, là nhóm dày nhất vì đây là chỗ bị xuất toán nhiều nhất: thiếu mã bệnh chính, sai định dạng ICD-10, mã bệnh kèm theo trùng mã chính, mã không có trong danh mục ICD-10 của Bộ Y tế, mã đã hết hiệu lực, mã không phù hợp giới tính, mã không phù hợp độ tuổi, mã cần đi kèm cặp dao - sao, mã nhóm dùng làm chẩn đoán chính, và mã thuộc nhóm không khuyến khích làm chẩn đoán chính theo Thông tư 06.", "italic": false, "indent": false}, {"t": "h2", "text": "4. Đối chiếu với danh mục của HIS - luồng đầy đủ"}, {"t": "p", "text": "Bước 1. Cơ sở xuất danh mục từ HIS ra file Excel và tải lên web admin.", "italic": false, "indent": true}, {"t": "p", "text": "Bước 2. Hệ thống nhận diện loại danh mục theo chuỗi trong tên file (ví dụ dm_duoc_vattu là danh mục thuốc và vật tư), và xác nhận lại bằng danh sách cột bắt buộc phải có.", "italic": false, "indent": true}, {"t": "p", "text": "Bước 3. Đọc file theo hồ sơ mô tả cột đã khai sẵn: dòng tiêu đề nằm ở đâu, cột nào là mã dùng chung của Bộ Y tế, cột nào là mã nội bộ HIS, cột nào là tên, đơn vị, giá BHYT, giá viện phí, cờ tạm ngưng, cờ ngoài danh mục BHYT.", "italic": false, "indent": true}, {"t": "p", "text": "Bước 4. Lưu thành hai bảng: một bản ghi nguồn danh mục (loại, mã cơ sở, tên file, thời điểm nạp, còn hiệu lực hay không) và các dòng mục thuộc nguồn đó.", "italic": false, "indent": true}, {"t": "p", "text": "Bước 5. Khi kiểm tra hồ sơ, luật đọc mã cơ sở trong hồ sơ rồi hỏi hệ thống: cơ sở này đã có danh mục loại này chưa. Chưa có thì bỏ qua, không báo sai.", "italic": false, "indent": true}, {"t": "p", "text": "Bước 6. Có rồi thì với từng dòng thuốc hoặc dịch vụ, tra tất cả mục cùng mã trong danh mục của đúng cơ sở đó và đúng nguồn còn hiệu lực, rồi mới đối chiếu.", "italic": false, "indent": true}, {"t": "p", "text": "Bốn nhóm đối chiếu đang chạy:", "italic": false, "indent": false}, {"t": "table", "header": ["Nhóm", "Bảng", "Nội dung đối chiếu", "Mức"], "rows": [["Thuốc", "XML2", "Có trong danh mục / tạm ngưng / ngoài BHYT / lệch đơn giá", "Lỗi, riêng giá là Cảnh báo"], ["Dịch vụ kỹ thuật", "XML3", "Tra trong 4 loại danh mục: dịch vụ, chẩn đoán hình ảnh, xét nghiệm, giường", "Lỗi"], ["Nhân viên y tế", "XML2, XML3", "Số chứng chỉ hành nghề của người chỉ định và người thực hiện", "Cảnh báo"], ["Chuyển tuyến", "XML13", "Đơn vị chuyển đến có trong danh mục cơ sở chuyển tuyến không", "Cảnh báo"]]}, {"t": "p", "text": "Ba nguyên tắc chống báo sai, nên nói khi được hỏi sâu:", "italic": false, "indent": false}, {"t": "p", "text": "a. Chưa có danh mục thì im lặng. Không có danh mục của đúng cơ sở đó thì luật tự tắt.", "italic": false, "indent": true}, {"t": "p", "text": "b. So với TẤT CẢ các dòng cùng mã, không so với một dòng. Một mã hoạt chất ứng với nhiều biệt dược khác giá, ví dụ mã 40.807 có Metformin 500 giá 680 đồng và Metformin Denk giá 600 đồng. Chỉ báo tạm ngưng khi mọi biệt dược cùng mã đều tạm ngưng; chỉ báo lệch giá khi đơn giá không khớp bất kỳ dòng nào, có dung sai 1 đồng cho sai số làm tròn.", "italic": false, "indent": true}, {"t": "p", "text": "c. Chuẩn hóa trước khi so. Số chứng chỉ hành nghề trong hồ sơ thường có số 0 ở đầu còn danh mục HIS thì không, nên phải bỏ số 0 đầu và chuẩn hóa hoa thường trước khi đối chiếu.", "italic": false, "indent": true}, {"t": "h2", "text": "5. Tầng 3 - đối chiếu chéo giữa nhiều hồ sơ"}, {"t": "p", "text": "Một file XML 130 thường chứa nhiều hồ sơ, và một số lỗi chỉ lộ ra khi đặt các hồ sơ cạnh nhau. Năm luật chéo:", "italic": false, "indent": false}, {"t": "li", "text": "Trùng giường: hai bệnh nhân cùng một giường trong khoảng thời gian giao nhau."}, {"t": "li", "text": "Trùng giờ bác sĩ: một bác sĩ có y lệnh ở hai nơi cùng thời điểm."}, {"t": "li", "text": "Trùng đợt điều trị: một bệnh nhân có hai đợt điều trị chồng thời gian."}, {"t": "li", "text": "Trùng dịch vụ cùng lúc: một bệnh nhân được chỉ định hai dịch vụ không thể làm đồng thời."}, {"t": "li", "text": "Cấp lại thuốc chồng đợt: cùng một thuốc được cấp lại khi đợt trước chưa hết."}, {"t": "p", "text": "Khi kiểm tra theo lô nhiều file, tầng chéo chạy ở cấp lô trên toàn bộ hồ sơ của mọi file thay vì chạy trong từng file, để không báo trùng hai lần.", "italic": false, "indent": false}, {"t": "h2", "text": "6. Vì sao thiết kế theo hướng dữ liệu chứ không viết cứng vào mã"}, {"t": "p", "text": "Đây là câu trả lời cho câu hỏi vì sao không viết 455 hàm kiểm tra:", "italic": false, "indent": false}, {"t": "li", "text": "Quy định thay đổi thường xuyên hơn tốc độ phát hành phần mềm. Sửa dữ liệu có hiệu lực ngay, sửa mã phải build, kiểm thử và triển khai lại."}, {"t": "li", "text": "Người hiểu nghiệp vụ đọc và sửa được đặc tả mà không cần biết lập trình."}, {"t": "li", "text": "Mã nguồn ít đi thì chỗ có thể sai cũng ít đi. Một lớp kiểm tra chung được viết kỹ và có kiểm thử tự động, thay cho 455 đoạn mã lặp lại."}, {"t": "li", "text": "Toàn bộ đặc tả và luật đều xem, sửa, nạp lại được từ web admin, có nhật ký kiểm toán ghi lại ai sửa gì lúc nào."}]}, {"id": "s11", "title": "PHỤ LỤC 2. CÁC ĐIỂM BAN TỔ CHỨC ĐÃ NÊU VÀ HIỆN TRẠNG", "blocks": [{"t": "p", "text": "Đối chiếu với bản rà soát kỹ thuật ngày 31/07/2026. Kiểm chứng lại ngày 01/08/2026.", "italic": true, "indent": false}, {"t": "table", "header": ["#", "Nội dung ban tổ chức nêu", "Hiện trạng ngày 01/08/2026"], "rows": [["1", "Mật khẩu cơ sở dữ liệu trong tệp cấu hình", "Đã gỡ ở bản hiện tại và trong toàn bộ lịch sử git; khóa API cũ đã thu hồi; có quét bí mật tự động ở cả 3 repo"], ["2", "Chính sách CORS mở toàn API", "Đã tách hai chính sách: quản trị theo danh sách nguồn cấu hình, chỉ 4 điểm cuối phục vụ extension mới mở"], ["3", "Hai repo không có kiểm thử", "Cả 3 repo có kiểm thử, tổng 103 test, chặn triển khai nếu đỏ"], ["4", "Có kịch bản k6 nhưng không có kết quả thô", "Có file kết xuất do k6 sinh; đã đo thêm trên cụm K8s thật; chứng minh scale ngang 2,98 lần"], ["5", "Không có HPA và tệp mẫu biến môi trường", "HPA cho web admin áp dụng được ngay; HPA cho API để sẵn kèm điều kiện; đã có tệp mẫu biến môi trường"], ["6", "Ảnh minh chứng nằm trong tệp .docx", "Đã xuất 42 ảnh PNG rời đặt tên theo luồng thao tác; đã gỡ tệp .docx của sản phẩm khác lẫn vào"], ["7", "Web admin không có nhật ký prompt", "Đã bổ sung tài liệu minh chứng AI cho web admin, trích nguyên văn phiên làm việc"], ["8", "Không có cấu hình quét phụ thuộc", "Cả 3 repo có dependabot và quy trình quét bí mật, quét lỗ hổng thư viện trong CI"], ["9", "Một tác giả trên cả 3 repo", "Đội xác nhận: đội 3 người, chỉ có 1 lập trình viên"], ["10", "Không có cấu hình quy ước mã ở 2 trên 3 repo", "Cả 3 repo đã có, chạy thật trong CI, không dùng cờ nới lỏng"]]}, {"t": "p", "text": "Ngoài 10 điểm trên, đội chủ động báo và xử lý thêm ba sai sót của chính mình: mật khẩu còn sót trong tài liệu cài đặt ở bản hiện tại, một khóa API trong lịch sử git, và một tệp .docx của sản phẩm khác lẫn trong thư mục tài liệu làm phồng số ảnh minh chứng.", "italic": false, "indent": false}, {"t": "p", "text": "Sau bản rà soát, đội còn sửa thêm hai lỗi của phần truy hồi văn bản (trợ lý hỏi đáp) mà ban tổ chức chưa nêu, kèm 22 kiểm thử tự động mới để khóa lại. Toàn bộ CI của cả 3 repo đang xanh trên bản mới nhất.", "italic": false, "indent": false}]}, {"id": "s12", "title": "PHỤ LỤC 3. NGUYÊN TẮC TRẢ LỜI", "blocks": [{"t": "p", "text": "1. Không biết thì nói không biết, kèm cách sẽ tìm ra. Không suy đoán con số.", "italic": false, "indent": true}, {"t": "p", "text": "2. Mọi con số nêu ra phải có chỗ kiểm chứng: file kết xuất k6, lịch sử chạy CI, địa chỉ hệ thống thật, hoặc dòng mã cụ thể.", "italic": false, "indent": true}, {"t": "p", "text": "3. Chủ động nói ra hạn chế trước khi bị hỏi. Bốn hạn chế đã liệt kê ở mục I.", "italic": false, "indent": true}, {"t": "p", "text": "4. Phân biệt rành mạch: bộ luật quyết định kết quả kiểm tra, AI chỉ tóm tắt và tra cứu. Đây là ranh giới quan trọng nhất của sản phẩm.", "italic": false, "indent": true}, {"t": "p", "text": "5. Câu trả lời gọn trước, chi tiết sau. Trả lời một hai câu, nếu ban giám khảo muốn sâu thì mới mở phụ lục.", "italic": false, "indent": true}, {"t": "p", "text": "6. Nếu bị hỏi về phần chưa làm, trả lời theo cấu trúc: chưa làm - lý do - điều kiện để làm được - khi nào làm.", "italic": false, "indent": true}]}];
+
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const bo = s => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+                       .replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase();
+
+const nav = document.getElementById('nav');
+const main = document.getElementById('main');
+
+DATA.forEach(s => {
+  const a = document.createElement('a');
+  a.href = '#' + s.id;
+  // nhãn ngắn nhưng vẫn đọc ra nội dung, để thanh mục không chiếm quá nhiều dòng
+  let lab = s.title, m;
+  if ((m = lab.match(/^[A-Z]\.\s*NHÓM\s*(\d+)\s*-\s*(.+)$/i))) lab = m[1] + '. ' + m[2];
+  else if ((m = lab.match(/^PHỤ LỤC\s*(\d+)\.\s*(.+)$/i))) lab = 'PL' + m[1] + '. ' + m[2];
+  else lab = lab.replace(/^[A-Z]\.\s*/, '');
+  const cut = lab.indexOf(' - ');
+  if (cut > 12) lab = lab.slice(0, cut);
+  a.textContent = lab.length > 28 ? lab.slice(0, 26) + '…' : lab;
+  a.title = s.title;
+  nav.appendChild(a);
+
+  const sec = document.createElement('section');
+  sec.id = s.id;
+  const h = document.createElement('h2');
+  h.className = 'sec'; h.textContent = s.title;
+  sec.appendChild(h);
+
+  s.blocks.forEach(b => {
+    let el;
+    if (b.t === 'h2') {
+      el = document.createElement('h3'); el.className = 'sub'; el.textContent = b.text;
+    } else if (b.t === 'p') {
+      el = document.createElement('p');
+      el.className = 'txt' + (b.indent ? ' ind' : '') + (b.italic ? ' it' : '');
+      el.textContent = b.text;
+    } else if (b.t === 'card') {
+      el = document.createElement('div'); el.className = 'card';
+      let h = '<div class="qq"><span class="cx">&#9660;</span><span class="qt">'
+            + esc(b.q) + '</span></div><div class="body"><p class="aa">' + esc(b.a) + '</p>';
+      if (b.li.length) h += '<ul>' + b.li.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>';
+      if (b.note) h += '<div class="note"><b>Lưu ý khi nói:</b> ' + esc(b.note) + '</div>';
+      el.innerHTML = h + '</div>';
+      el.querySelector('.qq').addEventListener('click', () => el.classList.toggle('closed'));
+    } else if (b.t === 'table') {
+      el = document.createElement('div'); el.className = 'tw';
+      el.innerHTML = '<table><thead><tr>'
+        + b.header.map(x => '<th>' + esc(x) + '</th>').join('')
+        + '</tr></thead><tbody>'
+        + b.rows.map(r => '<tr>' + r.map(x => '<td>' + esc(x) + '</td>').join('') + '</tr>').join('')
+        + '</tbody></table>';
+    }
+    if (el) sec.appendChild(el);
+  });
+  main.appendChild(sec);
+});
+
+// chỉ mục tìm kiếm
+const units = [];
+document.querySelectorAll('.card, .tw tbody tr, p.txt, h3.sub').forEach(n => {
+  units.push({ n, k: bo(n.textContent), html: n.innerHTML });
+});
+const secs = [...document.querySelectorAll('section')];
+
+const inp = document.getElementById('q');
+const clr = document.getElementById('clr');
+const cnt = document.getElementById('cnt');
+const empty = document.getElementById('empty');
+const TOT = document.querySelectorAll('.card').length;
+
+function unmark() {
+  units.forEach(u => { if (u.n.innerHTML !== u.html) u.n.innerHTML = u.html; });
+  document.querySelectorAll('.card .qq').forEach(q =>
+    q.onclick || q.addEventListener('click', () => q.parentElement.classList.toggle('closed')));
+}
+
+function rebind() {
+  document.querySelectorAll('.card').forEach(c => {
+    const q = c.querySelector('.qq');
+    if (q && !q.dataset.b) {
+      q.dataset.b = 1;
+      q.addEventListener('click', () => c.classList.toggle('closed'));
+    }
+  });
+}
+
+function hl(node, keys) {
+  const w = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+  const jobs = [];
+  while (w.nextNode()) {
+    const t = w.currentNode, s = t.nodeValue, b = bo(s);
+    const marks = [];
+    keys.forEach(k => {
+      let i = b.indexOf(k);
+      while (i !== -1) { marks.push([i, i + k.length]); i = b.indexOf(k, i + k.length); }
+    });
+    if (marks.length) jobs.push([t, s, marks]);
+  }
+  jobs.forEach(([t, s, marks]) => {
+    marks.sort((a, b) => a[0] - b[0]);
+    const merged = [];
+    marks.forEach(m => {
+      const last = merged[merged.length - 1];
+      if (last && m[0] <= last[1]) last[1] = Math.max(last[1], m[1]);
+      else merged.push([...m]);
+    });
+    const frag = document.createDocumentFragment();
+    let p = 0;
+    merged.forEach(([a, b]) => {
+      if (a > p) frag.appendChild(document.createTextNode(s.slice(p, a)));
+      const m = document.createElement('mark');
+      m.textContent = s.slice(a, b);
+      frag.appendChild(m);
+      p = b;
+    });
+    if (p < s.length) frag.appendChild(document.createTextNode(s.slice(p)));
+    t.parentNode.replaceChild(frag, t);
+  });
+}
+
+function run() {
+  const raw = inp.value.trim();
+  clr.style.display = raw ? 'block' : 'none';
+  unmark();
+  rebind();
+
+  if (!raw) {
+    units.forEach(u => u.n.classList.remove('hide'));
+    secs.forEach(s => s.classList.remove('hide'));
+    document.querySelectorAll('.card').forEach(c => c.classList.remove('closed'));
+    empty.style.display = 'none';
+    cnt.textContent = TOT + ' câu';
+    return;
+  }
+
+  const keys = bo(raw).split(/\s+/).filter(Boolean);
+  let hits = 0;
+  units.forEach(u => {
+    const ok = keys.every(k => u.k.includes(k));
+    u.n.classList.toggle('hide', !ok);
+    if (ok) { hits++; hl(u.n, keys); }
+  });
+  secs.forEach(s => {
+    const any = [...s.querySelectorAll('.card, .tw tbody tr, p.txt, h3.sub')]
+      .some(n => !n.classList.contains('hide'));
+    s.classList.toggle('hide', !any);
+  });
+  document.querySelectorAll('.tw').forEach(w => {
+    const any = [...w.querySelectorAll('tbody tr')].some(r => !r.classList.contains('hide'));
+    w.classList.toggle('hide', !any);
+  });
+  cnt.textContent = hits ? hits + ' kết quả' : 'không có';
+  empty.style.display = hits ? 'none' : 'block';
+}
+
+inp.addEventListener('input', run);
+clr.addEventListener('click', () => { inp.value = ''; run(); inp.focus(); });
+document.addEventListener('keydown', e => {
+  if (e.key === '/' && document.activeElement !== inp) { e.preventDefault(); inp.focus(); inp.select(); }
+  if (e.key === 'Escape') { inp.value = ''; run(); inp.blur(); }
+});
+rebind();
+cnt.textContent = TOT + ' câu';
+
+// Thanh đầu trang cố định cao bao nhiêu tùy độ rộng màn hình (nút mục xuống dòng),
+// nên phải đo thật rồi đẩy nội dung xuống đúng bấy nhiêu, tránh che tiêu đề mục.
+const hdr = document.querySelector('header');
+function fitHeader() {
+  document.documentElement.style.setProperty('--hh', hdr.offsetHeight + 'px');
+}
+fitHeader();
+window.addEventListener('resize', fitHeader);
+if (window.ResizeObserver) new ResizeObserver(fitHeader).observe(hdr);
+
+// Bấm nút mục: cuộn bằng JS cho chắc, không phụ thuộc nhảy neo của trình duyệt
+nav.addEventListener('click', e => {
+  const a = e.target.closest('a');
+  if (!a) return;
+  const t = document.getElementById(a.getAttribute('href').slice(1));
+  if (!t) return;
+  e.preventDefault();
+  fitHeader();
+  const y = t.getBoundingClientRect().top + window.scrollY - hdr.offsetHeight - 12;
+  window.scrollTo({ top: y, behavior: 'smooth' });
+  history.replaceState(null, '', a.getAttribute('href'));
+});
+
+// Mở trang bằng đường dẫn có sẵn #mục thì cũng phải trừ chiều cao thanh
+if (location.hash) {
+  const t = document.getElementById(location.hash.slice(1));
+  if (t) setTimeout(() => window.scrollTo(0,
+    t.getBoundingClientRect().top + window.scrollY - hdr.offsetHeight - 12), 0);
+}
+
+inp.focus();
+</script>
+</body>
+</html>

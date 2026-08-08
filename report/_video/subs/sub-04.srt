@@ -1,0 +1,16 @@
+1
+00:00:00,100 --> 00:00:03,976
+Tính năng đầu tiên: cảnh báo ngay khi nhập liệu.
+
+2
+00:00:03,926 --> 00:00:10,203
+Khi bạn nhập chẩn đoán, thuốc hay dịch vụ vào HIS, tiện ích sẽ âm thầm đối chiếu với quy định.
+
+3
+00:00:10,203 --> 00:00:18,817
+Nếu phát hiện bất thường — như chỉ định chưa hợp lý, thuốc cấp trùng, hay thiếu điều kiện thanh toán — nó hiện cảnh báo ngay tại chỗ.
+
+4
+00:00:18,817 --> 00:00:24,334
+Nhờ vậy bạn sửa đúng ngay từ đầu, thay vì chờ đến khi bị bảo hiểm từ chối.
+

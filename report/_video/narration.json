@@ -1,0 +1,77 @@
+[
+  {
+    "n": 1,
+    "file": "slide-01.png",
+    "text": "Xin chào! Đây là Chiến binh Y tế số — trợ lý trí tuệ nhân tạo giúp giám định hồ sơ bảo hiểm y tế. Trong bốn phút, tôi sẽ hướng dẫn bạn dùng hai công cụ chính: tiện ích cài trên trình duyệt để kiểm tra hồ sơ ngay khi làm việc, và trang quản trị để nạp tri thức và cấu hình hệ thống. Chúng ta bắt đầu nhé."
+  },
+  {
+    "n": 2,
+    "file": "slide-02.png",
+    "text": "Hệ thống gồm hai phần. Thứ nhất là tiện ích cài trên trình duyệt, gắn thẳng vào phần mềm HIS của bệnh viện; nó cảnh báo sai sót ngay khi nhập liệu và kiểm tra file XML 130 trước khi gửi cho bảo hiểm. Thứ hai là trang quản trị, nơi quản trị viên nạp văn bản quy định vào kho tri thức, quản lý danh mục và cấu hình hệ thống. Trước tiên, cùng xem phần tiện ích."
+  },
+  {
+    "n": 3,
+    "file": "slide-03.png",
+    "text": "Phần một: tiện ích chạy ngay trên phần mềm HIS. Đây là nơi nhân viên y tế làm việc hằng ngày."
+  },
+  {
+    "n": 4,
+    "file": "slide-04.png",
+    "text": "Tính năng đầu tiên: cảnh báo ngay khi nhập liệu. Khi bạn nhập chẩn đoán, thuốc hay dịch vụ vào HIS, tiện ích sẽ âm thầm đối chiếu với quy định. Nếu phát hiện bất thường — như chỉ định chưa hợp lý, thuốc cấp trùng, hay thiếu điều kiện thanh toán — nó hiện cảnh báo ngay tại chỗ. Nhờ vậy bạn sửa đúng ngay từ đầu, thay vì chờ đến khi bị bảo hiểm từ chối."
+  },
+  {
+    "n": 5,
+    "file": "slide-05.png",
+    "text": "Tính năng thứ hai: kiểm tra file XML 130 — chính là bộ hồ sơ gửi cho bảo hiểm. Bạn mở khu kiểm tra trên tiện ích rồi kéo thả file vào. Với một file, hệ thống kiểm tra cấu trúc và nội dung theo chuẩn của Bộ Y tế. Với nhiều file cùng lúc, nó còn đối chiếu chéo giữa các hồ sơ — phát hiện trùng giường bệnh, một bác sĩ xuất hiện ở hai nơi cùng thời điểm, hay một bệnh nhân xuất hiện bất hợp lý. Đây là những lỗi mà xem từng hồ sơ riêng lẻ gần như không thể thấy."
+  },
+  {
+    "n": 6,
+    "file": "slide-06.png",
+    "text": "Sau khi kiểm tra, kết quả được gom theo ba mức: từng hồ sơ, từng bảng, và từng dòng dữ liệu. Mỗi cảnh báo nêu rõ lỗi gì, nằm ở đâu, và trích dẫn quy định liên quan để bạn yên tâm. Bạn chỉ việc bấm vào cảnh báo là tới đúng dòng cần sửa."
+  },
+  {
+    "n": 7,
+    "file": "slide-07.png",
+    "text": "Tính năng thứ tư: hỏi đáp nghiệp vụ ngay trong lúc làm. Bạn gõ câu hỏi bằng tiếng Việt — chẳng hạn điều kiện thanh toán một dịch vụ, mức trần của một loại thuốc, hay thủ tục chuyển tuyến. Trí tuệ nhân tạo trả lời dựa trên kho văn bản đã nạp, luôn kèm trích dẫn điều khoản để bạn kiểm chứng. Bạn không còn phải mở hàng loạt tài liệu để tra cứu thủ công nữa."
+  },
+  {
+    "n": 8,
+    "file": "slide-08.png",
+    "text": "Phần hai: trang quản trị Web Admin. Đây là nơi quản trị viên chuẩn bị bộ não cho hệ thống và cấu hình vận hành."
+  },
+  {
+    "n": 9,
+    "file": "slide-09.png",
+    "text": "Sau khi đăng nhập bằng tài khoản được cấp, mỗi vai trò chỉ nhìn thấy đúng phần việc của mình. Trang Tổng quan cho bạn cái nhìn nhanh về tình trạng hệ thống và các số liệu chính. Menu bên trái dẫn tới các mục: Người dùng, Vai trò và quyền, Kho tri thức, Danh mục HIS, Tải văn bản, Nhật ký kiểm toán và Cấu hình. Ta xem các mục quan trọng nhất."
+  },
+  {
+    "n": 10,
+    "file": "slide-10.png",
+    "text": "Mục quan trọng nhất là Kho tri thức. Bạn tải lên văn bản, thông tư, quy định ở nhiều định dạng khác nhau; hệ thống tự đọc và tách thành các đoạn tri thức để tìm kiếm theo ngữ nghĩa. Bạn có thể theo dõi trạng thái chỉ mục của từng tài liệu — đang xử lý hay đã sẵn sàng cho AI sử dụng. Khi một quy định hết hiệu lực, chỉ cần gỡ tài liệu đó ra, để AI không trả lời theo quy định cũ."
+  },
+  {
+    "n": 11,
+    "file": "slide-11.png",
+    "text": "Mục Tải văn bản giúp kho tri thức luôn cập nhật. Hệ thống kết nối tới cổng văn bản pháp luật để tải về các văn bản mới liên quan. Bạn chỉ cần chọn văn bản cần dùng rồi đưa thẳng vào Kho tri thức, không phải tải thủ công từng file. Nhờ vậy, kho tri thức luôn theo kịp quy định mới nhất."
+  },
+  {
+    "n": 12,
+    "file": "slide-12.png",
+    "text": "Mục Danh mục HIS dùng để nạp danh mục thuốc, dịch vụ và vật tư theo từng cơ sở khám chữa bệnh, thường là từ file Excel. Đây chính là căn cứ để tiện ích đối chiếu khi kiểm tra hồ sơ. Danh mục càng đúng thì cảnh báo càng chính xác, nên hãy giữ cho phần này luôn khớp với thực tế của cơ sở."
+  },
+  {
+    "n": 13,
+    "file": "slide-13.png",
+    "text": "Cuối cùng là Cấu hình hệ thống. Tại đây bạn cập nhật bộ mã bệnh ICD và hẹn giờ đồng bộ định kỳ, để mã bệnh luôn mới mà không phải làm thủ công. Bạn cũng có thể tinh chỉnh cấu hình trí tuệ nhân tạo và các thông số vận hành khác. Lưu ý: chỉ vai trò quản trị hệ thống mới được vào mục này."
+  },
+  {
+    "n": 14,
+    "file": "slide-14.png",
+    "text": "Một điều quan trọng: an toàn dữ liệu. Hệ thống có thể chạy hoàn toàn trong mạng nội bộ của bệnh viện, nghĩa là dữ liệu bệnh nhân không rời khỏi cơ sở. Đồng thời, mọi thao tác quan trọng đều được ghi lại trong Nhật ký kiểm toán, để luôn có thể tra soát khi cần."
+  },
+  {
+    "n": 15,
+    "file": "slide-15.png",
+    "text": "Vậy là bạn đã nắm được cách dùng cả hai phần: tiện ích trên phần mềm HIS để kiểm tra và cảnh báo, cùng trang quản trị để nạp tri thức và cấu hình. Chiến binh Y tế số giúp hồ sơ sạch hơn, sai sót ít hơn và thanh toán nhanh hơn. Cảm ơn bạn đã theo dõi, và chúc bạn làm việc thật hiệu quả!"
+  }
+]

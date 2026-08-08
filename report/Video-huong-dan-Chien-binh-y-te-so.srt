@@ -1,0 +1,212 @@
+1
+00:00:00,450 --> 00:00:02,016
+Xin chào!
+
+2
+00:00:01,966 --> 00:00:08,366
+Đây là Chiến binh Y tế số — trợ lý trí tuệ nhân tạo giúp giám định hồ sơ bảo hiểm y tế.
+
+3
+00:00:08,366 --> 00:00:18,869
+Trong bốn phút, tôi sẽ hướng dẫn bạn dùng hai công cụ chính: tiện ích cài trên trình duyệt để kiểm tra hồ sơ ngay khi làm việc, và trang quản trị để nạp tri thức và cấu hình hệ thống.
+
+4
+00:00:18,869 --> 00:00:21,138
+Chúng ta bắt đầu nhé.
+
+5
+00:00:22,556 --> 00:00:24,978
+Hệ thống gồm hai phần.
+
+6
+00:00:24,928 --> 00:00:36,165
+Thứ nhất là tiện ích cài trên trình duyệt, gắn thẳng vào phần mềm HIS của bệnh viện; nó cảnh báo sai sót ngay khi nhập liệu và kiểm tra file XML 130 trước khi gửi cho bảo hiểm.
+
+7
+00:00:36,165 --> 00:00:44,004
+Thứ hai là trang quản trị, nơi quản trị viên nạp văn bản quy định vào kho tri thức, quản lý danh mục và cấu hình hệ thống.
+
+8
+00:00:44,004 --> 00:00:47,102
+Trước tiên, cùng xem phần tiện ích.
+
+9
+00:00:48,502 --> 00:00:52,188
+Phần một: tiện ích chạy ngay trên phần mềm HIS.
+
+10
+00:00:52,138 --> 00:00:55,752
+Đây là nơi nhân viên y tế làm việc hằng ngày.
+
+11
+00:00:57,168 --> 00:01:01,044
+Tính năng đầu tiên: cảnh báo ngay khi nhập liệu.
+
+12
+00:01:00,994 --> 00:01:07,271
+Khi bạn nhập chẩn đoán, thuốc hay dịch vụ vào HIS, tiện ích sẽ âm thầm đối chiếu với quy định.
+
+13
+00:01:07,271 --> 00:01:15,885
+Nếu phát hiện bất thường — như chỉ định chưa hợp lý, thuốc cấp trùng, hay thiếu điều kiện thanh toán — nó hiện cảnh báo ngay tại chỗ.
+
+14
+00:01:15,885 --> 00:01:21,402
+Nhờ vậy bạn sửa đúng ngay từ đầu, thay vì chờ đến khi bị bảo hiểm từ chối.
+
+15
+00:01:22,802 --> 00:01:29,857
+Tính năng thứ hai: kiểm tra file XML 130 — chính là bộ hồ sơ gửi cho bảo hiểm.
+
+16
+00:01:29,807 --> 00:01:34,006
+Bạn mở khu kiểm tra trên tiện ích rồi kéo thả file vào.
+
+17
+00:01:34,006 --> 00:01:39,590
+Với một file, hệ thống kiểm tra cấu trúc và nội dung theo chuẩn của Bộ Y tế.
+
+18
+00:01:39,590 --> 00:01:50,460
+Với nhiều file cùng lúc, nó còn đối chiếu chéo giữa các hồ sơ — phát hiện trùng giường bệnh, một bác sĩ xuất hiện ở hai nơi cùng thời điểm, hay một bệnh nhân xuất hiện bất hợp lý.
+
+19
+00:01:50,460 --> 00:01:55,269
+Đây là những lỗi mà xem từng hồ sơ riêng lẻ gần như không thể thấy.
+
+20
+00:01:56,692 --> 00:02:03,897
+Sau khi kiểm tra, kết quả được gom theo ba mức: từng hồ sơ, từng bảng, và từng dòng dữ liệu.
+
+21
+00:02:03,847 --> 00:02:10,437
+Mỗi cảnh báo nêu rõ lỗi gì, nằm ở đâu, và trích dẫn quy định liên quan để bạn yên tâm.
+
+22
+00:02:10,437 --> 00:02:14,744
+Bạn chỉ việc bấm vào cảnh báo là tới đúng dòng cần sửa.
+
+23
+00:02:16,158 --> 00:02:20,333
+Tính năng thứ tư: hỏi đáp nghiệp vụ ngay trong lúc làm.
+
+24
+00:02:20,283 --> 00:02:28,204
+Bạn gõ câu hỏi bằng tiếng Việt — chẳng hạn điều kiện thanh toán một dịch vụ, mức trần của một loại thuốc, hay thủ tục chuyển tuyến.
+
+25
+00:02:28,204 --> 00:02:34,685
+Trí tuệ nhân tạo trả lời dựa trên kho văn bản đã nạp, luôn kèm trích dẫn điều khoản để bạn kiểm chứng.
+
+26
+00:02:34,685 --> 00:02:39,264
+Bạn không còn phải mở hàng loạt tài liệu để tra cứu thủ công nữa.
+
+27
+00:02:40,664 --> 00:02:44,105
+Phần hai: trang quản trị Web Admin.
+
+28
+00:02:44,055 --> 00:02:49,246
+Đây là nơi quản trị viên chuẩn bị bộ não cho hệ thống và cấu hình vận hành.
+
+29
+00:02:50,650 --> 00:02:56,374
+Sau khi đăng nhập bằng tài khoản được cấp, mỗi vai trò chỉ nhìn thấy đúng phần việc của mình.
+
+30
+00:02:56,324 --> 00:03:01,582
+Trang Tổng quan cho bạn cái nhìn nhanh về tình trạng hệ thống và các số liệu chính.
+
+31
+00:03:01,582 --> 00:03:11,569
+Menu bên trái dẫn tới các mục: Người dùng, Vai trò và quyền, Kho tri thức, Danh mục HIS, Tải văn bản, Nhật ký kiểm toán và Cấu hình.
+
+32
+00:03:11,569 --> 00:03:14,204
+Ta xem các mục quan trọng nhất.
+
+33
+00:03:15,612 --> 00:03:18,564
+Mục quan trọng nhất là Kho tri thức.
+
+34
+00:03:18,514 --> 00:03:27,794
+Bạn tải lên văn bản, thông tư, quy định ở nhiều định dạng khác nhau; hệ thống tự đọc và tách thành các đoạn tri thức để tìm kiếm theo ngữ nghĩa.
+
+35
+00:03:27,794 --> 00:03:34,737
+Bạn có thể theo dõi trạng thái chỉ mục của từng tài liệu — đang xử lý hay đã sẵn sàng cho AI sử dụng.
+
+36
+00:03:34,737 --> 00:03:41,639
+Khi một quy định hết hiệu lực, chỉ cần gỡ tài liệu đó ra, để AI không trả lời theo quy định cũ.
+
+37
+00:03:43,046 --> 00:03:46,528
+Mục Tải văn bản giúp kho tri thức luôn cập nhật.
+
+38
+00:03:46,478 --> 00:03:52,008
+Hệ thống kết nối tới cổng văn bản pháp luật để tải về các văn bản mới liên quan.
+
+39
+00:03:52,008 --> 00:03:58,448
+Bạn chỉ cần chọn văn bản cần dùng rồi đưa thẳng vào Kho tri thức, không phải tải thủ công từng file.
+
+40
+00:03:58,448 --> 00:04:02,524
+Nhờ vậy, kho tri thức luôn theo kịp quy định mới nhất.
+
+41
+00:04:03,928 --> 00:04:11,880
+Mục Danh mục HIS dùng để nạp danh mục thuốc, dịch vụ và vật tư theo từng cơ sở khám chữa bệnh, thường là từ file Excel.
+
+42
+00:04:11,830 --> 00:04:16,368
+Đây chính là căn cứ để tiện ích đối chiếu khi kiểm tra hồ sơ.
+
+43
+00:04:16,368 --> 00:04:23,257
+Danh mục càng đúng thì cảnh báo càng chính xác, nên hãy giữ cho phần này luôn khớp với thực tế của cơ sở.
+
+44
+00:04:24,666 --> 00:04:27,442
+Cuối cùng là Cấu hình hệ thống.
+
+45
+00:04:27,392 --> 00:04:35,231
+Tại đây bạn cập nhật bộ mã bệnh ICD và hẹn giờ đồng bộ định kỳ, để mã bệnh luôn mới mà không phải làm thủ công.
+
+46
+00:04:35,231 --> 00:04:40,707
+Bạn cũng có thể tinh chỉnh cấu hình trí tuệ nhân tạo và các thông số vận hành khác.
+
+47
+00:04:40,707 --> 00:04:45,381
+Lưu ý: chỉ vai trò quản trị hệ thống mới được vào mục này.
+
+48
+00:04:46,796 --> 00:04:50,142
+Một điều quan trọng: an toàn dữ liệu.
+
+49
+00:04:50,092 --> 00:04:57,225
+Hệ thống có thể chạy hoàn toàn trong mạng nội bộ của bệnh viện, nghĩa là dữ liệu bệnh nhân không rời khỏi cơ sở.
+
+50
+00:04:57,225 --> 00:05:04,236
+Đồng thời, mọi thao tác quan trọng đều được ghi lại trong Nhật ký kiểm toán, để luôn có thể tra soát khi cần.
+
+51
+00:05:05,638 --> 00:05:14,772
+Vậy là bạn đã nắm được cách dùng cả hai phần: tiện ích trên phần mềm HIS để kiểm tra và cảnh báo, cùng trang quản trị để nạp tri thức và cấu hình.
+
+52
+00:05:14,722 --> 00:05:20,551
+Chiến binh Y tế số giúp hồ sơ sạch hơn, sai sót ít hơn và thanh toán nhanh hơn.
+
+53
+00:05:20,551 --> 00:05:25,279
+Cảm ơn bạn đã theo dõi, và chúc bạn làm việc thật hiệu quả!
+

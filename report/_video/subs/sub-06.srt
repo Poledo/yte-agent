@@ -1,0 +1,12 @@
+1
+00:00:00,100 --> 00:00:07,305
+Sau khi kiểm tra, kết quả được gom theo ba mức: từng hồ sơ, từng bảng, và từng dòng dữ liệu.
+
+2
+00:00:07,255 --> 00:00:13,845
+Mỗi cảnh báo nêu rõ lỗi gì, nằm ở đâu, và trích dẫn quy định liên quan để bạn yên tâm.
+
+3
+00:00:13,845 --> 00:00:18,152
+Bạn chỉ việc bấm vào cảnh báo là tới đúng dòng cần sửa.
+

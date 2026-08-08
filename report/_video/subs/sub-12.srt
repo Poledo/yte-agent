@@ -1,0 +1,12 @@
+1
+00:00:00,100 --> 00:00:08,052
+Mục Danh mục HIS dùng để nạp danh mục thuốc, dịch vụ và vật tư theo từng cơ sở khám chữa bệnh, thường là từ file Excel.
+
+2
+00:00:08,002 --> 00:00:12,540
+Đây chính là căn cứ để tiện ích đối chiếu khi kiểm tra hồ sơ.
+
+3
+00:00:12,540 --> 00:00:19,429
+Danh mục càng đúng thì cảnh báo càng chính xác, nên hãy giữ cho phần này luôn khớp với thực tế của cơ sở.
+
