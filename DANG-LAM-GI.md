@@ -104,13 +104,23 @@ Việc dự thi còn treo:
 
 Việc của riêng monorepo:
 
-- **CI/CD đã gộp về gốc** (`.github/workflows/`, 5 workflow, lọc `paths:` theo thư mục con) —
-  bảng chi tiết ở README. Nhánh làm việc là **`master`**. Còn phải làm bằng tay trên GitHub:
-  khai 4 secrets `ECR_ID/ECR_USER/ECR_PASSWORD/KUBE_CONFIG` và đổi default branch sang `master`.
-  Chưa khai secrets thì job triển khai tự bỏ qua (CI vẫn xanh).
-  **Khai xong rồi thì mỗi lần push lên `master` là deploy thẳng lên cụm production.**
+- **CI/CD đã gộp về gốc và đã chạy thật** (`.github/workflows/`, 5 workflow, lọc `paths:` theo
+  thư mục con) - bảng chi tiết ở README. Nhánh duy nhất, cũng là default branch: **`master`**
+  (nhánh `main` đã xóa). Bốn secrets `ECR_ID/ECR_USER/ECR_PASSWORD/KUBE_CONFIG` đã khai đủ
+  ngày 08/08/2026. Chưa khai đủ thì job `kiem-tra-secrets` cho triển khai tự bỏ qua, CI vẫn xanh.
+  **Mỗi lần push lên `master` là deploy thẳng lên cụm production** - đã kiểm chứng ở commit
+  `57c0d44`: build image → push ECR (tag `57c0d448` + `latest`) → `kubectl apply` →
+  `deployment "api-validation"/"web-admin" successfully rolled out`, <https://cbyts.vnpt.vn> trả 200.
+- **⚠ Phải xoay khóa ECR**: ngày 08/08/2026 Secret Key ECR bị in ra chat. Cần đổi khóa ở portal
+  ECR rồi cập nhật lại secret `ECR_PASSWORD` ở cả 4 kho (monorepo + 3 repo cũ).
 - Tag phát hành extension đổi tiền tố: `extension-v1.2.3` (hồi tách repo chỉ là `v1.2.3`),
   vì một kho giờ chứa 3 thành phần.
+- **Nâng thư viện lên major còn treo** (commit `57c0d44` chỉ lấy patch/minor cùng major):
+  typescript 5/6→7, jsdom 28→30, vite 5→8, vitest 2/4→4, eslint + @eslint/js 9→10,
+  @types/chrome 0.0.246→0.2.5, Scalar.AspNetCore 1→2, PDFtoImage 4→5, Microsoft.OpenApi 2→3,
+  Microsoft.NET.Test.Sdk 17→18, xunit.runner.visualstudio 2→3, `node:22-alpine`→25,
+  và các GitHub Action (checkout 4→7, setup-node 4→7, setup-dotnet 4→6, upload-artifact 4→7,
+  action-gh-release 2→3). Làm từng cụm một, đừng gộp - mỗi cụm có breaking change riêng.
 - Quyết định có chép nốt `nop-btc/`, `report/`, `data-import/`, `vnpt-cloud/` sang không.
 - Khi đã chắc chắn, người dùng tự xóa workspace cũ `D:\VNPT\hackathon`.
 
