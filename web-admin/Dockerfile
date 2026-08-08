@@ -7,7 +7,7 @@ COPY . .
 RUN npm run build -- --configuration production
 
 # Giai đoạn 2: serve bằng nginx
-FROM nginx:1.27-alpine
+FROM nginx:1.31-alpine
 # Bật script điền ${NGINX_LOCAL_RESOLVERS} từ /etc/resolv.conf (kube-dns trong K8s).
 ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
 # Đặt vào templates/ để entrypoint nginx chạy envsubst (điền ${NGINX_LOCAL_RESOLVERS})
