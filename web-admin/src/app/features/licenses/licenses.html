@@ -1,0 +1,134 @@
+<app-page-header
+  icon="key"
+  title="Hợp đồng cơ sở KCB"
+  subtitle="Mỗi cơ sở một khóa bản quyền — khóa quyết định ai được dùng dịch vụ và ai chịu tiền"
+>
+  <mat-slide-toggle [checked]="showRevoked()" (change)="toggleRevoked($event.checked)"
+    >Hiện đã thu hồi</mat-slide-toggle
+  >
+  <mat-form-field appearance="outline" class="search-field" subscriptSizing="dynamic">
+    <mat-icon matPrefix>search</mat-icon>
+    <input matInput [formControl]="searchCtrl" placeholder="Tìm cơ sở / mã / gói cước..." />
+  </mat-form-field>
+  <button *appHasPermission="'License.Manage'" [matButton]="'filled'" color="primary" (click)="add()">
+    <mat-icon>add</mat-icon>
+    Cấp hợp đồng
+  </button>
+</app-page-header>
+
+<app-data-table
+  [columns]="columns"
+  [data]="filtered()"
+  [loading]="loading()"
+  emptyIcon="key_off"
+  emptyTitle="Chưa cấp hợp đồng nào"
+  emptyDescription="Nhấn 'Cấp hợp đồng' để tạo khóa bản quyền cho một cơ sở KCB."
+>
+  <ng-template appColumnDef="facility" let-row>
+    <div class="facility-cell" [class.revoked-row]="row.revokedAt">
+      <div class="facility-name">{{ row.facilityName }}</div>
+      <div class="facility-meta">
+        <span class="code">{{ row.facilityCode }}</span>
+        <span class="key-prefix" matTooltip="Phần đầu khóa — dùng để đối chiếu khi hỗ trợ đơn vị"
+          >{{ row.keyPrefix }}…</span
+        >
+        @if (row.coversSubtree) {
+          <span class="subtree" matTooltip="Khóa dùng được cho cả các đơn vị cấp dưới trong cây">
+            <mat-icon>account_tree</mat-icon> cả nhánh
+          </span>
+        }
+      </div>
+    </div>
+  </ng-template>
+
+  <ng-template appColumnDef="quota" let-row>
+    <div class="usage-cell">
+      <div class="usage-main" [class.over]="isOverQuota(row)">
+        <strong>{{ row.currentPeriodUnits | number }}</strong>
+        <span class="quota">{{ quotaLabel(row) }}</span>
+      </div>
+      <div class="usage-sub">{{ row.currentPeriodAskCount | number }} lượt hỏi đáp</div>
+    </div>
+  </ng-template>
+
+  <ng-template appColumnDef="price" let-row>
+    <div class="price-cell">
+      <div>{{ row.basePrice | number }} đ/tháng</div>
+      <div class="price-sub">+{{ row.overageUnitPrice | number }} đ/hồ sơ vượt</div>
+    </div>
+  </ng-template>
+
+  <ng-template appColumnDef="validity" let-row>
+    <div class="validity-cell">
+      <div>{{ row.validFrom | date: 'dd/MM/yyyy' }}</div>
+      <div class="validity-sub">
+        @if (row.validTo) {
+          đến {{ row.validTo | date: 'dd/MM/yyyy' }}
+        } @else {
+          không hạn
+        }
+      </div>
+    </div>
+  </ng-template>
+
+  <ng-template appColumnDef="status" let-row>
+    <div class="status-cell">
+      @if (row.revokedAt) {
+        <span class="badge revoked"><mat-icon>block</mat-icon> Đã thu hồi</span>
+      } @else if (row.usableNow) {
+        <span class="badge active"><mat-icon>check_circle</mat-icon> Đang chạy</span>
+      } @else {
+        <span
+          class="badge paused"
+          matTooltip="Hợp đồng chưa tới hiệu lực, đã hết hạn, hoặc bị tắt"
+          ><mat-icon>pause_circle</mat-icon> Ngừng</span
+        >
+      }
+      @if (row.lastUsedAt) {
+        <span class="last-used" matTooltip="Lần cuối khóa được máy trạm dùng (sai số tới 5 phút)"
+          >{{ row.lastUsedAt | date: 'dd/MM HH:mm' }}</span
+        >
+      } @else {
+        <span class="last-used never">chưa dùng lần nào</span>
+      }
+    </div>
+  </ng-template>
+
+  <ng-template appColumnDef="actions" let-row>
+    @if (row.revokedAt) {
+      <button
+        *appHasPermission="'License.Manage'"
+        matIconButton
+        matTooltip="Khôi phục (khóa cũ hoạt động lại)"
+        (click)="restore(row)"
+      >
+        <mat-icon>restore</mat-icon>
+      </button>
+    } @else {
+      <button
+        *appHasPermission="'License.Manage'"
+        matIconButton
+        matTooltip="Sửa điều khoản"
+        (click)="edit(row)"
+      >
+        <mat-icon>edit</mat-icon>
+      </button>
+      <button
+        *appHasPermission="'License.Manage'"
+        matIconButton
+        matTooltip="Cấp lại khóa (khóa cũ chết ngay)"
+        (click)="rotate(row)"
+      >
+        <mat-icon>autorenew</mat-icon>
+      </button>
+      <button
+        *appHasPermission="'License.Manage'"
+        matIconButton
+        matTooltip="Thu hồi hợp đồng"
+        (click)="revoke(row)"
+      >
+        <mat-icon>block</mat-icon>
+      </button>
+    }
+  </ng-template>
+</app-data-table>

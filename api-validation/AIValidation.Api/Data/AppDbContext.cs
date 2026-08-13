@@ -1,5 +1,6 @@
 using AIValidation.Api.Data.Entities;
 using AIValidation.Api.Data.Entities.Auth;
+using AIValidation.Api.Data.Entities.Licensing;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -116,6 +117,15 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, Guid>
     /// <summary>DbSet cho UsageEvent - lượt sử dụng (hỏi đáp AI, kiểm tra XML 130) phục vụ thống kê dashboard.</summary>
     public DbSet<UsageEvent> UsageEvents { get; set; }
 
+    /// <summary>DbSet cho FacilityLicense - hợp đồng/giấy phép sử dụng gắn vào một nút cây đơn vị.</summary>
+    public DbSet<FacilityLicense> FacilityLicenses { get; set; }
+
+    /// <summary>DbSet cho BillingRecord - sổ tính tiền (tách khỏi UsageEvents vì yêu cầu độ tin cậy khác hẳn).</summary>
+    public DbSet<BillingRecord> BillingRecords { get; set; }
+
+    /// <summary>DbSet cho BillingInvoice - bản chốt sổ từng kỳ, bất biến sau khi tạo.</summary>
+    public DbSet<BillingInvoice> BillingInvoices { get; set; }
+
     /// <summary>
     /// Configure DbContext options.
     /// 
@@ -228,7 +238,84 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, Guid>
             entity.Property(e => e.Preview).HasMaxLength(400);
             // Thống kê luôn lọc theo khoảng thời gian (+ loại sự kiện)
             entity.HasIndex(e => new { e.CreatedAt, e.EventType });
+            // Bảng kê theo đơn vị lọc trước hết theo mã cơ sở rồi mới tới khoảng ngày
+            entity.HasIndex(e => new { e.FacilityCode, e.CreatedAt });
             entity.ToTable("usage_events", schema: "public");
+        });
+
+        modelBuilder.Entity<FacilityLicense>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
+            entity.Property(e => e.FacilityCode).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.KeyHash).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.KeyPrefix).IsRequired().HasMaxLength(40);
+            entity.Property(e => e.Plan).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.BasePrice).HasColumnType("numeric(18,2)");
+            entity.Property(e => e.OverageUnitPrice).HasColumnType("numeric(18,2)");
+            entity.Property(e => e.Note).HasMaxLength(1000);
+            entity.Property(e => e.CreatedBy).HasMaxLength(256);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            // Xóa đơn vị thì giấy phép của nó cũng hết nghĩa
+            entity.HasOne(e => e.Facility)
+                .WithMany()
+                .HasForeignKey(e => e.FacilityId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Mọi request đều tra bằng băm khóa — đây là truy vấn nóng nhất của bảng
+            entity.HasIndex(e => e.KeyHash).IsUnique();
+            entity.HasIndex(e => e.FacilityCode);
+            entity.ToTable("facility_licenses", schema: "public");
+        });
+
+        modelBuilder.Entity<BillingRecord>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
+            entity.Property(e => e.BilledFacilityCode).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.UsedByFacilityCode).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.EventType).IsRequired().HasMaxLength(30);
+            entity.Property(e => e.RecordKey).IsRequired().HasMaxLength(120);
+            entity.Property(e => e.StaffCode).HasMaxLength(50);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasOne(e => e.License)
+                .WithMany()
+                .HasForeignKey(e => e.LicenseId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // KHỬ TRÙNG: nhân viên sửa hồ sơ rồi kiểm lại ba lần vẫn chỉ tính tiền một lần.
+            // Ràng buộc đặt ở DB chứ không kiểm bằng code vì nhiều request chạy song song.
+            entity.HasIndex(e => new { e.LicenseId, e.PeriodMonth, e.EventType, e.RecordKey })
+                .IsUnique()
+                .HasDatabaseName("UX_billing_records_dedup");
+            entity.HasIndex(e => new { e.BilledFacilityCode, e.PeriodMonth });
+            entity.ToTable("billing_records", schema: "public");
+        });
+
+        modelBuilder.Entity<BillingInvoice>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
+            entity.Property(e => e.FacilityCode).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.FacilityName).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Plan).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.BasePrice).HasColumnType("numeric(18,2)");
+            entity.Property(e => e.OverageUnitPrice).HasColumnType("numeric(18,2)");
+            entity.Property(e => e.TotalAmount).HasColumnType("numeric(18,2)");
+            entity.Property(e => e.ClosedBy).HasMaxLength(256);
+            entity.Property(e => e.ClosedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            // Giấy phép bị xóa vẫn PHẢI giữ hóa đơn cũ — chứng từ đã phát hành
+            entity.HasOne(e => e.License)
+                .WithMany()
+                .HasForeignKey(e => e.LicenseId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Một kỳ của một giấy phép chỉ chốt được đúng một lần
+            entity.HasIndex(e => new { e.LicenseId, e.PeriodMonth }).IsUnique();
+            entity.ToTable("billing_invoices", schema: "public");
         });
 
         modelBuilder.Entity<MedicalDocument>(entity =>

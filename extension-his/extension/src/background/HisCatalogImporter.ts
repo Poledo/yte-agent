@@ -10,6 +10,7 @@ import {
     type CatalogFileProgress,
     type CatalogImportState,
 } from '../shared/his/CatalogImportChannel'
+import { buildLicenseHeaders } from '../shared/license/LicenseSettings'
 
 /** Một file danh mục tìm được trên trang xuất danh mục. */
 interface ScrapedFile {
@@ -189,6 +190,7 @@ export class HisCatalogImporter {
 
             const response = await fetch(`${this.api.baseUrl}/api/catalog/import?${query.toString()}`, {
                 method: 'POST',
+                headers: await buildLicenseHeaders(),
                 body: form,
             })
             const payload = (await response.json().catch(() => null)) as {

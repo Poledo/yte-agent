@@ -1,6 +1,7 @@
 import { ApiConfiguration } from './ApiConfiguration'
 import { ApiValidationRequest, ApiValidationResponse } from './ApiModels'
 import { ApiException } from './ApiException'
+import { buildLicenseHeaders } from '../../shared/license/LicenseSettings'
 
 export class ValidationApiClient {
     private config: ApiConfiguration
@@ -32,7 +33,7 @@ export class ValidationApiClient {
 
             const response = await fetch(endpoint, {
                 method: 'POST',
-                headers: this.config.headers,
+                headers: { ...this.config.headers, ...(await buildLicenseHeaders()) },
                 body: JSON.stringify(request),
                 signal: abortController.signal,
             })

@@ -1,0 +1,118 @@
+.search-field {
+  width: 240px;
+}
+
+.facility-cell {
+  .facility-name {
+    font-weight: 600;
+    line-height: 1.35;
+  }
+  .facility-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+  .code {
+    font-weight: 600;
+  }
+  .key-prefix {
+    font-family: 'Roboto Mono', 'Consolas', monospace;
+    letter-spacing: 0.3px;
+  }
+  .subtree {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 1px 8px;
+    border-radius: 20px;
+    background: var(--mat-sys-tertiary-container);
+    color: var(--mat-sys-on-tertiary-container);
+    mat-icon {
+      font-size: 14px;
+      width: 14px;
+      height: 14px;
+    }
+  }
+  // Hợp đồng đã thu hồi vẫn hiện (để đối soát sản lượng cũ) nhưng làm mờ đi
+  &.revoked-row {
+    opacity: 0.6;
+  }
+}
+
+.usage-cell {
+  .usage-main {
+    font-size: 14px;
+    // Vượt hạn mức = phát sinh tiền ngoài gói, phải nhìn thấy ngay
+    &.over {
+      color: #b3261e;
+    }
+    .quota {
+      margin-left: 3px;
+      font-size: 12px;
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+  .usage-sub {
+    font-size: 11.5px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.price-cell,
+.validity-cell {
+  font-size: 13px;
+  line-height: 1.4;
+
+  .price-sub,
+  .validity-sub {
+    font-size: 11.5px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.status-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+
+  .last-used {
+    font-size: 11px;
+    color: var(--mat-sys-on-surface-variant);
+    &.never {
+      font-style: italic;
+      opacity: 0.75;
+    }
+  }
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 500;
+
+  mat-icon {
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+  }
+  &.active {
+    background: rgba(46, 125, 50, 0.14);
+    color: #2e7d32;
+  }
+  &.paused {
+    background: rgba(230, 145, 0, 0.16);
+    color: #a65f00;
+  }
+  &.revoked {
+    background: var(--mat-sys-surface-container-high);
+    color: var(--mat-sys-on-surface-variant);
+  }
+}

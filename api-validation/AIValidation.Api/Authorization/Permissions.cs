@@ -38,6 +38,19 @@ public static class Permissions
     // Nhóm Audit
     public const string AuditView = "Audit.View";
 
+    // Nhóm License - hợp đồng bán theo cơ sở KCB
+    public const string LicenseView = "License.View";
+    public const string LicenseManage = "License.Manage";
+
+    // Nhóm Billing - bảng kê và chốt sổ tính tiền
+    public const string BillingView = "Billing.View";
+
+    /// <summary>
+    /// Chốt sổ tháng. Tách khỏi <see cref="BillingView"/> vì chốt sổ sinh CHỨNG TỪ
+    /// không sửa được — người xem bảng kê không đương nhiên được quyền phát hành.
+    /// </summary>
+    public const string BillingClose = "Billing.Close";
+
     // Nhóm System
     public const string SystemAdmin = "System.Admin";
 
@@ -63,6 +76,10 @@ public static class Permissions
         new(UserManage,       "Quản lý người dùng",        "User"),
         new(RoleManage,       "Quản lý vai trò & quyền",   "Role"),
         new(AuditView,        "Xem nhật ký kiểm toán",     "Audit"),
+        new(LicenseView,      "Xem hợp đồng cơ sở KCB",    "License"),
+        new(LicenseManage,    "Cấp/thu hồi khóa bản quyền","License"),
+        new(BillingView,      "Xem bảng kê tính tiền",     "Billing"),
+        new(BillingClose,     "Chốt sổ tính tiền theo tháng", "Billing"),
         new(SystemAdmin,      "Toàn quyền hệ thống",       "System"),
     };
 }

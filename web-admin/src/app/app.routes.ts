@@ -80,6 +80,18 @@ export const routes: Routes = [
         data: { permissions: ['Catalog.View', 'Catalog.Manage'] },
       },
       {
+        path: 'licenses',
+        loadComponent: () => import('./features/licenses/licenses').then((m) => m.Licenses),
+        canActivate: [permissionGuard],
+        data: { permissions: ['License.View', 'License.Manage'] },
+      },
+      {
+        path: 'billing',
+        loadComponent: () => import('./features/billing/billing').then((m) => m.Billing),
+        canActivate: [permissionGuard],
+        data: { permissions: ['Billing.View'] },
+      },
+      {
         path: 'legal',
         loadComponent: () => import('./features/legal/legal').then((m) => m.Legal),
         canActivate: [permissionGuard],

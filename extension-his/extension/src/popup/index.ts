@@ -13,6 +13,7 @@ import {
     type CatalogFileProgress,
     type CatalogImportState,
 } from '../shared/his/CatalogImportChannel'
+import { loadLicenseSettings, saveLicenseSettings } from '../shared/license/LicenseSettings'
 
 function initializePopup(): void {
     console.log('Popup initialized')
@@ -23,9 +24,70 @@ function initializePopup(): void {
     }
 
     initializeSettings()
+    initializeLicenseSettings()
     initializePopupRobot()
     initializeGuideButton()
     initializeCatalogImport()
+}
+
+/**
+ * Ô khai khóa bản quyền của cơ sở KCB.
+ *
+ * Đây là màn hình DUY NHẤT người dùng khai được khóa, nên mọi thông báo lỗi 401
+ * ở panel chat đều chỉ về đây (xem describeLicenseError trong LicenseSettings).
+ *
+ * Lưu cả 3 ô trong MỘT lượt bấm chứ không tự lưu theo từng phím: khóa dài, gõ dở
+ * dang mà đã lưu thì request kế tiếp gửi khóa cụt và bị máy chủ từ chối.
+ */
+function initializeLicenseSettings(): void {
+    const keyInput = document.getElementById('licenseKey') as HTMLInputElement | null
+    const facilityInput = document.getElementById('facilityCode') as HTMLInputElement | null
+    const staffInput = document.getElementById('staffCode') as HTMLInputElement | null
+    const saveButton = document.getElementById('saveLicense') as HTMLButtonElement | null
+    const status = document.getElementById('licenseStatus')
+    if (!keyInput || !facilityInput || !staffInput || !saveButton || !status) return
+
+    const showStatus = (message: string, tone: 'ok' | 'error'): void => {
+        status.textContent = message
+        status.dataset.tone = tone
+        status.hidden = false
+    }
+
+    void loadLicenseSettings().then((settings) => {
+        keyInput.value = settings.licenseKey
+        facilityInput.value = settings.facilityCode
+        staffInput.value = settings.staffCode
+        if (!settings.licenseKey) {
+            showStatus('Chưa khai khóa bản quyền - nhập khóa đơn vị được cấp rồi bấm Lưu.', 'error')
+        }
+    })
+
+    saveButton.addEventListener('click', () => {
+        const licenseKey = keyInput.value.trim()
+        if (!licenseKey) {
+            showStatus('Chưa nhập khóa bản quyền.', 'error')
+            keyInput.focus()
+            return
+        }
+
+        saveButton.disabled = true
+        saveLicenseSettings({ licenseKey, facilityCode: facilityInput.value, staffCode: staffInput.value })
+            .then(async () => {
+                // Đọc lại từ storage để ô hiển thị đúng thứ ĐÃ lưu (khóa được viết hoa,
+                // khoảng trắng bị cắt) chứ không phải thứ người dùng vừa gõ.
+                const saved = await loadLicenseSettings()
+                keyInput.value = saved.licenseKey
+                facilityInput.value = saved.facilityCode
+                staffInput.value = saved.staffCode
+                showStatus('Đã lưu. Khóa có hiệu lực ngay, không cần tải lại trang HIS.', 'ok')
+            })
+            .catch(() => {
+                showStatus('Không lưu được khóa. Hãy tải lại tiện ích rồi thử lại.', 'error')
+            })
+            .finally(() => {
+                saveButton.disabled = false
+            })
+    })
 }
 
 /**

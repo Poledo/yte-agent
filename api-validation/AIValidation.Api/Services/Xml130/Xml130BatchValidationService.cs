@@ -158,7 +158,18 @@ public class Xml130BatchValidationService : IXml130BatchValidationService
         }
 
         var total = parsedFiles.Sum(f => f.HoSos.Count);
-        yield return new { type = "start", fileCount = files.Count, hosoCount = total };
+        yield return new Xml130StreamStartEvent
+        {
+            FileCount = files.Count,
+            HosoCount = total,
+            FacilityCodes = parsedFiles
+                .SelectMany(f => f.HoSos)
+                .Select(h => h.FacilityCode)
+                .Where(c => !string.IsNullOrWhiteSpace(c))
+                .Select(c => c!.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList()
+        };
         foreach (var (fileName, error) in fileErrors)
         {
             yield return new { type = "fileError", fileName, error };
@@ -218,15 +229,17 @@ public class Xml130BatchValidationService : IXml130BatchValidationService
                 }
                 issueCount += result.IssueCount;
 
-                yield return new
+                // Kiểu CÓ TÊN (không phải kiểu ẩn danh) để controller bóc được MA_LK và
+                // mã cơ sở mà ghi sổ tính tiền — xem Xml130StreamHosoEvent.
+                yield return new Xml130StreamHosoEvent
                 {
-                    type = "hoso",
-                    index,
-                    total,
-                    fileName,
-                    result,
-                    riskCount = hosoRiskCount,
-                    issueCount
+                    Index = index,
+                    Total = total,
+                    FileName = fileName,
+                    Result = result,
+                    RiskCount = hosoRiskCount,
+                    IssueCount = issueCount,
+                    MaCskcb = hoso.FacilityCode
                 };
             }
         }

@@ -79,3 +79,14 @@ Trang **Cấu hình hệ thống** cho quản trị viên (RBAC — quyền `Sys
 - **Chuyển AI online/offline**: đổi giữa OpenRouter (cloud) và Ollama (local) + đổi model, kiểm tra kết nối — không cần restart. Endpoint: `GET/PUT /api/admin/llm-config`.
 - **Lịch đồng bộ danh mục ICD-10**: bật/tắt và đặt giờ tự động lấy dữ liệu ICD mỗi ngày; nút "Đồng bộ ngay".
 - **Phân quyền (RBAC)**: quản lý người dùng, vai trò, quyền; nhật ký kiểm toán (audit log) mọi thay đổi cấu hình.
+
+## 7. Bán theo cơ sở KCB: khóa bản quyền & tính tiền
+
+Mô hình thương mại: mỗi **cơ sở KCB** ký một hợp đồng, được cấp một **khóa bản quyền** riêng; sản lượng dùng thật của từng cơ sở được ghi vào sổ để lập bảng kê và chốt hóa đơn.
+
+- **Cấp khóa (web admin → Hợp đồng cơ sở)**: chọn đơn vị trong cây, đặt gói cước, hạn mức hồ sơ/tháng, cước thuê bao, đơn giá hồ sơ vượt hạn mức, thời hạn hiệu lực. Bật *"dùng được cho cả đơn vị cấp dưới"* khi một Trung tâm Y tế huyện ký thay cho toàn bộ Trạm Y tế xã - sản lượng cả nhánh dồn về hợp đồng đó. Cấp lại khóa (rotate), tạm dừng, thu hồi, khôi phục đều có; mỗi đơn vị chỉ có tối đa một hợp đồng còn hiệu lực. Endpoint: `GET/POST /api/license`, `PUT /api/license/{id}`, `POST /api/license/{id}/rotate|revoke|restore`.
+- **Khóa chỉ hiện đúng một lần**: hệ thống lưu bản băm SHA-256, không lưu chuỗi gốc. Sau khi cấp, hộp thoại hiện khóa kèm hướng dẫn bàn giao và chỉ đóng được sau khi đã chép - quên thì cấp lại khóa mới, không tra ngược được.
+- **Khai khóa ở tiện ích**: mục **Khóa bản quyền** trong popup tiện ích (khóa đơn vị, mã cơ sở KCB của máy trạm, mã nhân viên), lưu trên máy trạm và gửi kèm mỗi request qua header `X-License-Key` / `X-Staff-Code`. Có hiệu lực ngay, không cần tải lại trang HIS.
+- **Chặn dùng ngoài phạm vi hợp đồng**: mã cơ sở khai trong file XML được đối chiếu với phạm vi của khóa; hồ sơ của đơn vị khác bị từ chối kèm thông báo tiếng Việt. Mức siết đặt bằng cấu hình `Licensing:Mode`: `Off` (chỉ ghi sổ), `Warn` (vẫn phục vụ nhưng cảnh báo), `Enforce` (chặn thật) - triển khai được theo lộ trình, không cắt dịch vụ của cơ sở chưa kịp nhận khóa.
+- **Bảng kê sản lượng theo kỳ (web admin → Tính tiền)**: mỗi kỳ `tháng/năm` (giờ Việt Nam) liệt kê từng cơ sở - số hồ sơ đã kiểm, số vượt hạn mức, số lượt hỏi AI, thành tiền. Xem chi tiết một hợp đồng: biểu đồ theo ngày, tách theo đơn vị phát sinh và theo nhân viên. Một hồ sơ kiểm lại nhiều lần chỉ tính một lần (khử trùng theo `MA_LK`). Endpoint: `GET /api/billing/usage`, `GET /api/billing/usage/{licenseId}`.
+- **Chốt sổ & hóa đơn**: `POST /api/billing/close` sinh hóa đơn đóng băng số liệu kỳ đó - sau này sửa giá gói cước không làm hóa đơn đã phát hành đổi số. Chạy lại không tạo bản trùng. Endpoint tra cứu: `GET /api/billing/invoices`.

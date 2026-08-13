@@ -1,0 +1,124 @@
+mat-dialog-content {
+  min-width: 620px;
+  max-width: 720px;
+}
+
+.detail-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.detail-error {
+  padding: 24px 0;
+  color: #b3261e;
+}
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+
+  .sum-item {
+    flex: 1 1 110px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: var(--mat-sys-surface-container);
+
+    &.over .sum-value {
+      color: #b3261e;
+    }
+    &.total {
+      background: var(--mat-sys-primary-container);
+      color: var(--mat-sys-on-primary-container);
+    }
+  }
+  .sum-label {
+    font-size: 11.5px;
+    opacity: 0.8;
+  }
+  .sum-value {
+    font-size: 17px;
+    font-weight: 600;
+  }
+}
+
+section {
+  margin-bottom: 22px;
+
+  h3 {
+    margin: 0 0 10px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .h3-hint {
+    margin-left: 6px;
+    font-size: 11.5px;
+    font-weight: 400;
+    color: var(--mat-sys-on-surface-variant);
+  }
+  .empty {
+    margin: 0;
+    font-size: 13px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+// Biểu đồ cột thuần CSS: dữ liệu tối đa 31 cột nên không cần thư viện đồ thị
+.chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 130px;
+  padding: 6px 2px 0;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  overflow-x: auto;
+
+  .bar-col {
+    flex: 1 0 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+  }
+  .bar {
+    width: 100%;
+    max-width: 22px;
+    border-radius: 4px 4px 0 0;
+    background: var(--mat-sys-primary);
+    opacity: 0.85;
+  }
+  .bar-label {
+    margin-top: 4px;
+    font-size: 9.5px;
+    white-space: nowrap;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.mini-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th,
+  td {
+    padding: 6px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+  }
+  th {
+    font-weight: 600;
+    color: var(--mat-sys-on-surface-variant);
+  }
+  .num {
+    text-align: right;
+  }
+}

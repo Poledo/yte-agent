@@ -4,6 +4,7 @@ import {
   Xml130StreamEvent,
   AssistantAskResponse,
 } from './ChatModels'
+import { buildLicenseHeaders, describeLicenseError } from '../../shared/license/LicenseSettings'
 
 /**
  * Client gọi Backend API cho tính năng chat:
@@ -32,10 +33,11 @@ export class ChatApiClient {
 
     const response = await this.fetchWithTimeout(
       `${baseUrl}/api/xml130/validate?useAi=false`,
-      { method: 'POST', body: formData },
+      { method: 'POST', body: formData, headers: await buildLicenseHeaders() },
       signal,
     )
 
+    await ChatApiClient.throwIfLicenseError(response)
     if (!response.ok) {
       throw new Error(`API kiểm tra XML trả về lỗi HTTP ${response.status}`)
     }
@@ -60,11 +62,12 @@ export class ChatApiClient {
 
     const response = await this.fetchWithTimeout(
       `${baseUrl}/api/xml130/validate-batch`,
-      { method: 'POST', body: formData },
+      { method: 'POST', body: formData, headers: await buildLicenseHeaders() },
       signal,
       ChatApiClient.BATCH_REQUEST_TIMEOUT,
     )
 
+    await ChatApiClient.throwIfLicenseError(response)
     if (response.status === 413) {
       throw new Error(
         'Lô file quá lớn so với giới hạn máy chủ (HTTP 413). ' +
@@ -99,6 +102,7 @@ export class ChatApiClient {
       response = await fetch(`${baseUrl}/api/xml130/validate-batch-stream`, {
         method: 'POST',
         body: formData,
+        headers: await buildLicenseHeaders(),
         signal,
       })
     } catch (error) {
@@ -108,6 +112,7 @@ export class ChatApiClient {
       throw new Error('Không kết nối được máy chủ. Kiểm tra Backend API đang chạy rồi thử lại.')
     }
 
+    await ChatApiClient.throwIfLicenseError(response)
     if (response.status === 413) {
       throw new Error(
         'Lô file quá lớn so với giới hạn máy chủ (HTTP 413). ' +
@@ -149,17 +154,35 @@ export class ChatApiClient {
       `${baseUrl}/api/assistant/ask`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await buildLicenseHeaders()) },
         body: JSON.stringify({ question }),
       },
       signal,
     )
 
+    await ChatApiClient.throwIfLicenseError(response)
     if (!response.ok) {
       throw new Error(`API hỏi đáp trả về lỗi HTTP ${response.status}`)
     }
 
     return (await response.json()) as AssistantAskResponse
+  }
+
+  /**
+   * Ném lỗi có hướng dẫn tiếng Việt khi máy chủ từ chối vì bản quyền (401) hoặc vì
+   * hồ sơ nằm ngoài phạm vi hợp đồng (403).
+   *
+   * Tách riêng khỏi nhánh "lỗi HTTP" chung vì đây là hai tình huống người dùng TỰ
+   * xử lý được — nói "lỗi HTTP 401" thì họ chỉ biết gọi hỗ trợ.
+   */
+  private static async throwIfLicenseError(response: Response): Promise<void> {
+    if (response.status !== 401 && response.status !== 403) return
+
+    const payload = (await response.json().catch(() => null)) as { message?: string } | null
+    const message = describeLicenseError(response.status, payload?.message)
+    if (message) {
+      throw new Error(message)
+    }
   }
 
   /** URL đang cấu hình (để hiển thị trong thông báo lỗi/hướng dẫn) */

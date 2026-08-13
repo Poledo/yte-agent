@@ -42,6 +42,18 @@ export const MENU: MenuItem[] = [
     permissions: ['Catalog.View', 'Catalog.Manage'],
   },
   {
+    label: 'Hợp đồng cơ sở',
+    icon: 'key',
+    route: '/licenses',
+    permissions: ['License.View', 'License.Manage'],
+  },
+  {
+    label: 'Tính tiền',
+    icon: 'receipt_long',
+    route: '/billing',
+    permissions: ['Billing.View'],
+  },
+  {
     label: 'Tải văn bản',
     icon: 'cloud_download',
     route: '/legal',

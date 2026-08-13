@@ -30,6 +30,7 @@ using AIValidation.Api.Services;
 using AIValidation.Api.Services.Auth;
 using AIValidation.Api.Services.Catalog;
 using AIValidation.Api.Services.Interfaces;
+using AIValidation.Api.Services.Licensing;
 using AIValidation.Api.Services.Rag;
 using AIValidation.Api.Services.Xml130;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -474,6 +475,16 @@ builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IFacilityTreeProvider, FacilityTreeProvider>();
 builder.Services.AddScoped<ICatalogLookupProvider, CatalogLookupProvider>();
 builder.Services.AddScoped<ICatalogImportService, CatalogImportService>();
+
+// Register Licensing - bán theo cơ sở KCB: khóa bản quyền, phạm vi hợp đồng, sổ tính tiền.
+// Mặc định Licensing:Mode = Off nên nâng cấp API KHÔNG cắt dịch vụ của extension đã cài;
+// bật dần Warn (ghi log) rồi Enforce (chặn) khi các cơ sở đã khai khóa xong.
+builder.Services.Configure<LicensingOptions>(builder.Configuration.GetSection(LicensingOptions.SectionName));
+builder.Services.AddSingleton<ILicenseKeyGenerator, LicenseKeyGenerator>();
+builder.Services.AddScoped<ILicenseResolver, LicenseResolver>();
+// Scoped: giấy phép đã phân giải thuộc về ĐÚNG một request.
+builder.Services.AddScoped<ILicenseContext, LicenseContext>();
+builder.Services.AddScoped<IBillingRecorder, BillingRecorder>();
 
 // Register RAG - AI học văn bản y tế (công văn, thông tư, quyết định)
 builder.Services.AddSingleton<IDocumentTextExtractor, DocumentTextExtractor>();

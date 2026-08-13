@@ -1,0 +1,37 @@
+<h2 mat-dialog-title>
+  <mat-icon class="title-icon">key</mat-icon>
+  Khóa bản quyền của {{ data.license.facilityName }}
+</h2>
+<mat-dialog-content>
+  <p class="warn">{{ data.message }}</p>
+
+  <div class="key-box">
+    <code>{{ data.key }}</code>
+    <button matIconButton matTooltip="Chép khóa" (click)="copy()" aria-label="Chép khóa">
+      <mat-icon>{{ copied() ? 'check' : 'content_copy' }}</mat-icon>
+    </button>
+  </div>
+
+  @if (copyFailed()) {
+    <p class="copy-failed">
+      Trình duyệt không cho chép tự động. Hãy bôi đen khóa ở trên rồi bấm Ctrl+C.
+    </p>
+  }
+
+  <div class="steps">
+    <div class="steps-title">Bàn giao khóa cho cơ sở KCB</div>
+    <ol>
+      <li>Gửi khóa cho người phụ trách của đơn vị (qua kênh riêng, không đăng lên nhóm chung).</li>
+      <li>
+        Trên mỗi máy trạm: mở tiện ích ZeroCheck AI (biểu tượng trên thanh trình duyệt) → mục
+        <b>Khóa bản quyền</b> → dán khóa → bấm <b>Lưu</b>.
+      </li>
+      <li>Khóa có hiệu lực ngay, không cần tải lại trang HIS.</li>
+    </ol>
+  </div>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button [matButton]="'filled'" color="primary" (click)="close()" [disabled]="!copied()">
+    {{ copied() ? 'Đã chép, đóng lại' : 'Chép khóa trước khi đóng' }}
+  </button>
+</mat-dialog-actions>

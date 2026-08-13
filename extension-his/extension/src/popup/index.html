@@ -259,6 +259,63 @@
                 border-radius: 6px;
                 cursor: pointer;
             }
+            /* Khai khóa bản quyền của cơ sở KCB - dịch vụ bán theo từng cơ sở. */
+            .license-panel {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                padding: 10px;
+                background: #ffffff;
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+            }
+            .license-field {
+                display: flex;
+                flex-direction: column;
+                gap: 3px;
+            }
+            .license-field-label {
+                font-size: 11px;
+                font-weight: 600;
+                color: #475569;
+            }
+            .license-input {
+                width: 100%;
+                padding: 6px 8px;
+                font-size: 12px;
+                font-family: inherit;
+                color: #0f172a;
+                background: #f8fafc;
+                border: 1px solid #cbd5e1;
+                border-radius: 6px;
+            }
+            .license-input:focus {
+                outline: none;
+                border-color: var(--zc-accent, #0e7490);
+                background: #ffffff;
+            }
+            /* Khóa viết hoa toàn bộ để khớp đúng lúc cấp, tránh nhầm chữ hoa/thường. */
+            #licenseKey {
+                text-transform: uppercase;
+                letter-spacing: 0.4px;
+            }
+            .license-hint {
+                font-size: 10px;
+                line-height: 1.4;
+                color: #64748b;
+            }
+            .license-save {
+                background: linear-gradient(100deg, #4338ca, #7c3aed);
+            }
+            .license-status {
+                font-size: 11px;
+                font-weight: 600;
+                text-align: center;
+                color: #15803d;
+            }
+            .license-status[data-tone='error'] {
+                color: #b3261e;
+            }
         </style>
     </head>
     <body>
@@ -312,6 +369,56 @@
                     </span>
                     <span class="label" id="robotEnabledLabel">Bật trợ lý robot</span>
                 </label>
+            </div>
+
+            <!--
+                Khóa bản quyền cấp cho cơ sở KCB. Máy chủ dựa vào khóa này để biết
+                request đến từ đơn vị nào và tính tiền cho đơn vị nào - mã cơ sở khai
+                trong file XML KHÔNG dùng cho việc đó (người dùng tự nhập được).
+            -->
+            <div class="d-flex flex-column">
+                <span class="label"><b>Khóa bản quyền</b></span>
+            </div>
+            <div class="license-panel">
+                <div class="license-field">
+                    <label class="license-field-label" for="licenseKey">Khóa đơn vị được cấp *</label>
+                    <input
+                        id="licenseKey"
+                        class="license-input"
+                        type="text"
+                        autocomplete="off"
+                        spellcheck="false"
+                        placeholder="ZC-XXXXX-XXXXXXXXXXXX"
+                    />
+                </div>
+                <div class="license-field">
+                    <label class="license-field-label" for="facilityCode">Mã cơ sở KCB của máy trạm</label>
+                    <input
+                        id="facilityCode"
+                        class="license-input"
+                        type="text"
+                        autocomplete="off"
+                        spellcheck="false"
+                        placeholder="Ví dụ: 01234"
+                    />
+                </div>
+                <div class="license-field">
+                    <label class="license-field-label" for="staffCode">Mã nhân viên</label>
+                    <input
+                        id="staffCode"
+                        class="license-input"
+                        type="text"
+                        autocomplete="off"
+                        spellcheck="false"
+                        placeholder="Ví dụ: NV001"
+                    />
+                </div>
+                <div class="license-hint">
+                    Khóa do đơn vị cung cấp dịch vụ cấp cho cơ sở KCB, chỉ lưu trên máy này. Mã cơ sở và mã nhân viên
+                    dùng cho thống kê sử dụng, không bắt buộc.
+                </div>
+                <button id="saveLicense" class="guide-btn license-save" type="button">💾 Lưu khóa bản quyền</button>
+                <div id="licenseStatus" class="license-status" hidden></div>
             </div>
 
             <button id="showOnboarding" class="guide-btn" type="button">📖 Xem lại hướng dẫn sử dụng</button>

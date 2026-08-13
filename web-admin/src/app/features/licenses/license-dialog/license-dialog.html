@@ -1,0 +1,103 @@
+<h2 mat-dialog-title>{{ isEdit ? 'Sửa hợp đồng' : 'Cấp hợp đồng mới' }}</h2>
+<mat-dialog-content>
+  <form [formGroup]="form" class="form-grid">
+    <mat-form-field appearance="outline">
+      <mat-label>Cơ sở KCB đứng tên hợp đồng</mat-label>
+      <mat-select formControlName="facilityId">
+        @for (f of facilityOptions(); track f.id) {
+          <mat-option [value]="f.id">{{ f.name }} ({{ f.code }})</mat-option>
+        }
+      </mat-select>
+      <mat-icon matPrefix>local_hospital</mat-icon>
+      @if (isEdit) {
+        <mat-hint>
+          Không đổi được đơn vị đứng tên: sản lượng đã ghi vào sổ dưới tên đơn vị này. Muốn chuyển
+          sang đơn vị khác thì thu hồi hợp đồng rồi cấp hợp đồng mới.
+        </mat-hint>
+      } @else {
+        <mat-hint>Đơn vị đã có hợp đồng còn hiệu lực không hiện trong danh sách.</mat-hint>
+      }
+      @if (form.controls.facilityId.hasError('required') && form.controls.facilityId.touched) {
+        <mat-error>Bắt buộc</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Gói cước</mat-label>
+      <input matInput formControlName="plan" placeholder="vd Cơ bản / Nâng cao" />
+      <mat-icon matPrefix>sell</mat-icon>
+      @if (form.controls.plan.hasError('required') && form.controls.plan.touched) {
+        <mat-error>Bắt buộc</mat-error>
+      }
+    </mat-form-field>
+
+    <div class="row-2">
+      <mat-form-field appearance="outline">
+        <mat-label>Hạn mức hồ sơ / tháng</mat-label>
+        <input matInput type="number" min="0" formControlName="monthlyQuota" />
+        <mat-icon matPrefix>inventory</mat-icon>
+        <mat-hint>0 = không giới hạn (không tính vượt)</mat-hint>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Cước thuê bao / tháng (đ)</mat-label>
+        <input matInput type="number" min="0" formControlName="basePrice" />
+        <mat-icon matPrefix>payments</mat-icon>
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Đơn giá hồ sơ vượt hạn mức (đ)</mat-label>
+      <input matInput type="number" min="0" formControlName="overageUnitPrice" />
+      <mat-icon matPrefix>trending_up</mat-icon>
+      <mat-hint>Tiền một kỳ = cước thuê bao + số hồ sơ vượt × đơn giá này</mat-hint>
+    </mat-form-field>
+
+    <div class="row-2">
+      <mat-form-field appearance="outline">
+        <mat-label>Hiệu lực từ</mat-label>
+        <input matInput [matDatepicker]="fromPicker" formControlName="validFrom" />
+        <mat-datepicker-toggle matSuffix [for]="fromPicker"></mat-datepicker-toggle>
+        <mat-datepicker #fromPicker></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Hết hiệu lực</mat-label>
+        <input matInput [matDatepicker]="toPicker" formControlName="validTo" />
+        <mat-datepicker-toggle matSuffix [for]="toPicker"></mat-datepicker-toggle>
+        <mat-datepicker #toPicker></mat-datepicker>
+        <mat-hint>Bỏ trống = không hạn</mat-hint>
+      </mat-form-field>
+    </div>
+
+    <mat-slide-toggle formControlName="coversSubtree">
+      Khóa dùng được cho cả đơn vị cấp dưới
+    </mat-slide-toggle>
+    <p class="toggle-hint">
+      Bật: một khóa cấp cho đơn vị cha dùng được cho toàn nhánh (vd Trung tâm Y tế huyện ký cho tất
+      cả Trạm Y tế xã), sản lượng của cả nhánh dồn về hợp đồng này. Tắt: khóa chỉ kiểm được hồ sơ
+      khai đúng mã cơ sở của chính đơn vị đứng tên.
+    </p>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Ghi chú</mat-label>
+      <textarea matInput formControlName="note" rows="2" placeholder="Số hợp đồng, đầu mối liên hệ..."></textarea>
+      <mat-icon matPrefix>notes</mat-icon>
+    </mat-form-field>
+
+    @if (isEdit) {
+      <mat-slide-toggle formControlName="isActive">Hợp đồng đang hoạt động</mat-slide-toggle>
+      <p class="toggle-hint">Tắt: khóa ngừng dùng được ngay nhưng hợp đồng chưa bị thu hồi.</p>
+    }
+
+    @if (error()) {
+      <p class="form-error">{{ error() }}</p>
+    }
+  </form>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button matButton (click)="cancel()">Hủy</button>
+  <button [matButton]="'filled'" color="primary" (click)="save()" [disabled]="saving()">
+    {{ isEdit ? 'Lưu' : 'Cấp khóa' }}
+  </button>
+</mat-dialog-actions>

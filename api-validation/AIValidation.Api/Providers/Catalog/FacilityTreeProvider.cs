@@ -22,6 +22,18 @@ public interface IFacilityTreeProvider
     Task<IReadOnlyList<string>> GetCatalogChainAsync(
         string facilityCode, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Chuỗi mã đơn vị đi từ chính nó lên tới gốc: [chính nó, cha, ông...].
+    ///
+    /// KHÁC <see cref="GetCatalogChainAsync"/> ở chỗ ĐI HẾT lên gốc, bỏ qua cờ
+    /// <see cref="Data.Entities.Facility.InheritCatalogFromParent"/>. Cờ đó nói về kế thừa
+    /// DANH MỤC (nghiệp vụ đối chiếu), còn hàm này phục vụ câu hỏi PHẠM VI QUYỀN
+    /// THƯƠNG MẠI ("giấy phép của tuyến trên có phủ đơn vị này không"). Trộn hai
+    /// khái niệm lại thì một thao tác chỉnh danh mục sẽ vô tình cắt hoặc mở dịch vụ.
+    /// </summary>
+    Task<IReadOnlyList<string>> GetAncestorChainAsync(
+        string facilityCode, CancellationToken cancellationToken = default);
+
     /// <summary>Xóa cache cây đơn vị — gọi sau khi thêm/sửa/xóa đơn vị.</summary>
     void Invalidate();
 }
@@ -67,6 +79,40 @@ public class FacilityTreeProvider : IFacilityTreeProvider
 
         // Chỉ lần lên cha khi chính đơn vị đang xét cho phép mượn danh mục cấp trên
         while (node.InheritCatalogFromParent && node.ParentId.HasValue && chain.Count < MaxDepth)
+        {
+            if (!nodes.TryGetValue(node.ParentId.Value, out var parent) || !visited.Add(parent.Id))
+            {
+                break;
+            }
+            chain.Add(parent.Code);
+            node = parent;
+        }
+
+        return chain;
+    }
+
+    public async Task<IReadOnlyList<string>> GetAncestorChainAsync(
+        string facilityCode, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(facilityCode))
+        {
+            return Array.Empty<string>();
+        }
+
+        var code = facilityCode.Trim();
+        var nodes = await GetNodesAsync(cancellationToken);
+
+        if (!nodes.TryGetValue(code, out var node))
+        {
+            // Chưa khai báo trong cây → không biết cha là ai, coi như đơn vị độc lập
+            return new[] { code };
+        }
+
+        var chain = new List<string> { node.Code };
+        var visited = new HashSet<long> { node.Id };
+
+        // Đi hết lên gốc — KHÔNG xét InheritCatalogFromParent (xem chú thích ở interface)
+        while (node.ParentId.HasValue && chain.Count < MaxDepth)
         {
             if (!nodes.TryGetValue(node.ParentId.Value, out var parent) || !visited.Add(parent.Id))
             {

@@ -1,0 +1,111 @@
+<h2 mat-dialog-title>
+  {{ data.line.facilityName }} — kỳ {{ periodLabel() }}
+</h2>
+<mat-dialog-content>
+  @if (loading()) {
+    <div class="detail-loading">
+      <mat-spinner diameter="34"></mat-spinner>
+      <span>Đang tra sổ…</span>
+    </div>
+  } @else if (error()) {
+    <p class="detail-error">{{ error() }}</p>
+  } @else if (detail(); as d) {
+    <div class="summary">
+      <div class="sum-item">
+        <span class="sum-label">Hồ sơ đã kiểm</span>
+        <span class="sum-value">{{ d.line.usedUnits | number }}</span>
+      </div>
+      <div class="sum-item">
+        <span class="sum-label">Trong hạn mức</span>
+        <span class="sum-value">{{ d.line.includedQuota > 0 ? (d.line.includedQuota | number) : 'không giới hạn' }}</span>
+      </div>
+      <div class="sum-item" [class.over]="d.line.overageUnits > 0">
+        <span class="sum-label">Vượt hạn mức</span>
+        <span class="sum-value">{{ d.line.overageUnits | number }}</span>
+      </div>
+      <div class="sum-item">
+        <span class="sum-label">Lượt hỏi đáp</span>
+        <span class="sum-value">{{ d.line.askCount | number }}</span>
+      </div>
+      <div class="sum-item total">
+        <span class="sum-label">Tiền {{ d.line.closed ? 'đã chốt' : 'tạm tính' }}</span>
+        <span class="sum-value">{{ d.line.totalAmount | number }} đ</span>
+      </div>
+    </div>
+
+    <section>
+      <h3>Theo ngày (giờ Việt Nam)</h3>
+      @if (d.byDay.length === 0) {
+        <p class="empty">Kỳ này chưa phát sinh hồ sơ nào.</p>
+      } @else {
+        <div class="chart">
+          @for (day of d.byDay; track day.day) {
+            <div class="bar-col" [matTooltip]="day.units + ' hồ sơ, ' + day.askCount + ' lượt hỏi'">
+              <div class="bar" [style.height]="barHeight(day.units)"></div>
+              <span class="bar-label">{{ dayLabel(day.day) }}</span>
+            </div>
+          }
+        </div>
+      }
+    </section>
+
+    <section>
+      <h3>
+        Theo đơn vị phát sinh
+        <span class="h3-hint">hợp đồng phủ cả nhánh thì đây là các đơn vị cấp dưới</span>
+      </h3>
+      @if (d.byFacility.length === 0) {
+        <p class="empty">Chưa có dữ liệu.</p>
+      } @else {
+        <table class="mini-table">
+          <thead>
+            <tr>
+              <th>Mã cơ sở</th>
+              <th class="num">Hồ sơ</th>
+              <th class="num">Hỏi đáp</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (f of d.byFacility; track f.facilityCode) {
+              <tr>
+                <td>{{ f.facilityCode }}</td>
+                <td class="num">{{ f.units | number }}</td>
+                <td class="num">{{ f.askCount | number }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </section>
+
+    <section>
+      <h3>
+        Theo nhân viên
+        <span class="h3-hint">do máy trạm khai, 50 người dùng nhiều nhất</span>
+      </h3>
+      @if (d.topStaff.length === 0) {
+        <p class="empty">Máy trạm chưa khai mã nhân viên nào.</p>
+      } @else {
+        <table class="mini-table">
+          <thead>
+            <tr>
+              <th>Mã nhân viên</th>
+              <th class="num">Lượt</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (s of d.topStaff; track s.staffCode) {
+              <tr>
+                <td>{{ s.staffCode }}</td>
+                <td class="num">{{ s.units | number }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </section>
+  }
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button matButton mat-dialog-close>Đóng</button>
+</mat-dialog-actions>

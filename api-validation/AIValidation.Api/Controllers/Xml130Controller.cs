@@ -5,6 +5,7 @@ using AIValidation.Api.Models.Enums;
 using AIValidation.Api.Models.Xml130;
 using AIValidation.Api.Providers.Xml130;
 using AIValidation.Api.Services;
+using AIValidation.Api.Services.Licensing;
 using AIValidation.Api.Services.Xml130;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http.Features;
@@ -26,6 +27,9 @@ namespace AIValidation.Api.Controllers;
 [EnableCors("Extension")]
 [ApiController]
 [Route("api/[controller]")]
+// Đây là endpoint sinh ra doanh thu — mọi request phải kèm khóa bản quyền của cơ sở KCB.
+// Mức siết do cấu hình Licensing:Mode quyết định (Off/Warn/Enforce).
+[RequireLicense]
 public class Xml130Controller : ControllerBase
 {
     private readonly IXml130ValidationService _validationService;
@@ -33,6 +37,8 @@ public class Xml130Controller : ControllerBase
     private readonly IXml130FieldSpecImportService _fieldSpecImportService;
     private readonly IXml130SpecProvider _specProvider;
     private readonly IUsageRecorder _usageRecorder;
+    private readonly ILicenseContext _license;
+    private readonly IBillingRecorder _billing;
     private readonly ILogger<Xml130Controller> _logger;
 
     public Xml130Controller(
@@ -41,6 +47,8 @@ public class Xml130Controller : ControllerBase
         IXml130FieldSpecImportService fieldSpecImportService,
         IXml130SpecProvider specProvider,
         IUsageRecorder usageRecorder,
+        ILicenseContext license,
+        IBillingRecorder billing,
         ILogger<Xml130Controller> logger)
     {
         _validationService = validationService ?? throw new ArgumentNullException(nameof(validationService));
@@ -48,6 +56,8 @@ public class Xml130Controller : ControllerBase
         _fieldSpecImportService = fieldSpecImportService ?? throw new ArgumentNullException(nameof(fieldSpecImportService));
         _specProvider = specProvider ?? throw new ArgumentNullException(nameof(specProvider));
         _usageRecorder = usageRecorder ?? throw new ArgumentNullException(nameof(usageRecorder));
+        _license = license ?? throw new ArgumentNullException(nameof(license));
+        _billing = billing ?? throw new ArgumentNullException(nameof(billing));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -95,6 +105,16 @@ public class Xml130Controller : ControllerBase
                 xmlContent, useAi, uploadedFileName, crossCheck: true, cancellationToken);
             sw.Stop();
 
+            // Mã cơ sở trong hồ sơ phải nằm trong phạm vi giấy phép. Kiểm được ở đây
+            // chứ không ở cổng cấp phép vì lúc đó file chưa bóc ra.
+            var scope = await _license.CheckFacilityAsync(result.MaCskcb, cancellationToken);
+            if (!scope.Allowed)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = scope.Message });
+            }
+
+            await TryBillAsync(result.MaCskcb, result.Results.Select(r => r.MaLk));
+
             // Ghi lịch sử sử dụng cho thống kê dashboard (không chặn/không hỏng request)
             var (errors, warnings) = CountSeverities(result.Results);
             await _usageRecorder.RecordAsync(
@@ -115,6 +135,37 @@ public class Xml130Controller : ControllerBase
         catch (FormatException ex)
         {
             return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Ghi sổ tính tiền cho lượt kiểm vừa xong.
+    ///
+    /// Ghi hỏng thì KHÔNG làm gãy request: cắt kết quả kiểm hồ sơ giữa ca trực chỉ vì
+    /// hệ thống tính tiền trục trặc là đánh đổi sai. Nhưng cũng KHÔNG nuốt im như
+    /// thống kê dashboard — log ở mức Error kèm đủ thông tin (giấy phép, đơn vị, danh
+    /// sách MA_LK) để dựng lại dòng sổ bị mất khi đối soát cuối kỳ.
+    /// </summary>
+    private async Task TryBillAsync(string? maCskcb, IEnumerable<string?> maLkList)
+    {
+        if (_license.License is not { } license)
+        {
+            return;
+        }
+
+        var keys = maLkList.ToList();
+        try
+        {
+            await _billing.RecordXml130Async(
+                license, maCskcb, keys, _license.StaffCode, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "MẤT DÒNG SỔ TÍNH TIỀN — giấy phép {LicenseId} ({Facility}), đơn vị phát sinh {Used}, "
+                + "{Count} hồ sơ: {MaLkList}",
+                license.Id, license.FacilityCode, maCskcb, keys.Count,
+                string.Join(",", keys.Where(k => !string.IsNullOrWhiteSpace(k)).Take(200)));
         }
     }
 
@@ -219,6 +270,27 @@ public class Xml130Controller : ControllerBase
         var result = await _batchValidationService.ValidateBatchAsync(inputs, useAi: false, cancellationToken);
         sw.Stop();
 
+        // Lô có thể trộn hồ sơ của nhiều đơn vị (tuyến trên gom file của tuyến dưới) —
+        // chặn nếu có bất kỳ mã cơ sở nào nằm ngoài phạm vi giấy phép.
+        foreach (var code in result.Files
+            .Select(f => f.Result?.MaCskcb)
+            .Where(m => !string.IsNullOrWhiteSpace(m))
+            .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var scope = await _license.CheckFacilityAsync(code, cancellationToken);
+            if (!scope.Allowed)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = scope.Message });
+            }
+        }
+
+        var billedFacility = result.Files
+            .Select(f => f.Result?.MaCskcb)
+            .FirstOrDefault(m => !string.IsNullOrWhiteSpace(m));
+        await TryBillAsync(
+            billedFacility,
+            result.Files.Where(f => f.Result != null).SelectMany(f => f.Result!.Results).Select(r => r.MaLk));
+
         var (errors, warnings) = CountSeverities(
             result.Files.Where(f => f.Result != null).SelectMany(f => f.Result!.Results));
         await _usageRecorder.RecordAsync(
@@ -273,16 +345,75 @@ public class Xml130Controller : ControllerBase
         }
         _logger.LogInformation("Nhận lô {Count} file XML130 để kiểm tra kiểu streaming", inputs.Count);
 
-        Response.ContentType = "application/x-ndjson; charset=utf-8";
-        Response.Headers.CacheControl = "no-cache";
-        // Tắt buffering để từng sự kiện được đẩy về client ngay
-        HttpContext.Features.Get<IHttpResponseBodyFeature>()?.DisableBuffering();
+        var sw = Stopwatch.StartNew();
+        var started = false;
+        string? billedFacility = null;
+        var maLkList = new List<string?>();
+        int hosoCount = 0, errors = 0, warnings = 0, riskCount = 0;
 
         await foreach (var evt in _batchValidationService.ValidateBatchStreamAsync(inputs, cancellationToken))
         {
+            // Sự kiện "start" tới TRƯỚC khi ghi byte nào — mốc cuối cùng còn trả được
+            // mã lỗi HTTP tử tế. Qua mốc này thì 200 đã chốt, chỉ còn cách cắt luồng.
+            if (evt is Xml130StreamStartEvent start)
+            {
+                billedFacility = start.FacilityCodes.FirstOrDefault();
+                foreach (var code in start.FacilityCodes)
+                {
+                    var scope = await _license.CheckFacilityAsync(code, cancellationToken);
+                    if (!scope.Allowed)
+                    {
+                        Response.StatusCode = StatusCodes.Status403Forbidden;
+                        await Response.WriteAsJsonAsync(new { message = scope.Message }, cancellationToken);
+                        return;
+                    }
+                }
+            }
+            else if (evt is Xml130StreamHosoEvent hoso)
+            {
+                hosoCount++;
+                maLkList.Add(hoso.Result.MaLk);
+                if (hoso.Result.XuatToanRisk)
+                {
+                    riskCount++;
+                }
+                var (e, w) = CountSeverities(new[] { hoso.Result });
+                errors += e;
+                warnings += w;
+            }
+
+            if (!started)
+            {
+                started = true;
+                Response.ContentType = "application/x-ndjson; charset=utf-8";
+                Response.Headers.CacheControl = "no-cache";
+                // Tắt buffering để từng sự kiện được đẩy về client ngay
+                HttpContext.Features.Get<IHttpResponseBodyFeature>()?.DisableBuffering();
+            }
+
             await Response.WriteAsync(JsonSerializer.Serialize(evt, StreamJsonOptions) + "\n", cancellationToken);
             await Response.Body.FlushAsync(cancellationToken);
         }
+        sw.Stop();
+
+        // Ghi sổ SAU khi chạy xong, không ghi từng hồ sơ: lô nghìn hồ sơ mà mỗi hồ sơ
+        // một lệnh INSERT thì phần tính tiền còn chậm hơn phần kiểm tra.
+        // Client bấm dừng giữa chừng → OperationCanceledException, không tới được đây:
+        // phần đã kiểm KHÔNG bị tính tiền. Cố ý tính THIẾU chứ không tính THỪA.
+        await TryBillAsync(billedFacility, maLkList);
+
+        await _usageRecorder.RecordAsync(
+            UsageRecorder.EventXml130Check,
+            hosoCount: hosoCount,
+            errorCount: errors,
+            warningCount: warnings,
+            xuatToanRisk: riskCount > 0,
+            durationMs: sw.ElapsedMilliseconds,
+            facilityCode: FirstNonEmpty(Request.Headers["X-Facility-Code"], billedFacility),
+            staffCode: Request.Headers["X-Staff-Code"],
+            preview: $"Lô {inputs.Count} file — {hosoCount} hồ sơ, {errors + warnings} vấn đề"
+                + (riskCount > 0 ? $" ({riskCount} hồ sơ có nguy cơ xuất toán)" : string.Empty),
+            cancellationToken: CancellationToken.None);
     }
 
     /// <summary>

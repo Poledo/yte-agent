@@ -310,3 +310,126 @@ export interface FacilityCatalogScopeDto {
     inherited: boolean;
   }[];
 }
+
+/**
+ * Hợp đồng bán dịch vụ cho MỘT cơ sở KCB. Khóa bản quyền của hợp đồng là thứ máy
+ * trạm gửi lên để máy chủ biết "ai đang gọi" và "ai chịu tiền" — KHÔNG bao giờ
+ * trả về đây, chỉ có phần đầu khóa để đối chiếu khi hỗ trợ khách hàng.
+ */
+export interface LicenseDto {
+  id: number;
+  facilityId: number;
+  facilityCode: string;
+  facilityName: string;
+  /** Phần đầu khóa, vd "ZC-58028-K4M2QP". */
+  keyPrefix: string;
+  plan: string;
+  /** Số hồ sơ đã bao trong giá gói; 0 = không giới hạn. */
+  monthlyQuota: number;
+  basePrice: number;
+  /** Đơn giá mỗi hồ sơ vượt hạn mức. */
+  overageUnitPrice: number;
+  /** Khóa dùng được cho cả các đơn vị cấp dưới trong cây hay không. */
+  coversSubtree: boolean;
+  validFrom: string;
+  validTo?: string | null;
+  isActive: boolean;
+  revokedAt?: string | null;
+  note?: string | null;
+  createdAt: string;
+  createdBy?: string | null;
+  /** Lần cuối khóa được dùng (cập nhật thưa, sai số tới 5 phút). */
+  lastUsedAt?: string | null;
+  /** Ngay lúc này khóa có dùng được không (gộp hiệu lực + thu hồi + bật/tắt). */
+  usableNow: boolean;
+  currentPeriodUnits: number;
+  currentPeriodAskCount: number;
+}
+
+/** Kết quả cấp / cấp lại khóa — lần DUY NHẤT khóa gốc đi ra khỏi máy chủ. */
+export interface IssuedLicenseDto {
+  license: LicenseDto;
+  key: string;
+  message: string;
+}
+
+/** Dữ liệu cấp mới / sửa điều khoản hợp đồng. */
+export interface LicenseRequest {
+  facilityId: number;
+  plan: string;
+  monthlyQuota: number;
+  basePrice: number;
+  overageUnitPrice: number;
+  coversSubtree: boolean;
+  validFrom?: string | null;
+  validTo?: string | null;
+  note?: string | null;
+  isActive: boolean;
+}
+
+/** Bảng kê sản lượng một kỳ (yyyyMM). */
+export interface BillingPeriodDto {
+  period: number;
+  lines: BillingLineDto[];
+  totalUnits: number;
+  totalAmount: number;
+  /** Số hợp đồng đã chốt sổ trong kỳ này. */
+  closedCount: number;
+}
+
+/** Một dòng bảng kê theo cơ sở KCB — tiền TẠM TÍNH theo bảng giá hiện hành. */
+export interface BillingLineDto {
+  licenseId: number;
+  facilityCode: string;
+  facilityName: string;
+  plan: string;
+  includedQuota: number;
+  usedUnits: number;
+  overageUnits: number;
+  askCount: number;
+  basePrice: number;
+  overageUnitPrice: number;
+  totalAmount: number;
+  /** Đã có hóa đơn chốt cho kỳ này chưa. */
+  closed: boolean;
+}
+
+/** Chi tiết sản lượng một hợp đồng trong kỳ — dùng khi khách hàng thắc mắc con số. */
+export interface BillingDetailDto {
+  period: number;
+  line: BillingLineDto;
+  byDay: { day: string; units: number; askCount: number }[];
+  /** Sản lượng theo ĐƠN VỊ PHÁT SINH — hợp đồng phủ cả nhánh thì đây là các đơn vị con. */
+  byFacility: { facilityCode: string; units: number; askCount: number }[];
+  topStaff: { staffCode: string; units: number }[];
+}
+
+/** Hóa đơn đã chốt: con số của kỳ được đóng băng, sổ phát sinh thêm KHÔNG làm nó đổi. */
+export interface InvoiceDto {
+  id: number;
+  licenseId: number;
+  period: number;
+  facilityCode: string;
+  facilityName: string;
+  plan: string;
+  includedQuota: number;
+  usedUnits: number;
+  overageUnits: number;
+  askCount: number;
+  basePrice: number;
+  overageUnitPrice: number;
+  totalAmount: number;
+  closedAt: string;
+  closedBy?: string | null;
+}
+
+/** Kết quả chốt sổ một kỳ. */
+export interface CloseResultDto {
+  period: number;
+  createdCount: number;
+  /** Số hợp đồng bỏ qua vì đã chốt từ trước. */
+  skippedCount: number;
+  totalAmount: number;
+  invoices: InvoiceDto[];
+  message: string;
+}

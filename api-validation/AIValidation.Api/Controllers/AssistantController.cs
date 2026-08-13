@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using AIValidation.Api.Data;
 using AIValidation.Api.Services;
+using AIValidation.Api.Services.Licensing;
 using AIValidation.Api.Services.Rag;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http.Features;
@@ -39,6 +40,8 @@ public class AssistantController : ControllerBase
     private readonly IEmbeddingBackfill _backfill;
     private readonly AppDbContext _db;
     private readonly IUsageRecorder _usageRecorder;
+    private readonly ILicenseContext _license;
+    private readonly IBillingRecorder _billing;
     private readonly ILogger<AssistantController> _logger;
     // Dùng đúng cấu hình JSON của MVC (camelCase + enum) để /ask stream ra
     // response y hệt Ok(answer) trước đây — extension không phải đổi gì.
@@ -55,10 +58,14 @@ public class AssistantController : ControllerBase
         IEmbeddingBackfill backfill,
         AppDbContext db,
         IUsageRecorder usageRecorder,
+        ILicenseContext license,
+        IBillingRecorder billing,
         IOptions<Microsoft.AspNetCore.Mvc.JsonOptions> jsonOptions,
         ILogger<AssistantController> logger)
     {
         _usageRecorder = usageRecorder ?? throw new ArgumentNullException(nameof(usageRecorder));
+        _license = license ?? throw new ArgumentNullException(nameof(license));
+        _billing = billing ?? throw new ArgumentNullException(nameof(billing));
         _ingestService = ingestService ?? throw new ArgumentNullException(nameof(ingestService));
         _assistantService = assistantService ?? throw new ArgumentNullException(nameof(assistantService));
         _searchService = searchService ?? throw new ArgumentNullException(nameof(searchService));
@@ -558,6 +565,9 @@ public class AssistantController : ControllerBase
     /// ingress) không gom buffer, đẩy byte ra LB ngay.
     /// </remarks>
     [HttpPost("ask")]
+    // Chỉ endpoint này gắn cổng cấp phép: các endpoint quản trị văn bản trong cùng
+    // controller do web-admin gọi bằng JWT, không có khóa bản quyền của cơ sở.
+    [RequireLicense]
     [EnableRateLimiting("rl-ask")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AssistantAnswer))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -637,7 +647,36 @@ public class AssistantController : ControllerBase
             }, _jsonOptions),
             cancellationToken: CancellationToken.None);
 
+        await TryBillAskAsync(request.Question);
+
         await JsonSerializer.SerializeAsync(Response.Body, answer, _jsonOptions, cancellationToken);
         await Response.Body.FlushAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Ghi sổ một lượt hỏi đáp. Hiện chỉ đếm sản lượng, chưa tính tiền phần này —
+    /// nhưng phải có số liệu từ bây giờ thì sau này mới quyết định được giá.
+    ///
+    /// Ghi hỏng KHÔNG được làm gãy câu trả lời (mà lúc này response đã mở, ném lỗi ra
+    /// còn làm Kestrel văng "response already started"). Log mức Error để đối soát.
+    /// </summary>
+    private async Task TryBillAskAsync(string question)
+    {
+        if (_license.License is not { } license)
+        {
+            return;
+        }
+
+        try
+        {
+            await _billing.RecordAskAsync(
+                license, Request.Headers["X-Facility-Code"], question, _license.StaffCode, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "MẤT DÒNG SỔ TÍNH TIỀN (hỏi đáp) — giấy phép {LicenseId} ({Facility})",
+                license.Id, license.FacilityCode);
+        }
     }
 }

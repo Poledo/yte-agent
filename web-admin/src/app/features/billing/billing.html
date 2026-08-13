@@ -1,0 +1,169 @@
+<app-page-header
+  icon="receipt_long"
+  title="Tính tiền theo cơ sở KCB"
+  subtitle="Sản lượng từng cơ sở trong kỳ và hóa đơn đã chốt"
+>
+  <mat-form-field appearance="outline" class="period-field" subscriptSizing="dynamic">
+    <mat-label>Kỳ</mat-label>
+    <mat-select [formControl]="periodCtrl" (selectionChange)="load()">
+      @for (p of periodOptions(); track p) {
+        <mat-option [value]="p">
+          {{ periodLabel(p) }}
+          @if (p === currentPeriod) {
+            <span class="running-tag">đang chạy</span>
+          }
+        </mat-option>
+      }
+    </mat-select>
+    <mat-icon matPrefix>calendar_month</mat-icon>
+  </mat-form-field>
+  <button
+    *appHasPermission="'Billing.Close'"
+    [matButton]="'filled'"
+    color="primary"
+    (click)="close()"
+    [disabled]="loading() || lines().length === 0"
+  >
+    <mat-icon>lock</mat-icon>
+    Chốt sổ kỳ này
+  </button>
+</app-page-header>
+
+@if (usage(); as u) {
+  <div class="stat-row">
+    <mat-card class="stat" appearance="outlined">
+      <span class="stat-label">Cơ sở có phát sinh</span>
+      <span class="stat-value">{{ u.lines.length | number }}</span>
+    </mat-card>
+    <mat-card class="stat" appearance="outlined">
+      <span class="stat-label">Hồ sơ đã kiểm</span>
+      <span class="stat-value">{{ u.totalUnits | number }}</span>
+    </mat-card>
+    <mat-card class="stat" appearance="outlined">
+      <span class="stat-label">Đã chốt sổ</span>
+      <span class="stat-value">{{ u.closedCount | number }} / {{ u.lines.length | number }}</span>
+    </mat-card>
+    <mat-card class="stat highlight" appearance="outlined">
+      <span class="stat-label">Tổng {{ isCurrentPeriod() ? 'tạm tính' : 'tiền kỳ' }}</span>
+      <span class="stat-value">{{ u.totalAmount | number }} đ</span>
+    </mat-card>
+  </div>
+
+  @if (isCurrentPeriod()) {
+    <p class="running-note">
+      <mat-icon>info</mat-icon>
+      Kỳ {{ periodLabel(u.period) }} đang chạy — số liệu còn tăng tiếp tới hết tháng. Tiền ở đây là
+      tạm tính theo bảng giá hiện hành, chốt sổ mới thành chứng từ.
+    </p>
+  }
+}
+
+<mat-tab-group
+  [selectedIndex]="activeTab()"
+  (selectedIndexChange)="activeTab.set($event)"
+  animationDuration="200ms"
+>
+  <mat-tab label="Bảng kê sản lượng">
+    <app-data-table
+      [columns]="columns"
+      [data]="lines()"
+      [loading]="loading()"
+      emptyIcon="receipt_long"
+      emptyTitle="Kỳ này chưa phát sinh"
+      emptyDescription="Chưa cơ sở nào kiểm hồ sơ trong kỳ đã chọn."
+    >
+      <ng-template appColumnDef="facility" let-row>
+        <div class="facility-cell">
+          <div class="facility-name">{{ row.facilityName }}</div>
+          <div class="facility-code">{{ row.facilityCode }}</div>
+        </div>
+      </ng-template>
+
+      <ng-template appColumnDef="units" let-row>
+        <strong>{{ row.usedUnits | number }}</strong>
+        <span class="quota">{{ row.includedQuota > 0 ? ' / ' + (row.includedQuota | number) : ' / ∞' }}</span>
+      </ng-template>
+
+      <ng-template appColumnDef="overage" let-row>
+        @if (row.overageUnits > 0) {
+          <span class="over">{{ row.overageUnits | number }}</span>
+        } @else {
+          <span class="muted">—</span>
+        }
+      </ng-template>
+
+      <ng-template appColumnDef="askCount" let-row>
+        {{ row.askCount | number }}
+      </ng-template>
+
+      <ng-template appColumnDef="totalAmount" let-row>
+        <strong>{{ row.totalAmount | number }} đ</strong>
+      </ng-template>
+
+      <ng-template appColumnDef="closed" let-row>
+        @if (row.closed) {
+          <span class="badge closed" matTooltip="Đã phát hành hóa đơn cho kỳ này"
+            ><mat-icon>lock</mat-icon> Đã chốt</span
+          >
+        } @else {
+          <span class="badge open"><mat-icon>lock_open</mat-icon> Chưa chốt</span>
+        }
+      </ng-template>
+
+      <ng-template appColumnDef="actions" let-row>
+        <button matIconButton matTooltip="Xem chi tiết sản lượng" (click)="openDetail(row)">
+          <mat-icon>visibility</mat-icon>
+        </button>
+      </ng-template>
+    </app-data-table>
+  </mat-tab>
+
+  <mat-tab [label]="'Hóa đơn đã chốt (' + invoices().length + ')'">
+    <app-data-table
+      [columns]="invoiceColumns"
+      [data]="invoices()"
+      [loading]="loading()"
+      emptyIcon="lock_open"
+      emptyTitle="Kỳ này chưa chốt sổ"
+      emptyDescription="Chốt sổ để sinh hóa đơn bất biến cho từng cơ sở có phát sinh."
+    >
+      <ng-template appColumnDef="facility" let-row>
+        <div class="facility-cell">
+          <div class="facility-name">{{ row.facilityName }}</div>
+          <div class="facility-code">{{ row.facilityCode }}</div>
+        </div>
+      </ng-template>
+
+      <ng-template appColumnDef="units" let-row>
+        <strong>{{ row.usedUnits | number }}</strong>
+        <span class="quota">
+          @if (row.overageUnits > 0) {
+            / vượt <span class="over">{{ row.overageUnits | number }}</span>
+          } @else {
+            / trong hạn mức
+          }
+        </span>
+      </ng-template>
+
+      <ng-template appColumnDef="price" let-row>
+        <div class="price-cell">
+          <div>{{ row.basePrice | number }} đ thuê bao</div>
+          <div class="price-sub">+{{ row.overageUnitPrice | number }} đ/hồ sơ vượt</div>
+        </div>
+      </ng-template>
+
+      <ng-template appColumnDef="totalAmount" let-row>
+        <strong>{{ row.totalAmount | number }} đ</strong>
+      </ng-template>
+
+      <ng-template appColumnDef="closedAt" let-row>
+        <div class="closed-cell">
+          <div>{{ row.closedAt | date: 'dd/MM/yyyy HH:mm' }}</div>
+          @if (row.closedBy) {
+            <div class="closed-by">{{ row.closedBy }}</div>
+          }
+        </div>
+      </ng-template>
+    </app-data-table>
+  </mat-tab>
+</mat-tab-group>

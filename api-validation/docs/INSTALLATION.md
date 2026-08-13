@@ -98,4 +98,20 @@ Hệ thống demo chạy local, không yêu cầu đăng nhập:
 - **Extension**: load unpacked như trên, hoạt động trên mọi trang HIS (mặc định match domain VNPT HIS, sửa `manifest.json` → `content_scripts.matches` khi demo trên trang khác).
 - **File mẫu**: dùng bất kỳ file XML 130 chuẩn GIAMDINHHS; hồ sơ demo kèm theo trong tài liệu slide.
 
+## 6. Khóa bản quyền theo cơ sở KCB (khi triển khai thương mại)
+
+Mặc định `Licensing:Mode` = `Off` nên bản chạy thử **không cần khóa**. Khi bán theo cơ sở KCB, đặt trong `appsettings.json` (hoặc biến môi trường `Licensing__Mode`):
+
+```json
+"Licensing": {
+  "Mode": "Enforce",           // Off = không kiểm | Warn = vẫn phục vụ + ghi log | Enforce = chặn
+  "RecordBilling": true,       // ghi sổ sản lượng — độc lập với Mode
+  "HeaderName": "X-License-Key"
+}
+```
+
+Trình tự khuyến nghị: chạy `Off` để sổ sản lượng có dữ liệu → cấp khóa cho từng cơ sở ở web admin (**Hợp đồng cơ sở**) → chuyển `Warn` đối soát log xem còn máy trạm nào chưa khai khóa → mới bật `Enforce`. Chi tiết tính năng: [FEATURES.md](FEATURES.md) mục 7.
+
+Phía máy trạm: mở popup extension → mục **Khóa bản quyền** → dán khóa được cấp, khai mã cơ sở KCB và mã nhân viên → **Lưu**. Khóa chỉ lưu trên máy đó và có hiệu lực ngay.
+
 Triển khai server thật: xem [OPERATIONS.md](OPERATIONS.md).
