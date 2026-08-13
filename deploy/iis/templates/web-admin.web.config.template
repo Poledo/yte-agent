@@ -1,0 +1,85 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ===========================================================================
+  web.config cho SITE WEB-ADMIN trên IIS.
+
+  FILE NÀY ĐƯỢC SINH LẠI MỖI LẦN DEPLOY: Deploy-Iis.ps1 thay hai chỗ đánh dấu
+  trong khối rewrite bên dưới bằng luật ép HTTPS và luật proxy, nên sửa tay
+  ở máy chủ sẽ mất. Muốn đổi vĩnh viễn thì sửa template này trong gói triển khai.
+  (Cố ý không viết tên hai chỗ đánh dấu ra đây: chúng bị thay thế theo văn bản,
+  nhắc lại trong chú thích là luật rewrite bị chèn nhầm vào giữa chú thích.)
+
+  Vai trò: phục vụ SPA Angular (mọi route trả index.html) và chuyển tiếp
+  /api/* về site API nội bộ, để trình duyệt lẫn tiện ích Chrome gọi cùng
+  một origin - không dính CORS, chỉ cần một chứng chỉ TLS.
+  ===========================================================================
+-->
+<configuration>
+
+  <!-- index.html KHÔNG được cache: đây là file trỏ tới các bundle có hash,
+       cache nó là người dùng kẹt lại bản cũ sau khi nâng cấp. -->
+  <location path="index.html">
+    <system.webServer>
+      <staticContent>
+        <clientCache cacheControlMode="DisableCache" />
+      </staticContent>
+    </system.webServer>
+  </location>
+
+  <system.webServer>
+
+    <rewrite>
+      <rules>
+{{HTTPS_REDIRECT_RULE}}
+{{API_PROXY_RULE}}
+        <!-- SPA: đường dẫn không trỏ tới file/thư mục có thật thì trả index.html
+             để Angular Router tự xử lý (vd /licenses, /billing khi bấm F5). -->
+        <rule name="SpaFallback" stopProcessing="true">
+          <match url=".*" />
+          <conditions logicalGrouping="MatchAll">
+            <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" />
+            <add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="true" />
+          </conditions>
+          <action type="Rewrite" url="index.html" />
+        </rule>
+      </rules>
+    </rewrite>
+
+    <!-- Lỗi từ API (JSON kèm thông báo tiếng Việt) phải đi thẳng tới trình duyệt.
+         Thiếu dòng này, IIS nuốt body và thay bằng trang lỗi HTML của nó, phía
+         web-admin không đọc được message để hiện cho người dùng. -->
+    <httpErrors existingResponse="PassThrough" />
+
+    <staticContent>
+      <!-- Bundle JS/CSS có hash nội dung trong tên nên cache dài vô tư;
+           riêng index.html đã bị chặn cache ở khối <location> phía trên. -->
+      <clientCache cacheControlMode="UseMaxAge" cacheControlMaxAge="365.00:00:00" />
+    </staticContent>
+
+    <!-- Nén tĩnh cho JS/CSS. KHÔNG bật nén động: khung chat đẩy dữ liệu kiểu
+         SSE, nén động làm IIS gom buffer nên câu trả lời hiện giật cục. -->
+    <urlCompression doStaticCompression="true" doDynamicCompression="false" />
+
+    <httpProtocol>
+      <customHeaders>
+        <add name="X-Content-Type-Options" value="nosniff" />
+        <add name="Referrer-Policy" value="strict-origin-when-cross-origin" />
+      </customHeaders>
+    </httpProtocol>
+
+    <security>
+      <requestFiltering>
+        <!-- Nạp file danh mục/tài liệu tới 50MB (khớp giới hạn phía API). -->
+        <requestLimits maxAllowedContentLength="52428800" />
+      </requestFiltering>
+    </security>
+
+    <defaultDocument>
+      <files>
+        <clear />
+        <add value="index.html" />
+      </files>
+    </defaultDocument>
+
+  </system.webServer>
+</configuration>

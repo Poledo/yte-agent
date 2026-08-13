@@ -2,12 +2,38 @@
 
 ## Triển khai production
 
-### Windows Server (IIS hoặc Windows Service)
+### Windows Server + IIS (khuyến nghị cho triển khai tại đơn vị)
+
+Bộ script `deploy/iis/` làm trọn cả API lẫn web-admin. **Máy build** cần .NET SDK + Node; **máy chủ** chỉ cần IIS + ASP.NET Core 10 Hosting Bundle (thêm URL Rewrite và ARR nếu dùng reverse proxy).
+
+```powershell
+# 1) Trên máy build: đóng gói (chạy unit test, publish API, build Angular, nén .zip)
+.\deploy\iis\Build-Package.ps1
+
+# 2) Chép .zip sang máy chủ, giải nén, mở PowerShell QUYỀN ADMIN tại thư mục đó
+.\Deploy-Iis.ps1 -CheckOnly     # kiểm tra máy chủ đủ điều kiện chưa
+.\Deploy-Iis.ps1                # cài đặt / nâng cấp
+```
+
+Kết quả: site `cbyts` (web-admin, cổng 80) + site `cbyts-api` (chỉ nghe 127.0.0.1:8080), `/api/*` được ARR chuyển tiếp sang API nên trình duyệt và tiện ích Chrome gọi cùng một origin.
+
+| Tham số hay dùng | Ý nghĩa |
+|---|---|
+| `-HostHeader cbyts.donvi.vn` | gắn tên miền vào binding |
+| `-HttpsPort 443 -CertThumbprint <vân tay> -ForceHttps` | bật HTTPS bằng chứng chỉ trong `LocalMachine\My` và ép chuyển hướng |
+| `-InstallRoot D:\apps\cbyts` | đổi nơi cài (mặc định `C:\inetpub\cbyts`) |
+| `-NoProxy` | máy chủ không cài được ARR: tách 2 site riêng, khi đó build web bằng `Build-Package.ps1 -ApiBaseUrl https://api...` và khai `Cors:WebAdminOrigins` |
+| `-Rollback` | quay lại bản sao lưu gần nhất |
+
+Nâng cấp phiên bản = chạy lại `Deploy-Iis.ps1` với gói mới: script tự sao lưu bản cũ (giữ 5 bản), đặt `app_offline.htm` để nhả khóa file, copy đè **nhưng giữ nguyên** `api\Storage` (tài liệu/danh mục đã nạp) và `api\appsettings.Production.json` (chuỗi kết nối, khóa ký token), rồi bật lại và gọi thử `/api/health`.
+
+Cấu hình riêng của máy chủ nằm ở `<InstallRoot>\api\appsettings.Production.json` - lần đầu script tạo từ mẫu, các chỗ `DIEN_VAO_DAY` phải điền trước khi API chạy được. Schema CSDL tự cập nhật lúc khởi động (`Database.MigrateAsync`), không cần chạy `dotnet ef` trên máy chủ.
+
+Không dùng IIS thì chạy dạng Windows Service:
 
 ```powershell
 cd AIValidation.Api
 dotnet publish -c Release -o C:\apps\chienbinh-api
-# Chạy dạng service:
 sc.exe create ChienBinhYTeSoApi binPath="C:\apps\chienbinh-api\AIValidation.Api.exe" start=auto
 ```
 

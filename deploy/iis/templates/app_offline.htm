@@ -1,0 +1,30 @@
+﻿<!DOCTYPE html>
+<!--
+  Đặt tạm vào thư mục API trong lúc copy bản mới. ASP.NET Core Module thấy file này
+  thì tắt ứng dụng (nhả khóa file .dll) và trả chính trang này cho mọi request,
+  nên người dùng thấy thông báo bảo trì thay vì lỗi 503/500 khó hiểu.
+  Deploy-Iis.ps1 tự xóa sau khi copy xong.
+-->
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Đang nâng cấp hệ thống</title>
+  <style>
+    body {
+      margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      font-family: "Segoe UI", Roboto, Arial, sans-serif; background: #0f172a; color: #e2e8f0;
+    }
+    .box { max-width: 460px; padding: 32px 36px; border-radius: 16px; background: #1e293b; text-align: center; }
+    h1 { margin: 0 0 12px; font-size: 20px; }
+    p { margin: 8px 0 0; font-size: 14px; line-height: 1.6; color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Hệ thống đang được nâng cấp</h1>
+    <p>Quá trình thường mất dưới 2 phút. Vui lòng tải lại trang sau ít phút.</p>
+    <p>Dữ liệu đã nạp không bị ảnh hưởng.</p>
+  </div>
+</body>
+</html>

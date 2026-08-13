@@ -26,3 +26,8 @@ report/_extract/obj/
 report/_extract/out/
 report/_unpacked_report/
 report/**/node_modules/
+
+# ---- Gói triển khai IIS: sinh lại được bằng deploy/iis/Build-Package.ps1 ----
+deploy/iis/out/
+# File môi trường do Build-Package.ps1 sinh khi deploy kiểu 2 site riêng (-ApiBaseUrl).
+web-admin/src/environments/environment.iis.ts
