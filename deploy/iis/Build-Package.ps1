@@ -10,6 +10,7 @@
         <out>\<version>\
             api\                bản publish của AIValidation.Api
             web\                bản build Angular (dist/web-admin/browser)
+            ext\                (khi có -ExtensionKey) .crx + update.xml + chrome-policy.reg
             templates\          web.config, appsettings.Production mẫu, app_offline
             Deploy-Iis.ps1      script cài đặt - chạy ngay tại chỗ trên máy chủ
             package-info.json   version, commit, thời điểm build
@@ -42,6 +43,10 @@ param(
 
     # Bỏ qua bước chạy unit test (không khuyến khích cho bản đưa ra khách hàng).
     [switch]$SkipTests,
+
+    # Khóa ký .pem của tiện ích Chrome. CÓ tham số này thì gói kèm luôn bản .crx tự host
+    # (xem Pack-Extension.ps1); bỏ trống = không đụng tới tiện ích.
+    [string]$ExtensionKey = '',
 
     # Chỉ build một phần - dùng khi vá nóng một bên.
     [switch]$SkipApi,
@@ -78,6 +83,7 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $apiProject = Join-Path $repoRoot 'api-validation\AIValidation.Api\AIValidation.Api.csproj'
 $apiSolutionDir = Join-Path $repoRoot 'api-validation'
 $webDir = Join-Path $repoRoot 'web-admin'
+$extDir = Join-Path $repoRoot 'extension-his\extension'
 
 if (-not (Test-Path $apiProject)) { throw "Không thấy $apiProject - chạy script từ trong repo yte-agent." }
 if (-not $OutputRoot) { $OutputRoot = Join-Path $PSScriptRoot 'out' }
@@ -173,6 +179,23 @@ export const environment = {
     Write-Ok "Web: $((Get-ChildItem $stageWeb -Recurse -File).Count) file"
 }
 
+# ------------------------------------------------------- tiện ích Chrome (.crx)
+$extInfo = $null
+if ($ExtensionKey) {
+    Write-Step 'Đóng gói tiện ích Chrome tự host'
+
+    if (-not (Test-Path (Join-Path $extDir 'node_modules'))) {
+        Write-Info 'Chưa có node_modules cho tiện ích - chạy npm ci'
+        Invoke-Checked -File 'npm' -Arguments @('ci') -WorkingDirectory $extDir
+    }
+    # Build lại để .crx khớp đúng mã nguồn trong lần đóng gói này.
+    Invoke-Checked -File 'npm' -Arguments @('run', 'build') -WorkingDirectory $extDir
+
+    $extInfo = & (Join-Path $PSScriptRoot 'Pack-Extension.ps1') `
+        -KeyFile $ExtensionKey -OutputDir (Join-Path $stage 'ext')
+    Write-Ok "Tiện ích $($extInfo.Version) - ID $($extInfo.Id)"
+}
+
 # --------------------------------------------------- script cài + template kèm gói
 Write-Step 'Gắn kèm script cài đặt'
 Copy-Item -Path (Join-Path $PSScriptRoot 'Deploy-Iis.ps1') -Destination $stage -Force
@@ -195,7 +218,8 @@ finally { Pop-Location }
     builtAt    = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss zzz')
     builtOn    = $env:COMPUTERNAME
     apiBaseUrl = if ($ApiBaseUrl) { $ApiBaseUrl } else { '(cùng origin qua /api)' }
-    includes   = @(if (-not $SkipApi) { 'api' }; if (-not $SkipWeb) { 'web' })
+    extension  = if ($extInfo) { @{ id = $extInfo.Id; version = $extInfo.Version; file = $extInfo.CrxName } } else { $null }
+    includes   = @(if (-not $SkipApi) { 'api' }; if (-not $SkipWeb) { 'web' }; if ($extInfo) { 'ext' })
 } | ConvertTo-Json | Set-Content -Path (Join-Path $stage 'package-info.json') -Encoding UTF8
 
 # ------------------------------------------------------------------------- nén

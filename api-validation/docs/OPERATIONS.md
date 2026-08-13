@@ -24,10 +24,35 @@ Kết quả: site `cbyts` (web-admin, cổng 80) + site `cbyts-api` (chỉ nghe 
 | `-InstallRoot D:\apps\cbyts` | đổi nơi cài (mặc định `C:\inetpub\cbyts`) |
 | `-NoProxy` | máy chủ không cài được ARR: tách 2 site riêng, khi đó build web bằng `Build-Package.ps1 -ApiBaseUrl https://api...` và khai `Cors:WebAdminOrigins` |
 | `-Rollback` | quay lại bản sao lưu gần nhất |
+| `-ExtensionKey <đường dẫn .pem>` (khi build) | đóng gói kèm tiện ích Chrome tự phát hành, xem mục bên dưới |
 
 Nâng cấp phiên bản = chạy lại `Deploy-Iis.ps1` với gói mới: script tự sao lưu bản cũ (giữ 5 bản), đặt `app_offline.htm` để nhả khóa file, copy đè **nhưng giữ nguyên** `api\Storage` (tài liệu/danh mục đã nạp) và `api\appsettings.Production.json` (chuỗi kết nối, khóa ký token), rồi bật lại và gọi thử `/api/health`.
 
 Cấu hình riêng của máy chủ nằm ở `<InstallRoot>\api\appsettings.Production.json` - lần đầu script tạo từ mẫu, các chỗ `DIEN_VAO_DAY` phải điền trước khi API chạy được. Schema CSDL tự cập nhật lúc khởi động (`Database.MigrateAsync`), không cần chạy `dotnet ef` trên máy chủ.
+
+#### Tự phát hành tiện ích Chrome (không qua Web Store)
+
+Khi không đưa tiện ích lên Chrome Web Store, máy chủ IIS đóng luôn vai trò kênh cập nhật: gói `.crx` đã ký + `update.xml` được phục vụ tại `/ext`, máy trạm cài bằng chính sách nhóm nên Chrome tự kiểm tra bản mới khoảng 5 giờ một lần.
+
+```powershell
+# Máy build: thêm -ExtensionKey để gói kèm tiện ích (Chrome/Edge phải cài sẵn để ký)
+.\deploy\iis\Build-Package.ps1 -ExtensionKey C:\keys\zerocheck.pem
+
+# Máy chủ: deploy như thường, script tự điền địa chỉ thật vào update.xml
+.\Deploy-Iis.ps1 -HostHeader cbyts.donvi.vn
+```
+
+**File khóa `.pem` quyết định ID tiện ích và là thứ ký mọi bản cập nhật.** Lần đầu chưa có khóa thì Chrome sinh mới và script chép vào đường dẫn `-ExtensionKey`; phải sao lưu nơi an toàn và dùng lại mãi mãi - mất khóa là đổi ID, mọi máy trạm coi như tiện ích khác và phải cài lại. Khóa đã vào `.gitignore` (`*.pem`), tuyệt đối không commit: ai có nó đều ký được bản cập nhật giả gửi tới toàn bộ máy trạm.
+
+Sau khi deploy, script in ra ID tiện ích và địa chỉ `https://<tên miền>/ext/update.xml`, đồng thời sinh sẵn `<InstallRoot>\web\ext\chrome-policy.reg` đã điền đúng địa chỉ. Đưa file `.reg` này cho quản trị máy trạm chạy quyền admin (hoặc đẩy bằng Group Policy - khóa `ExtensionInstallForcelist` cho cả Chrome lẫn Edge). Máy trạm sẽ tự cài, tự cập nhật, và **người dùng không gỡ được** tiện ích.
+
+Phát hành bản mới = tăng `version` trong `manifest.json`, chạy lại `Build-Package.ps1 -ExtensionKey ...` với đúng khóa cũ rồi `Deploy-Iis.ps1`. Không cần đụng gì tới máy trạm.
+
+Lưu ý khi vận hành:
+
+- Deploy một gói **không** kèm tiện ích sẽ giữ nguyên `web\ext` sẵn có, nên kênh cập nhật của máy trạm không bị đứt.
+- `-ExtensionBaseUrl https://cbyts.donvi.vn` dùng khi máy trạm truy cập qua địa chỉ khác với binding của IIS (ví dụ đứng sau reverse proxy hoặc NAT).
+- IIS mặc định trả 404.3 cho `.crx`; script tự thêm MIME `application/x-chrome-extension`. Nếu máy trạm báo lỗi tải, kiểm tra `https://<tên miền>/ext/update.xml` mở được bằng trình duyệt trước.
 
 Không dùng IIS thì chạy dạng Windows Service:
 

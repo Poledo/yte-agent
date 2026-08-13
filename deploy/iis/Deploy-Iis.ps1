@@ -15,7 +15,9 @@
         4. Vá web.config của API (môi trường Production, log, giới hạn upload 50MB)
            và sinh web.config cho site web (SPA fallback + proxy /api).
         5. Tạo/cập nhật app pool + site, cấp quyền ghi Storage cho app pool.
-        6. Bật lại, gọi thử /api/health và trang chủ để xác nhận sống.
+        6. Nếu gói có kèm tiện ích Chrome: xuất bản /ext (bản .crx + update.xml) để
+           máy trạm tự cập nhật mà không cần Chrome Web Store.
+        7. Bật lại, gọi thử /api/health và trang chủ để xác nhận sống.
 
     Chạy lại nhiều lần được (idempotent) - lần sau chỉ là nâng cấp phiên bản.
 
@@ -67,6 +69,10 @@ param(
 
     # Thêm luật chuyển hướng HTTP -> HTTPS (chỉ có nghĩa khi đã cấu hình HTTPS).
     [switch]$ForceHttps,
+
+    # Địa chỉ gốc điền vào update.xml của tiện ích Chrome, ví dụ https://cbyts.benhvien.vn.
+    # Bỏ trống = tự suy từ binding của site (tên miền + giao thức + cổng).
+    [string]$ExtensionBaseUrl = '',
 
     # Số bản sao lưu giữ lại.
     [int]$KeepBackups = 5,
@@ -188,6 +194,7 @@ function Resolve-Package {
     $candidate = (Resolve-Path $candidate).Path
     $hasApi = Test-Path (Join-Path $candidate 'api\AIValidation.Api.dll')
     $hasWeb = Test-Path (Join-Path $candidate 'web\index.html')
+    $hasExt = Test-Path (Join-Path $candidate 'ext\update.xml')
     if (-not $hasApi -and -not $hasWeb) {
         throw "Thư mục $candidate không phải gói triển khai (thiếu cả api\AIValidation.Api.dll lẫn web\index.html). Dùng -PackagePath để trỏ đúng gói."
     }
@@ -199,7 +206,7 @@ function Resolve-Package {
     }
     else { Write-Warn 'Gói không có package-info.json (build thủ công?)' }
 
-    [pscustomobject]@{ Root = $candidate; HasApi = $hasApi; HasWeb = $hasWeb }
+    [pscustomobject]@{ Root = $candidate; HasApi = $hasApi; HasWeb = $hasWeb; HasExt = $hasExt }
 }
 
 # ===========================================================================
@@ -379,6 +386,52 @@ function Write-WebSiteConfig([string]$dir) {
     Write-Ok "web.config web-admin (SPA fallback$(if (-not $NoProxy) { " + proxy /api -> 127.0.0.1:$ApiPort" }))"
 }
 
+function Get-PublicBaseUrl {
+    <#
+      Địa chỉ mà MÁY TRẠM gọi tới, dùng cho update.xml và file .reg. Không có tên miền
+      thì lấy tên máy chủ - IP/localhost vô nghĩa với máy trạm ở phòng khác.
+    #>
+    if ($ExtensionBaseUrl) { return $ExtensionBaseUrl.TrimEnd('/') }
+
+    $useHttps = $HttpsPort -gt 0
+    $scheme = if ($useHttps) { 'https' } else { 'http' }
+    $port = if ($useHttps) { $HttpsPort } else { $Port }
+    $hostName = if ($HostHeader) { $HostHeader } else { $env:COMPUTERNAME }
+
+    if (-not $HostHeader) {
+        Write-Warn "Không có -HostHeader nên update.xml của tiện ích dùng tạm '$hostName'. Máy trạm gọi bằng tên miền khác thì chạy lại với -ExtensionBaseUrl."
+    }
+    $default = ($useHttps -and $port -eq 443) -or (-not $useHttps -and $port -eq 80)
+    if ($default) { "${scheme}://$hostName" } else { "${scheme}://${hostName}:$port" }
+}
+
+function Publish-Extension([string]$sourceDir, [string]$targetDir) {
+    <#
+      Chép .crx + update.xml lên site web thành /ext và điền địa chỉ thật vào.
+      Máy trạm được khai chính sách trỏ vào /ext/update.xml sẽ tự nâng cấp tiện ích,
+      không cần Chrome Web Store và không cần ai đụng vào từng máy.
+    #>
+    Copy-Tree -Source $sourceDir -Destination $targetDir
+
+    $base = Get-PublicBaseUrl
+    foreach ($name in @('update.xml', 'chrome-policy.reg')) {
+        $file = Join-Path $targetDir $name
+        if (-not (Test-Path $file)) { continue }
+        # .reg là UTF-16, update.xml là UTF-8: đọc/ghi giữ nguyên kiểu của từng file.
+        $encoding = if ($name -like '*.reg') { 'Unicode' } else { 'UTF8' }
+        $raw = Get-Content $file -Raw
+        if ($raw -match '\{\{BASE_URL\}\}') {
+            Set-Content -Path $file -Value $raw.Replace('{{BASE_URL}}', $base) -Encoding $encoding
+        }
+    }
+
+    $crx = Get-ChildItem $targetDir -Filter '*.crx' | Select-Object -First 1
+    $xml = [xml](Get-Content (Join-Path $targetDir 'update.xml') -Raw)
+    $script:ExtensionId = $xml.gupdate.app.appid
+    $script:ExtensionUpdateUrl = "$base/ext/update.xml"
+    Write-Ok "Tiện ích: $($crx.Name) -> $base/ext/  (ID $script:ExtensionId)"
+}
+
 function Add-MissingMimeTypes([string]$site) {
     <#
       IIS đời cũ (8.5 trên Windows Server 2012 R2) chưa biết vài kiểu file Angular sinh ra
@@ -389,6 +442,8 @@ function Add-MissingMimeTypes([string]$site) {
         '.webmanifest' = 'application/manifest+json'
         '.woff2'       = 'font/woff2'
         '.woff'        = 'font/woff'
+        # Thiếu kiểu này thì IIS trả 404.3 cho file .crx, Chrome báo "tải bản cập nhật thất bại".
+        '.crx'         = 'application/x-chrome-extension'
     }
     $existing = @((Get-WebConfiguration -PSPath 'MACHINE/WEBROOT/APPHOST' `
                 -Filter 'system.webServer/staticContent').Collection | ForEach-Object { $_.fileExtension })
@@ -574,10 +629,18 @@ try {
 
     if ($package.HasWeb) {
         Write-Step 'Copy web-admin'
-        Copy-Tree -Source (Join-Path $package.Root 'web') -Destination $webDir -ExcludeFiles @('web.config')
+        # Loại trừ 'ext': gói không kèm tiện ích thì /MIR sẽ xóa mất bản .crx đang phục vụ
+        # máy trạm, làm hỏng đường tự cập nhật của cả đơn vị.
+        Copy-Tree -Source (Join-Path $package.Root 'web') -Destination $webDir `
+            -ExcludeFiles @('web.config') -ExcludeDirs @('ext')
         Write-WebSiteConfig $webDir
     }
     else { Write-Info 'Gói không có phần web - bỏ qua' }
+
+    if ($package.HasExt) {
+        Write-Step 'Xuất bản tiện ích Chrome'
+        Publish-Extension (Join-Path $package.Root 'ext') (Join-Path $webDir 'ext')
+    }
 
     Write-Step 'Cấu hình IIS'
     Set-AppPoolConfig $apiPoolName
@@ -606,6 +669,12 @@ if ($configReady) {
     $apiOk = Test-Endpoint "http://127.0.0.1:$ApiPort/api/health" 'API /api/health'
     $webOk = Test-Endpoint "http://127.0.0.1:$Port/" 'Trang web-admin'
     if (-not $NoProxy) { Test-Endpoint "http://127.0.0.1:$Port/api/health" 'Proxy /api qua site web' | Out-Null }
+    if ($package.HasExt) {
+        # Kiểm luôn cả .crx: 404.3 do thiếu kiểu MIME chỉ lộ ra khi tải đúng file đó.
+        Test-Endpoint "http://127.0.0.1:$Port/ext/update.xml" 'Bản kê cập nhật tiện ích' 3 | Out-Null
+        $crxName = (Get-ChildItem (Join-Path $webDir 'ext') -Filter '*.crx' | Select-Object -First 1).Name
+        if ($crxName) { Test-Endpoint "http://127.0.0.1:$Port/ext/$crxName" 'Gói .crx' 3 | Out-Null }
+    }
 
     if (-not $apiOk) {
         Write-Warn 'API chưa lên. Soi lỗi: Event Viewer > Windows Logs > Application (nguồn IIS AspNetCore Module), hoặc bật stdoutLogEnabled="true" trong api\web.config rồi xem api\logs\stdout*.log.'
@@ -623,6 +692,11 @@ Write-Host "API       : http://127.0.0.1:$ApiPort/api/health$(if (-not $NoProxy)
 Write-Host "Cấu hình  : $apiDir\$prodConfigName" -ForegroundColor Gray
 Write-Host "Dữ liệu   : $apiDir\Storage  (không bị deploy ghi đè)" -ForegroundColor Gray
 Write-Host "Sao lưu   : $backupRoot  (quay lui: .\Deploy-Iis.ps1 -Rollback)" -ForegroundColor Gray
+if ($package.HasExt) {
+    Write-Host "Tiện ích  : $script:ExtensionUpdateUrl  (ID $script:ExtensionId)" -ForegroundColor Gray
+    Write-Host "            Phát $webDir\ext\chrome-policy.reg cho IT đơn vị chạy trên máy trạm" -ForegroundColor Gray
+    Write-Host '            (hoặc khai cùng nội dung bằng GPO), Chrome sẽ tự cài và tự cập nhật.' -ForegroundColor Gray
+}
 if ($script:Warnings.Count) {
     Write-Host "`nCẢNH BÁO ($($script:Warnings.Count)):" -ForegroundColor Yellow
     $script:Warnings | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow }

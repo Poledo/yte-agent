@@ -31,3 +31,6 @@ report/**/node_modules/
 deploy/iis/out/
 # File môi trường do Build-Package.ps1 sinh khi deploy kiểu 2 site riêng (-ApiBaseUrl).
 web-admin/src/environments/environment.iis.ts
+
+# Khóa ký tiện ích Chrome: lộ là người khác ký được bản cập nhật giả gửi tới máy trạm.
+*.pem
