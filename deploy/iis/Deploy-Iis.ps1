@@ -195,8 +195,10 @@ function Resolve-Package {
     $hasApi = Test-Path (Join-Path $candidate 'api\AIValidation.Api.dll')
     $hasWeb = Test-Path (Join-Path $candidate 'web\index.html')
     $hasExt = Test-Path (Join-Path $candidate 'ext\update.xml')
-    if (-not $hasApi -and -not $hasWeb) {
-        throw "Thư mục $candidate không phải gói triển khai (thiếu cả api\AIValidation.Api.dll lẫn web\index.html). Dùng -PackagePath để trỏ đúng gói."
+    # Gói chỉ có ext vẫn hợp lệ: phát hành riêng bản tiện ích mới thì không cần
+    # đụng tới API lẫn web-admin (Build-Package.ps1 -SkipApi -SkipWeb -ExtensionKey).
+    if (-not $hasApi -and -not $hasWeb -and -not $hasExt) {
+        throw "Thư mục $candidate không phải gói triển khai (thiếu cả api\AIValidation.Api.dll, web\index.html lẫn ext\update.xml). Dùng -PackagePath để trỏ đúng gói."
     }
 
     $info = Join-Path $candidate 'package-info.json'

@@ -42,12 +42,17 @@ Chrome trên Windows chặn cài tiện ích ngoài Web Store bằng cách kéo 
 .\deploy\iis\Build-Package.ps1 -ExtensionKey C:\keys\zerocheck.pem
 ```
 
+Kết quả là `deploy\iis\out\cbyts-iis-<phiên bản>.zip` (phiên bản mặc định lấy theo `yyyyMMdd-HHmm`, đặt tên khác bằng `-Version`).
+
 **File `.pem` quyết định ID tiện ích và ký mọi bản cập nhật.** Lần đầu chưa có thì Chrome sinh mới và script chép vào đúng đường dẫn `-ExtensionKey`; phải sao lưu và dùng lại mãi mãi. Đổi khóa = đổi ID = mọi máy trạm coi như tiện ích khác và phải cài lại từ đầu. Khóa đã nằm trong `.gitignore` (`*.pem`) - tuyệt đối không commit, ai có nó cũng ký được bản cập nhật giả gửi tới toàn bộ máy trạm.
 
-### 2. Máy chủ - triển khai
+### 2. Máy chủ - chép gói lên rồi triển khai
+
+Chép file `.zip` sang máy chủ (RDP copy-paste, ổ mạng, USB - tùy đơn vị), giải nén ra một thư mục bất kỳ, ví dụ `C:\deploy\cbyts`:
 
 ```powershell
-# PowerShell quyền admin, tại thư mục vừa giải nén gói .zip
+# PowerShell QUYỀN ADMIN, đứng tại thư mục vừa giải nén
+.\Deploy-Iis.ps1 -CheckOnly                 # lần đầu: kiểm tra máy chủ đủ điều kiện chưa
 .\Deploy-Iis.ps1 -HostHeader cbyts.donvi.vn
 ```
 
@@ -90,9 +95,21 @@ Mở **HIS** (`https://*.vnpthis.vn/*` - tiện ích chỉ chạy trên các tra
 
 ### 5. Phát hành bản mới
 
-Tăng `version` trong `public/manifest.json`, chạy lại bước 1 (đúng khóa `.pem` cũ) và bước 2. **Không cần gửi gì cho người dùng** - máy trạm tự lấy bản mới trong khoảng 5 giờ hoặc ngay khi mở lại Chrome. Chỉ máy trạm mới tinh mới cần chạy `.reg` lần đầu.
+Vẫn phải chép gói lên máy chủ - chỉ là **không phải đụng tới máy trạm** nữa.
 
-Gói triển khai không kèm tiện ích cũng không xóa `web\ext` sẵn có, nên kênh cập nhật của máy trạm không bị đứt khi deploy riêng phần API hay web-admin.
+1. Tăng `version` trong `public/manifest.json` (Chrome so số này để biết có bản mới; quên tăng thì máy trạm không cập nhật).
+2. Máy build: đóng gói **đúng khóa `.pem` cũ**. Chỉ sửa tiện ích thì bỏ luôn phần API và web-admin cho gói nhẹ và nhanh:
+
+    ```powershell
+    .\deploy\iis\Build-Package.ps1 -ExtensionKey C:\keys\zerocheck.pem -SkipApi -SkipWeb
+    ```
+
+3. Chép `.zip` lên máy chủ, giải nén, chạy `Deploy-Iis.ps1` **với đúng các tham số như lần đầu** (`-HostHeader`, `-HttpsPort`, `-InstallRoot`... - script áp lại cấu hình site mỗi lần chạy, thiếu tham số là binding đổi theo mặc định).
+4. Xong. Máy trạm tự lấy bản mới trong khoảng 5 giờ, hoặc ngay khi mở lại Chrome. Chỉ máy trạm mới tinh mới cần chạy `.reg` lần đầu.
+
+Chiều ngược lại cũng an toàn: gói **không** kèm tiện ích sẽ không xóa `web\ext` sẵn có, nên deploy riêng phần API hay web-admin không làm đứt đường cập nhật của máy trạm.
+
+Không muốn qua `Deploy-Iis.ps1` thì chép tay cũng được: đóng gói bằng `Pack-Extension.ps1 -BaseUrl https://cbyts.donvi.vn` (điền sẵn địa chỉ vào `update.xml`) rồi copy cả thư mục đè lên `<InstallRoot>\web\ext\`. Nhớ xóa file `.crx` phiên bản cũ.
 
 ## Cấu hình
 
