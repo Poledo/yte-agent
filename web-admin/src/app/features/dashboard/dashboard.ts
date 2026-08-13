@@ -7,7 +7,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MAT_DATE_LOCALE, provideNativeDateAdapter } from '@angular/material/core';
 import { AuthService } from '../../core/auth.service';
 import { UsersApi } from '../../core/api/users.api';
 import { RolesApi } from '../../core/api/roles.api';
@@ -39,7 +38,6 @@ interface StatCard {
     PageHeader,
     HasPermissionDirective,
   ],
-  providers: [provideNativeDateAdapter(), { provide: MAT_DATE_LOCALE, useValue: 'vi-VN' }],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })

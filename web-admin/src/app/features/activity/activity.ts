@@ -6,7 +6,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MAT_DATE_LOCALE, provideNativeDateAdapter } from '@angular/material/core';
 import { StatsApi, UsageEventRow } from '../../core/api/stats.api';
 import { NotificationService } from '../../core/notification.service';
 import { PageHeader } from '../../shared/page-header/page-header';
@@ -32,7 +31,6 @@ import { ActivityDetailDialog } from './activity-detail-dialog/activity-detail-d
     DataTable,
     ColumnDefDirective,
   ],
-  providers: [provideNativeDateAdapter(), { provide: MAT_DATE_LOCALE, useValue: 'vi-VN' }],
   templateUrl: './activity.html',
   styleUrl: './activity.scss',
 })
