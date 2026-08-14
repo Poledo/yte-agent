@@ -3,6 +3,15 @@
   title="Cây đơn vị"
   subtitle="Cơ sở KCB và cấu hình dùng chung danh mục HIS theo cấp trên"
 >
+  <mat-form-field appearance="outline" subscriptSizing="dynamic" class="tuyen-filter">
+    <mat-label>Tuyến</mat-label>
+    <mat-select [value]="tuyenFilter()" (selectionChange)="filterTuyen($event.value)">
+      <mat-option value="all">Tất cả các tuyến</mat-option>
+      @for (t of tuyenOptions; track t) {
+        <mat-option [value]="t">{{ tuyenLabels[t] }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
   <mat-slide-toggle [checked]="showInactive()" (change)="toggleInactive($event.checked)">
     Hiện đã ngưng
   </mat-slide-toggle>
@@ -24,14 +33,19 @@
   } @else if (isEmpty()) {
     <div class="tree-empty">
       <mat-icon>account_tree</mat-icon>
-      <div class="empty-title">Chưa có đơn vị nào</div>
-      <div class="empty-desc">
-        Đơn vị được tạo tự động khi nạp danh mục HIS có mã cơ sở, hoặc bấm "Thêm đơn vị gốc".
-      </div>
+      @if (isFiltered()) {
+        <div class="empty-title">Không có đơn vị nào thuộc tuyến này</div>
+        <div class="empty-desc">Chọn "Tất cả các tuyến" để xem lại toàn bộ cây.</div>
+      } @else {
+        <div class="empty-title">Chưa có đơn vị nào</div>
+        <div class="empty-desc">
+          Đơn vị được tạo tự động khi nạp danh mục HIS có mã cơ sở, hoặc bấm "Thêm đơn vị gốc".
+        </div>
+      }
     </div>
   } @else {
     <div class="tree">
-      @for (root of tree(); track root.id) {
+      @for (root of visibleTree(); track root.id) {
         <ng-container *ngTemplateOutlet="nodeTpl; context: { $implicit: root, depth: 0 }"></ng-container>
       }
     </div>
@@ -61,6 +75,11 @@
     </button>
 
     <span class="node-badges">
+      @if (node.tuyen !== 'khongXacDinh') {
+        <span class="badge tuyen" [matTooltip]="node.tuyenLabel">
+          <mat-icon>stairs</mat-icon> {{ shortTuyen(node.tuyen) }}
+        </span>
+      }
       @if (node.ownCatalogCount > 0) {
         <span class="badge own" matTooltip="Số loại danh mục đơn vị tự nạp">
           <mat-icon>inventory_2</mat-icon> {{ node.ownCatalogCount }}

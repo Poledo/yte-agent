@@ -266,6 +266,39 @@ export interface CatalogItemsPageDto {
 }
 
 /**
+ * Tuyến của cơ sở KCB. Trùng tên enum phía API (serialize camelCase), thứ tự khai
+ * ở đây cũng là thứ tự từ tuyến trên xuống tuyến dưới.
+ */
+export type FacilityTuyen = 'khongXacDinh' | 'trungUong' | 'tinhDaKhoa' | 'chuyenKhoa' | 'xa';
+
+/** Nhãn tiếng Việt của từng tuyến, dùng cho ô chọn và nhãn trên cây. */
+export const FACILITY_TUYEN_LABELS: Record<FacilityTuyen, string> = {
+  khongXacDinh: 'Chưa phân tuyến',
+  trungUong: 'Tuyến trung ương',
+  tinhDaKhoa: 'Tuyến 1 - tỉnh, đa khoa',
+  chuyenKhoa: 'Tuyến 2-3 - chuyên khoa',
+  xa: 'Tuyến 4 - TYT, xã phường',
+};
+
+/** Thứ tự hiển thị: tuyến trên trước, "chưa phân tuyến" xuống cuối. */
+/** Nhãn ngắn cho huy hiệu trên cây — nhãn đầy đủ nằm ở tooltip. */
+export const FACILITY_TUYEN_SHORT: Record<FacilityTuyen, string> = {
+  khongXacDinh: 'Chưa phân tuyến',
+  trungUong: 'Trung ương',
+  tinhDaKhoa: 'Tuyến 1',
+  chuyenKhoa: 'Tuyến 2-3',
+  xa: 'Tuyến 4',
+};
+
+export const FACILITY_TUYEN_ORDER: FacilityTuyen[] = [
+  'trungUong',
+  'tinhDaKhoa',
+  'chuyenKhoa',
+  'xa',
+  'khongXacDinh',
+];
+
+/**
  * Một đơn vị (cơ sở KCB) trong cây tổ chức: Sở Y tế → Trung tâm Y tế huyện →
  * Trạm Y tế xã. Cây này quyết định hồ sơ XML 130 của một cơ sở được đối chiếu
  * bằng danh mục HIS nào.
@@ -275,6 +308,10 @@ export interface FacilityDto {
   /** Mã cơ sở KCB, vd "58028" — trùng MACSKCB trong file XML 130. */
   code: string;
   name: string;
+  /** Tuyến của cơ sở — mô tả, không ảnh hưởng việc mượn danh mục. */
+  tuyen: FacilityTuyen;
+  /** Nhãn tiếng Việt của `tuyen`, do API trả về sẵn. */
+  tuyenLabel: string;
   parentId?: number | null;
   /** Cho phép mượn danh mục của đơn vị cấp trên khi đơn vị này chưa tự nạp. */
   inheritCatalogFromParent: boolean;
@@ -290,6 +327,7 @@ export interface FacilityDto {
 export interface FacilityRequest {
   code: string;
   name: string;
+  tuyen: FacilityTuyen;
   parentId?: number | null;
   inheritCatalogFromParent: boolean;
   note?: string | null;

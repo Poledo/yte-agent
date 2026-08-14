@@ -25,6 +25,14 @@ public class Facility
     /// <summary>Tên đơn vị, vd "Trung tâm Y tế huyện Ninh Phước".</summary>
     public required string Name { get; set; }
 
+    /// <summary>
+    /// Tuyến của cơ sở: trung ương → tỉnh đa khoa → chuyên khoa → xã. Mang tính mô tả,
+    /// KHÔNG quyết định việc mượn danh mục — cái đó vẫn theo <see cref="ParentId"/>.
+    /// Tách riêng khỏi cây vì hai thứ không phải lúc nào cũng trùng: một bệnh viện
+    /// chuyên khoa tỉnh có thể treo thẳng dưới Sở Y tế mà vẫn là tuyến 2-3.
+    /// </summary>
+    public FacilityTuyen Tuyen { get; set; } = FacilityTuyen.KhongXacDinh;
+
     /// <summary>Đơn vị cấp trên trực tiếp. Null = đơn vị gốc (không có cha).</summary>
     public long? ParentId { get; set; }
 

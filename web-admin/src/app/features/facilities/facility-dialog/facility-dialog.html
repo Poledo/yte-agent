@@ -31,6 +31,17 @@
       <mat-icon matPrefix>account_tree</mat-icon>
     </mat-form-field>
 
+    <mat-form-field appearance="outline">
+      <mat-label>Tuyến</mat-label>
+      <mat-select formControlName="tuyen">
+        @for (t of tuyenOptions; track t) {
+          <mat-option [value]="t">{{ tuyenLabels[t] }}</mat-option>
+        }
+      </mat-select>
+      <mat-icon matPrefix>stairs</mat-icon>
+      <mat-hint>Chỉ để phân loại và lọc — không ảnh hưởng việc kế thừa danh mục</mat-hint>
+    </mat-form-field>
+
     <mat-slide-toggle formControlName="inheritCatalogFromParent">
       Được dùng danh mục HIS của đơn vị cấp trên
     </mat-slide-toggle>

@@ -76,6 +76,7 @@ public class FacilityController : ControllerBase
         {
             Code = request.Code.Trim(),
             Name = request.Name.Trim(),
+            Tuyen = request.Tuyen,
             ParentId = request.ParentId,
             InheritCatalogFromParent = request.InheritCatalogFromParent,
             Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(),
@@ -86,8 +87,14 @@ public class FacilityController : ControllerBase
         await _db.SaveChangesAsync(cancellationToken);
         _facilityTree.Invalidate();
 
-        _logger.LogInformation("Đã thêm đơn vị {Code} - {Name}", facility.Code, facility.Name);
-        return Ok(new { facility.Id, message = $"Đã thêm đơn vị \"{facility.Name}\" (mã {facility.Code})." });
+        _logger.LogInformation("Đã thêm đơn vị {Code} - {Name} ({Tuyen})",
+            facility.Code, facility.Name, facility.Tuyen);
+        return Ok(new
+        {
+            facility.Id,
+            message = $"Đã thêm đơn vị \"{facility.Name}\" (mã {facility.Code}).",
+            warning = await CheckTuyenAsync(request, cancellationToken)
+        });
     }
 
     /// <summary>Sửa một đơn vị: đổi tên, đổi đơn vị cấp trên, bật/tắt kế thừa danh mục.</summary>
@@ -113,6 +120,7 @@ public class FacilityController : ControllerBase
 
         facility.Code = request.Code.Trim();
         facility.Name = request.Name.Trim();
+        facility.Tuyen = request.Tuyen;
         facility.ParentId = request.ParentId;
         facility.InheritCatalogFromParent = request.InheritCatalogFromParent;
         facility.Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
@@ -121,8 +129,13 @@ public class FacilityController : ControllerBase
         await _db.SaveChangesAsync(cancellationToken);
         _facilityTree.Invalidate();
 
-        _logger.LogInformation("Đã cập nhật đơn vị {Code} - {Name}", facility.Code, facility.Name);
-        return Ok(new { message = $"Đã cập nhật đơn vị \"{facility.Name}\"." });
+        _logger.LogInformation("Đã cập nhật đơn vị {Code} - {Name} ({Tuyen})",
+            facility.Code, facility.Name, facility.Tuyen);
+        return Ok(new
+        {
+            message = $"Đã cập nhật đơn vị \"{facility.Name}\".",
+            warning = await CheckTuyenAsync(request, cancellationToken)
+        });
     }
 
     /// <summary>
@@ -212,6 +225,7 @@ public class FacilityController : ControllerBase
                 f.Id,
                 f.Code,
                 f.Name,
+                f.Tuyen,
                 f.ParentId,
                 f.InheritCatalogFromParent,
                 f.Note,
@@ -234,6 +248,8 @@ public class FacilityController : ControllerBase
                 Id = f.Id,
                 Code = f.Code,
                 Name = f.Name,
+                Tuyen = f.Tuyen,
+                TuyenLabel = f.Tuyen.Label(),
                 ParentId = f.ParentId,
                 InheritCatalogFromParent = f.InheritCatalogFromParent,
                 Note = f.Note,
@@ -313,6 +329,43 @@ public class FacilityController : ControllerBase
         return null;
     }
 
+    /// <summary>
+    /// Đối chiếu tuyến của đơn vị với tuyến của đơn vị cấp trên. Trả về lời nhắc
+    /// tiếng Việt khi hai thứ ngược nhau, null nếu không có gì đáng nói.
+    ///
+    /// Cố tình CHỈ nhắc chứ không chặn: cây tổ chức và tuyến chuyên môn là hai
+    /// trục khác nhau, thực tế vẫn có bệnh viện chuyên khoa tỉnh nằm dưới một
+    /// bệnh viện chuyên khoa khác, hoặc trạm y tế treo thẳng dưới Sở Y tế. Chặn
+    /// cứng thì người quản trị hết đường khai đúng thực tế đơn vị mình.
+    /// </summary>
+    private async Task<string?> CheckTuyenAsync(
+        FacilityRequest request, CancellationToken cancellationToken)
+    {
+        if (!request.Tuyen.IsSet() || !request.ParentId.HasValue)
+        {
+            return null;
+        }
+
+        var parent = await _db.Facilities
+            .Where(f => f.Id == request.ParentId)
+            .Select(f => new { f.Name, f.Tuyen })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (parent == null || !parent.Tuyen.IsSet())
+        {
+            return null;
+        }
+
+        // Bậc càng nhỏ càng là tuyến trên, nên con phải có bậc LỚN hơn cha.
+        if (request.Tuyen.Rank() > parent.Tuyen.Rank())
+        {
+            return null;
+        }
+
+        return request.Tuyen == parent.Tuyen
+            ? $"Đơn vị này cùng {request.Tuyen.Label()} với đơn vị cấp trên \"{parent.Name}\". Kiểm tra lại nếu không phải chủ ý."
+            : $"Đơn vị này là {request.Tuyen.Label()} nhưng đơn vị cấp trên \"{parent.Name}\" lại là {parent.Tuyen.Label()} — cấp dưới đang ở tuyến cao hơn cấp trên.";
+    }
+
     /// <summary>True nếu <paramref name="candidateId"/> nằm trong nhánh dưới của <paramref name="ancestorId"/>.</summary>
     private async Task<bool> IsDescendantAsync(long candidateId, long ancestorId, CancellationToken cancellationToken)
     {
@@ -342,6 +395,13 @@ public class FacilityDto
     public long Id { get; set; }
     public required string Code { get; set; }
     public required string Name { get; set; }
+
+    /// <summary>Tuyến của cơ sở. API cấu hình enum ra chuỗi camelCase nên JSON là "tinhDaKhoa", không phải số.</summary>
+    public FacilityTuyen Tuyen { get; set; }
+
+    /// <summary>Nhãn tiếng Việt của <see cref="Tuyen"/> — để web admin và báo cáo khỏi tự dịch mỗi nơi một kiểu.</summary>
+    public string TuyenLabel { get; set; } = string.Empty;
+
     public long? ParentId { get; set; }
     public bool InheritCatalogFromParent { get; set; }
     public string? Note { get; set; }
@@ -361,4 +421,5 @@ public record FacilityRequest(
     long? ParentId,
     bool InheritCatalogFromParent,
     string? Note,
-    bool IsActive = true);
+    bool IsActive = true,
+    FacilityTuyen Tuyen = FacilityTuyen.KhongXacDinh);

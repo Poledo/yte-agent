@@ -10,6 +10,12 @@
   }
 }
 
+// Ô lọc nằm trên thanh tiêu đề cạnh nút bấm: không ghim bề rộng thì nó co lại vừa
+// đúng chữ "Tuyến" và nuốt mất nhãn tuyến đang chọn.
+.tuyen-filter {
+  width: 190px;
+}
+
 .tree-loading,
 .tree-empty {
   display: flex;
@@ -130,6 +136,10 @@
     font-size: 15px;
     width: 15px;
     height: 15px;
+  }
+  &.tuyen {
+    background: var(--mat-sys-secondary-container);
+    color: var(--mat-sys-on-secondary-container);
   }
   &.own {
     background: rgba(46, 125, 50, 0.14);

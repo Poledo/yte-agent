@@ -8,7 +8,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { FacilityApi } from '../../../core/api/facility.api';
-import { FacilityDto } from '../../../core/api/models';
+import {
+  FACILITY_TUYEN_LABELS,
+  FACILITY_TUYEN_ORDER,
+  FacilityDto,
+  FacilityTuyen,
+} from '../../../core/api/models';
 
 export interface FacilityDialogData {
   /** null = thêm mới. */
@@ -17,6 +22,13 @@ export interface FacilityDialogData {
   all: FacilityDto[];
   /** Đơn vị cấp trên đặt sẵn khi bấm "Thêm đơn vị cấp dưới". */
   defaultParentId?: number | null;
+}
+
+/** Dialog đóng lại với kết quả này khi lưu thành công (đóng bằng Hủy thì undefined). */
+export interface FacilityDialogResult {
+  message: string;
+  /** Nhắc tuyến của đơn vị không khớp tuyến cấp trên — đã lưu rồi, không phải lỗi. */
+  warning: string | null;
 }
 
 /** Dialog thêm/sửa một đơn vị trong cây tổ chức. */
@@ -45,10 +57,14 @@ export class FacilityDialog {
   readonly saving = signal(false);
   readonly error = signal('');
 
+  readonly tuyenOptions = FACILITY_TUYEN_ORDER;
+  readonly tuyenLabels = FACILITY_TUYEN_LABELS;
+
   readonly form = this.fb.nonNullable.group({
     code: [this.data.facility?.code ?? '', [Validators.required, Validators.maxLength(20)]],
     name: [this.data.facility?.name ?? '', [Validators.required, Validators.maxLength(255)]],
     parentId: [this.data.facility?.parentId ?? this.data.defaultParentId ?? (null as number | null)],
+    tuyen: [this.data.facility?.tuyen ?? ('khongXacDinh' as FacilityTuyen)],
     inheritCatalogFromParent: [this.data.facility?.inheritCatalogFromParent ?? true],
     note: [this.data.facility?.note ?? ''],
     isActive: [this.data.facility?.isActive ?? true],
@@ -94,6 +110,7 @@ export class FacilityDialog {
       code: v.code.trim(),
       name: v.name.trim(),
       parentId: v.parentId,
+      tuyen: v.tuyen,
       inheritCatalogFromParent: v.inheritCatalogFromParent,
       note: v.note.trim() || null,
       isActive: v.isActive,
@@ -104,7 +121,7 @@ export class FacilityDialog {
       : this.api.create(body);
 
     request.subscribe({
-      next: (res) => this.ref.close(res.message),
+      next: (res) => this.ref.close({ message: res.message, warning: res.warning ?? null }),
       error: (e) => {
         this.error.set(e?.error?.message ?? 'Không lưu được đơn vị.');
         this.saving.set(false);

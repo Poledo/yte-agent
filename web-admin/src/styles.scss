@@ -161,6 +161,11 @@ html.dark-theme {
   --mat-snack-bar-button-color: #fff;
   --mdc-snackbar-supporting-text-color: #fff;
 }
+.snack-warning {
+  --mdc-snackbar-container-color: #a15c00;
+  --mat-snack-bar-button-color: #fff;
+  --mdc-snackbar-supporting-text-color: #fff;
+}
 .snack-error {
   --mdc-snackbar-container-color: var(--mat-sys-error);
   --mat-snack-bar-button-color: #fff;

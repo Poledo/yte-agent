@@ -4,17 +4,30 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { forkJoin } from 'rxjs';
 import { FacilityApi } from '../../core/api/facility.api';
-import { FacilityCatalogScopeDto, FacilityDto } from '../../core/api/models';
+import {
+  FACILITY_TUYEN_LABELS,
+  FACILITY_TUYEN_ORDER,
+  FACILITY_TUYEN_SHORT,
+  FacilityCatalogScopeDto,
+  FacilityDto,
+  FacilityTuyen,
+} from '../../core/api/models';
 import { NotificationService } from '../../core/notification.service';
 import { ConfirmService } from '../../shared/confirm.service';
 import { HasPermissionDirective } from '../../shared/permission.directive';
 import { PageHeader } from '../../shared/page-header/page-header';
-import { FacilityDialog, FacilityDialogData } from './facility-dialog/facility-dialog';
+import {
+  FacilityDialog,
+  FacilityDialogData,
+  FacilityDialogResult,
+} from './facility-dialog/facility-dialog';
 
 /**
  * Màn hình cây đơn vị: Sở Y tế → Trung tâm Y tế huyện → Trạm Y tế xã.
@@ -32,6 +45,8 @@ import { FacilityDialog, FacilityDialogData } from './facility-dialog/facility-d
     MatButtonModule,
     MatIconModule,
     MatCardModule,
+    MatFormFieldModule,
+    MatSelectModule,
     MatTooltipModule,
     MatSlideToggleModule,
     MatProgressSpinnerModule,
@@ -53,6 +68,11 @@ export class Facilities {
   readonly flat = signal<FacilityDto[]>([]);
   readonly showInactive = signal(false);
 
+  /** Lọc theo tuyến; 'all' = không lọc. */
+  readonly tuyenFilter = signal<FacilityTuyen | 'all'>('all');
+  readonly tuyenOptions = FACILITY_TUYEN_ORDER;
+  readonly tuyenLabels = FACILITY_TUYEN_LABELS;
+
   /** Các nút đang thu gọn (mặc định mở hết cho thấy ngay toàn cảnh). */
   private readonly collapsed = signal<Set<number>>(new Set());
 
@@ -61,7 +81,26 @@ export class Facilities {
   readonly scope = signal<FacilityCatalogScopeDto | null>(null);
   readonly scopeLoading = signal(false);
 
-  readonly isEmpty = computed(() => !this.loading() && this.tree().length === 0);
+  /**
+   * Cây sau khi lọc tuyến. Giữ lại cả đơn vị không khớp tuyến nếu bên dưới nó còn
+   * đơn vị khớp — cắt luôn cấp trên thì các trạm y tế tìm được sẽ hiện lơ lửng,
+   * không còn biết thuộc bệnh viện nào.
+   */
+  readonly visibleTree = computed<FacilityDto[]>(() => {
+    const want = this.tuyenFilter();
+    if (want === 'all') return this.tree();
+
+    const prune = (nodes: FacilityDto[]): FacilityDto[] =>
+      nodes.reduce<FacilityDto[]>((acc, n) => {
+        const children = prune(n.children);
+        if (n.tuyen === want || children.length > 0) acc.push({ ...n, children });
+        return acc;
+      }, []);
+    return prune(this.tree());
+  });
+
+  readonly isEmpty = computed(() => !this.loading() && this.visibleTree().length === 0);
+  readonly isFiltered = computed(() => this.tuyenFilter() !== 'all');
 
   constructor() {
     this.load();
@@ -90,6 +129,15 @@ export class Facilities {
     this.load();
   }
 
+  /** Ngữ cảnh của ng-template đệ quy không có kiểu, nên tra bảng qua hàm cho gọn. */
+  shortTuyen(tuyen: FacilityTuyen): string {
+    return FACILITY_TUYEN_SHORT[tuyen];
+  }
+
+  filterTuyen(tuyen: FacilityTuyen | 'all'): void {
+    this.tuyenFilter.set(tuyen);
+  }
+
   isCollapsed(id: number): boolean {
     return this.collapsed().has(id);
   }
@@ -113,9 +161,12 @@ export class Facilities {
     this.dialog
       .open(FacilityDialog, { data, width: '520px', maxWidth: '95vw', autoFocus: false })
       .afterClosed()
-      .subscribe((message?: string) => {
-        if (!message) return;
-        this.notify.success(message);
+      .subscribe((res?: FacilityDialogResult) => {
+        if (!res) return;
+        // Snackbar chỉ hiện được một cái: gọi liên tiếp thì toast sau nuốt mất toast
+        // trước. Có cảnh báo lệch tuyến thì gộp chung vào một toast màu vàng.
+        if (res.warning) this.notify.warning(`${res.message} ${res.warning}`);
+        else this.notify.success(res.message);
         this.load();
       });
   }

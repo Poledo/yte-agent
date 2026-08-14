@@ -411,6 +411,11 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, Guid>
             entity.Property(e => e.Code).IsRequired().HasMaxLength(20);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
             entity.Property(e => e.Note).HasMaxLength(1000);
+            // Lưu tên enum, không lưu số: cột này hay bị đọc thẳng bằng SQL lúc đối soát.
+            entity.Property(e => e.Tuyen)
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .HasDefaultValue(FacilityTuyen.KhongXacDinh);
             entity.Property(e => e.InheritCatalogFromParent).HasDefaultValue(true);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");

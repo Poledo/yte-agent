@@ -24,6 +24,16 @@ export class NotificationService {
     });
   }
 
+  /** Việc đã xong nhưng có điểm cần người dùng ngó lại — không phải lỗi. */
+  warning(message: string): void {
+    this.snack.open(message, 'Đóng', {
+      duration: 8000,
+      panelClass: ['snack-warning'],
+      horizontalPosition: 'right',
+      verticalPosition: 'top',
+    });
+  }
+
   info(message: string): void {
     this.snack.open(message, 'Đóng', {
       duration: 3500,

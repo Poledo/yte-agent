@@ -24,12 +24,16 @@ export class FacilityApi {
     return this.http.get<FacilityDto[]>(`${this.base}/tree`, { params });
   }
 
-  create(body: FacilityRequest): Observable<{ id: number; message: string }> {
-    return this.http.post<{ id: number; message: string }>(this.base, body);
+  /**
+   * `warning` có giá trị khi tuyến của đơn vị không khớp tuyến của đơn vị cấp trên.
+   * Chỉ là lời nhắc — dữ liệu đã lưu xong, đừng coi như lỗi.
+   */
+  create(body: FacilityRequest): Observable<{ id: number; message: string; warning?: string | null }> {
+    return this.http.post<{ id: number; message: string; warning?: string | null }>(this.base, body);
   }
 
-  update(id: number, body: FacilityRequest): Observable<{ message: string }> {
-    return this.http.put<{ message: string }>(`${this.base}/${id}`, body);
+  update(id: number, body: FacilityRequest): Observable<{ message: string; warning?: string | null }> {
+    return this.http.put<{ message: string; warning?: string | null }>(`${this.base}/${id}`, body);
   }
 
   remove(id: number): Observable<{ message: string }> {
