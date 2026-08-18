@@ -10,33 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { PermissionGroupDto, RoleDto } from '../../../core/api/models';
 import { RolesApi } from '../../../core/api/roles.api';
 import { NotificationService } from '../../../core/notification.service';
-
-/** Tên nhóm tiếng Việt để hiển thị. */
-const GROUP_LABELS: Record<string, string> = {
-  Document: 'Tài liệu',
-  Knowledge: 'Tri thức',
-  Catalog: 'Danh mục',
-  Validation: 'Kiểm tra hồ sơ',
-  AI: 'Trợ lý AI',
-  Prompt: 'Prompt',
-  User: 'Người dùng',
-  Role: 'Vai trò & quyền',
-  Audit: 'Kiểm toán',
-  System: 'Hệ thống',
-};
-
-const GROUP_ICONS: Record<string, string> = {
-  Document: 'description',
-  Knowledge: 'menu_book',
-  Catalog: 'inventory_2',
-  Validation: 'fact_check',
-  AI: 'smart_toy',
-  Prompt: 'terminal',
-  User: 'group',
-  Role: 'admin_panel_settings',
-  Audit: 'history',
-  System: 'settings',
-};
+import { categoryIcon, categoryLabel } from '../../../shared/permission-labels';
 
 /** Trình gán quyền theo nhóm cho một vai trò. */
 @Component({
@@ -84,7 +58,9 @@ export class PermissionEditor {
         ...g,
         permissions: g.permissions.filter(
           (p) =>
-            p.displayName.toLowerCase().includes(term) || p.code.toLowerCase().includes(term),
+            p.displayName.toLowerCase().includes(term) ||
+            p.code.toLowerCase().includes(term) ||
+            p.route.toLowerCase().includes(term),
         ),
       }))
       .filter((g) => g.permissions.length > 0);
@@ -95,11 +71,11 @@ export class PermissionEditor {
   );
   readonly selectedCount = computed(() => this.selected().size);
 
-  groupLabel(group: string): string {
-    return GROUP_LABELS[group] ?? group;
+  groupLabel(category: string): string {
+    return categoryLabel(category);
   }
-  groupIcon(group: string): string {
-    return GROUP_ICONS[group] ?? 'folder';
+  groupIcon(category: string): string {
+    return categoryIcon(category);
   }
 
   isChecked(code: string): boolean {

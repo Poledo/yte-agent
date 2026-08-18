@@ -29,6 +29,12 @@ public class AuditLog
     /// <summary>Địa chỉ IP nguồn.</summary>
     public string? IpAddress { get; set; }
 
+    /// <summary>
+    /// Cơ sở KCB của người thực hiện tại thời điểm ghi log. Null = thao tác cấp hệ thống.
+    /// Lưu lại để admin cơ sở chỉ soi được nhật ký trong nhánh của mình.
+    /// </summary>
+    public long? FacilityId { get; set; }
+
     /// <summary>Thời điểm ghi (UTC).</summary>
     public DateTime CreatedAt { get; set; }
 }

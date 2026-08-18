@@ -36,6 +36,20 @@
       </mat-form-field>
     }
 
+    @if (canPickFacility && !isEdit) {
+      <mat-form-field appearance="outline">
+        <mat-label>Cơ sở KCB</mat-label>
+        <mat-select formControlName="facilityId">
+          <mat-option [value]="null">Cấp hệ thống (thấy toàn bộ dữ liệu)</mat-option>
+          @for (f of facilities(); track f.id) {
+            <mat-option [value]="f.id">{{ f.name }} ({{ f.code }})</mat-option>
+          }
+        </mat-select>
+        <mat-icon matPrefix>account_tree</mat-icon>
+        <mat-hint>Tài khoản chỉ thấy dữ liệu của cơ sở này và các cơ sở cấp dưới.</mat-hint>
+      </mat-form-field>
+    }
+
     <mat-form-field appearance="outline">
       <mat-label>Vai trò</mat-label>
       <mat-select formControlName="roles" multiple>

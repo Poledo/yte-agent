@@ -1,0 +1,272 @@
+<app-page-header
+  icon="key_vertical"
+  title="Quyền"
+  subtitle="Bảng quyền sinh từ endpoint đang chạy — bật/tắt và soi các lần bị từ chối"
+>
+  <button
+    *appHasPermission="'Permissions.Rescan'"
+    [matButton]="'outlined'"
+    (click)="rescan()"
+    [disabled]="rescanning()"
+    matTooltip="Quét lại toàn bộ endpoint và đồng bộ vào bảng quyền, không cần khởi động lại API"
+  >
+    <mat-icon>{{ rescanning() ? 'hourglass_top' : 'sync' }}</mat-icon>
+    {{ rescanning() ? 'Đang quét...' : 'Quét lại' }}
+  </button>
+</app-page-header>
+
+@if (syncStatus(); as st) {
+  <div class="sync-row" [class.warn]="st.missingCount > 0 || st.orphanCount > 0">
+    <span class="sync-item" matTooltip="Số endpoint bộ quét nhìn thấy trong bản đang chạy">
+      <mat-icon>api</mat-icon> {{ st.endpointCount }} endpoint
+    </span>
+    <span class="sync-item" matTooltip="Số quyền đang lưu trong CSDL (kể cả quyền đã tắt)">
+      <mat-icon>storage</mat-icon> {{ st.dbCount }} quyền · {{ st.activeCount }} đang bật
+    </span>
+    @if (st.missingCount > 0) {
+      <span
+        class="sync-item err-text"
+        [matTooltip]="'Chưa có trong CSDL: ' + st.missingCodes.join(', ')"
+      >
+        <mat-icon class="err">add_circle</mat-icon>
+        {{ st.missingCount }} endpoint chưa có mã quyền — bấm Quét lại
+      </span>
+    }
+    @if (st.orphanCount > 0) {
+      <span
+        class="sync-item err-text"
+        [matTooltip]="'Endpoint đã gỡ: ' + st.orphanCodes.join(', ')"
+      >
+        <mat-icon class="err">link_off</mat-icon>
+        {{ st.orphanCount }} quyền không còn endpoint
+      </span>
+    }
+    @if (st.missingCount === 0 && st.orphanCount === 0) {
+      <span class="sync-item" matTooltip="Bảng quyền khớp đúng danh sách endpoint đang chạy">
+        <mat-icon class="ok">task_alt</mat-icon> Đã đồng bộ
+      </span>
+    }
+    @if (st.lastScanAt) {
+      <span class="sync-item muted">
+        Quét lần cuối {{ st.lastScanAt | date: 'dd/MM/yyyy HH:mm' }}
+      </span>
+    }
+  </div>
+}
+
+<mat-tab-group (selectedIndexChange)="onTabChange($event)" animationDuration="0ms">
+  <mat-tab label="Bảng quyền">
+    <div class="tab-body">
+      <div class="filter-row">
+        <mat-form-field appearance="outline" class="cat-field" subscriptSizing="dynamic">
+          <mat-label>Nhóm</mat-label>
+          <mat-select [formControl]="categoryCtrl">
+            <mat-option value="">Tất cả nhóm</mat-option>
+            @for (c of facets()?.categories ?? []; track c) {
+              <mat-option [value]="c">{{ groupLabel(c) }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="status-field" subscriptSizing="dynamic">
+          <mat-label>Trạng thái</mat-label>
+          <mat-select [formControl]="statusCtrl">
+            <mat-option value="">Tất cả</mat-option>
+            <mat-option value="active">Đang bật</mat-option>
+            <mat-option value="inactive">Đang tắt</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="search-field" subscriptSizing="dynamic">
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput [formControl]="searchCtrl" placeholder="Tìm mã quyền / tên / đường dẫn" />
+        </mat-form-field>
+
+        @if (selectedCount() > 0) {
+          <div class="bulk-actions">
+            <span class="sel-count">Đã chọn {{ selectedCount() }}</span>
+            <button [matButton]="'outlined'" (click)="bulkToggle(true)">
+              <mat-icon>toggle_on</mat-icon> Bật
+            </button>
+            <button [matButton]="'outlined'" class="danger" (click)="bulkToggle(false)">
+              <mat-icon>toggle_off</mat-icon> Tắt
+            </button>
+          </div>
+        }
+      </div>
+
+      <app-data-table
+        [columns]="columns()"
+        [data]="items()"
+        [loading]="loading()"
+        [pageSize]="20"
+        emptyIcon="key_off"
+        emptyTitle="Chưa có quyền nào"
+        emptyDescription="Bảng quyền được sinh từ endpoint đang chạy. Bấm Quét lại để đồng bộ."
+      >
+        <ng-template appColumnHeaderDef="select">
+          <mat-checkbox
+            [checked]="allVisibleSelected()"
+            [indeterminate]="selectIndeterminate()"
+            (change)="toggleSelectAll()"
+            aria-label="Chọn tất cả quyền"
+          ></mat-checkbox>
+        </ng-template>
+
+        <ng-template appColumnDef="select" let-row>
+          <mat-checkbox
+            [checked]="isSelected(row.code)"
+            (change)="toggleSelect(row.code)"
+            [attr.aria-label]="'Chọn quyền ' + row.code"
+          ></mat-checkbox>
+        </ng-template>
+
+        <ng-template appColumnDef="displayName" let-row>
+          @if (editingCode() === row.code) {
+            <div class="edit-cell">
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <input
+                  matInput
+                  [formControl]="editCtrl"
+                  (keydown.enter)="saveEdit(row)"
+                  (keydown.escape)="cancelEdit()"
+                />
+              </mat-form-field>
+              <button matIconButton matTooltip="Lưu" (click)="saveEdit(row)">
+                <mat-icon>check</mat-icon>
+              </button>
+              <button matIconButton matTooltip="Hủy" (click)="cancelEdit()">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+          } @else {
+            <div class="name-cell" [class.off]="!row.isActive">
+              <span>{{ row.displayName }}</span>
+              @if (canRename()) {
+                <button
+                  matIconButton
+                  class="edit-btn"
+                  matTooltip="Sửa tên hiển thị (giữ nguyên qua các lần quét sau)"
+                  (click)="startEdit(row)"
+                >
+                  <mat-icon>edit</mat-icon>
+                </button>
+              }
+            </div>
+          }
+        </ng-template>
+
+        <ng-template appColumnDef="code" let-row>
+          <span class="code">{{ row.code }}</span>
+        </ng-template>
+
+        <ng-template appColumnDef="category" let-row>
+          <span class="cat-cell">
+            <mat-icon>{{ groupIcon(row.category) }}</mat-icon>
+            {{ groupLabel(row.category) }}
+          </span>
+        </ng-template>
+
+        <ng-template appColumnDef="endpoint" let-row>
+          <span class="endpoint">
+            <span class="verb">{{ row.httpMethod }}</span>
+            <span class="route" [matTooltip]="'/' + row.route">/{{ row.route }}</span>
+          </span>
+        </ng-template>
+
+        <ng-template appColumnDef="isActive" let-row>
+          @if (canToggle()) {
+            <button
+              type="button"
+              class="badge-btn"
+              (click)="toggleOne(row)"
+              [matTooltip]="row.isActive ? 'Bấm để tắt quyền này' : 'Bấm để bật lại quyền này'"
+            >
+              @if (row.isActive) {
+                <span class="badge active"><mat-icon>check_circle</mat-icon> Đang bật</span>
+              } @else {
+                <span class="badge inactive"><mat-icon>block</mat-icon> Đang tắt</span>
+              }
+            </button>
+          } @else if (row.isActive) {
+            <span class="badge active"><mat-icon>check_circle</mat-icon> Đang bật</span>
+          } @else {
+            <span class="badge inactive"><mat-icon>block</mat-icon> Đang tắt</span>
+          }
+        </ng-template>
+      </app-data-table>
+    </div>
+  </mat-tab>
+
+  <mat-tab label="Nhật ký từ chối">
+    <div class="tab-body">
+      <p class="tab-hint">
+        Chỉ ghi các lần <strong>bị từ chối</strong>. Đây là chỗ dò xem vai trò nào còn thiếu
+        quyền gì — cấp bù rồi thì các dòng tương ứng sẽ không xuất hiện nữa.
+      </p>
+
+      <div class="filter-row">
+        <mat-form-field appearance="outline" class="cat-field" subscriptSizing="dynamic">
+          <mat-label>Lý do</mat-label>
+          <mat-select [formControl]="resultCtrl">
+            @for (r of resultOptions; track r.value) {
+              <mat-option [value]="r.value">{{ r.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="search-field" subscriptSizing="dynamic">
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput [formControl]="logSearchCtrl" placeholder="Tìm người dùng / đường dẫn" />
+        </mat-form-field>
+
+        <span class="log-total">{{ logsTotal() }} lượt từ chối</span>
+      </div>
+
+      <app-data-table
+        [columns]="logColumns"
+        [data]="logs()"
+        [loading]="logsLoading()"
+        [pageSize]="20"
+        emptyIcon="verified_user"
+        emptyTitle="Chưa có lượt từ chối nào"
+        emptyDescription="Mọi yêu cầu đều đi lọt tầng phân quyền."
+      >
+        <ng-template appColumnDef="createdAt" let-row>
+          <span class="nowrap">{{ row.createdAt | date: 'dd/MM/yyyy HH:mm:ss' }}</span>
+        </ng-template>
+
+        <ng-template appColumnDef="userName" let-row>
+          @if (row.userName) {
+            <span>{{ row.userName }}</span>
+          } @else {
+            <span class="muted">Chưa đăng nhập</span>
+          }
+        </ng-template>
+
+        <ng-template appColumnDef="permissionCode" let-row>
+          @if (row.permissionCode) {
+            <span class="code">{{ row.permissionCode }}</span>
+          } @else {
+            <span class="muted">-</span>
+          }
+        </ng-template>
+
+        <ng-template appColumnDef="path" let-row>
+          <span class="endpoint">
+            <span class="verb">{{ row.httpMethod }}</span>
+            <span class="route" [matTooltip]="row.path">{{ row.path }}</span>
+          </span>
+        </ng-template>
+
+        <ng-template appColumnDef="result" let-row>
+          <span [class]="'badge res-' + row.result">{{ resultLabel(row.result) }}</span>
+        </ng-template>
+
+        <ng-template appColumnDef="ipAddress" let-row>
+          <span class="muted">{{ row.ipAddress || '-' }}</span>
+        </ng-template>
+      </app-data-table>
+    </div>
+  </mat-tab>
+</mat-tab-group>

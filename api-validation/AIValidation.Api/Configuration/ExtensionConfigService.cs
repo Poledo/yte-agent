@@ -144,8 +144,14 @@ public sealed class ExtensionConfigService : IExtensionConfigStore
     /// <summary>Giới hạn độ dài data URL logo (~512KB ảnh mã base64) để cấu hình không phình.</summary>
     private const int MaxLogoDataUrlLength = 700_000;
 
-    /// <summary>Chuẩn hoá: renderer về giá trị hợp lệ, loại mốc rỗng id, kiểm diện mạo.</summary>
-    private static ExtensionConfigState Normalize(ExtensionConfigState state)
+    /// <summary>
+    /// Chuẩn hoá: renderer về giá trị hợp lệ, loại mốc rỗng id, kiểm diện mạo.
+    ///
+    /// Công khai để cấu hình riêng của từng cơ sở đi qua đúng bộ luật này thay vì có
+    /// một bản sao lệch pha - hai đường ghi cấu hình mà kiểm khác nhau thì sớm muộn
+    /// một bên lọt giá trị bên kia chặn.
+    /// </summary>
+    public static ExtensionConfigState Normalize(ExtensionConfigState state)
     {
         var renderer = state.RobotRenderer?.Trim() ?? string.Empty;
         return new ExtensionConfigState

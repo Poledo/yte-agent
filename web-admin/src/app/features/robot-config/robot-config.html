@@ -2,7 +2,40 @@
   icon="smart_toy"
   title="Cấu hình robot trợ lý"
   subtitle="Chọn hình hài robot và tinh chỉnh hệ sinh hoạt hiển thị trên trang HIS"
-></app-page-header>
+>
+  <mat-form-field appearance="outline" class="scope-field" subscriptSizing="dynamic">
+    <mat-label>Áp cho</mat-label>
+    <mat-select [formControl]="scopeCtrl">
+      @if (isSystemScope) {
+        <mat-option [value]="null">Cấu hình chung (mọi cơ sở chưa tự đặt)</mat-option>
+      }
+      @for (f of facilities(); track f.id) {
+        <mat-option [value]="f.id">
+          {{ f.name }} ({{ f.code }})
+          @if (overriddenIds().has(f.id)) {
+            <span class="own-tag">riêng</span>
+          }
+        </mat-option>
+      }
+    </mat-select>
+    <mat-icon matPrefix>account_tree</mat-icon>
+  </mat-form-field>
+</app-page-header>
+
+@if (scope() !== null && !hasOwnConfig()) {
+  <div class="inherit-note">
+    <mat-icon>info</mat-icon>
+    <span>
+      Cơ sở này <strong>chưa có cấu hình riêng</strong>, đang dùng
+      @if (inheritedFrom(); as src) {
+        cấu hình của <strong>{{ src.name }} ({{ src.code }})</strong>.
+      } @else {
+        <strong>cấu hình chung</strong> của hệ thống.
+      }
+      Bấm Lưu để tạo bản riêng cho cơ sở.
+    </span>
+  </div>
+}
 
 @if (loading()) {
   <mat-progress-bar mode="indeterminate"></mat-progress-bar>
@@ -121,7 +154,22 @@
     </div>
 
     <div class="form-actions">
-      <span class="hint">Áp dụng cho lần tải trang HIS tiếp theo của extension.</span>
+      <span class="hint">
+        Đang sửa <strong>{{ scopeLabel() }}</strong>. Áp dụng cho lần tải trang HIS tiếp theo
+        của extension ở phạm vi này.
+      </span>
+      @if (scope() !== null && hasOwnConfig()) {
+        <button
+          matButton
+          type="button"
+          class="danger"
+          (click)="clearOverride()"
+          [disabled]="saving()"
+          matTooltip="Xóa bản riêng để cơ sở quay lại thừa hưởng cấp trên"
+        >
+          <mat-icon>layers_clear</mat-icon> Bỏ cấu hình riêng
+        </button>
+      }
       <button matButton type="button" (click)="resetDefaults()" [disabled]="saving()">
         <mat-icon>restart_alt</mat-icon> Khôi phục mặc định
       </button>

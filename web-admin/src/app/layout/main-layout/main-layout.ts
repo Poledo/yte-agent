@@ -60,8 +60,12 @@ export class MainLayout {
     }
   }
 
-  // Menu lọc theo quyền của user
-  readonly menu = computed(() => MENU.filter((m) => this.auth.hasAny(m.permissions)));
+  // Menu lọc theo quyền của user: mục không khai nhóm nào thì luôn hiện.
+  readonly menu = computed(() =>
+    MENU.filter(
+      (m) => m.permissionPrefix.length === 0 || m.permissionPrefix.some((p) => this.auth.hasModule(p)),
+    ),
+  );
 
   // Nhãn trang hiện tại cho breadcrumb
   readonly currentUrl = toSignal(

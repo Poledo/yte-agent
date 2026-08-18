@@ -9,7 +9,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { of, switchMap } from 'rxjs';
 import { UsersApi } from '../../../core/api/users.api';
-import { RoleDto, UserDto } from '../../../core/api/models';
+import { FacilityApi } from '../../../core/api/facility.api';
+import { FacilityDto, RoleDto, UserDto } from '../../../core/api/models';
+import { AuthService } from '../../../core/auth.service';
 import { NotificationService } from '../../../core/notification.service';
 
 export interface UserDialogData {
@@ -37,12 +39,21 @@ export class UserDialog {
   private readonly fb = inject(FormBuilder);
   private readonly api = inject(UsersApi);
   private readonly notify = inject(NotificationService);
+  private readonly facilityApi = inject(FacilityApi);
+  private readonly auth = inject(AuthService);
   readonly data = inject<UserDialogData>(MAT_DIALOG_DATA);
   private readonly ref = inject(MatDialogRef<UserDialog>);
 
   readonly isEdit = !!this.data.user;
   readonly saving = signal(false);
   readonly hide = signal(true);
+
+  /**
+   * Chỉ quản trị hệ thống mới chọn được cơ sở. Quản trị cơ sở gửi lên gì máy chủ cũng
+   * ép về cơ sở của chính họ, nên hiện ô này cho họ chỉ tạo ảo giác là chọn được.
+   */
+  readonly canPickFacility = this.auth.isSystemScope();
+  readonly facilities = signal<FacilityDto[]>([]);
 
   readonly form = this.fb.nonNullable.group({
     email: [
@@ -53,7 +64,18 @@ export class UserDialog {
     password: ['', this.isEdit ? [] : [Validators.required, Validators.minLength(6)]],
     isActive: [this.data.user?.isActive ?? true],
     roles: [this.data.user?.roles ?? ([] as string[])],
+    // null = tài khoản cấp hệ thống, thấy toàn bộ dữ liệu.
+    facilityId: [this.data.user?.facilityId ?? (null as number | null)],
   });
+
+  constructor() {
+    if (this.canPickFacility && !this.isEdit) {
+      this.facilityApi.list().subscribe({
+        next: (list) => this.facilities.set(list),
+        error: () => this.facilities.set([]),
+      });
+    }
+  }
 
   save(): void {
     if (this.form.invalid) {
@@ -65,7 +87,13 @@ export class UserDialog {
 
     if (!this.isEdit) {
       this.api
-        .create({ email: v.email, password: v.password, fullName: v.fullName, roles: v.roles })
+        .create({
+          email: v.email,
+          password: v.password,
+          fullName: v.fullName,
+          roles: v.roles,
+          facilityId: this.canPickFacility ? v.facilityId : null,
+        })
         .subscribe({
           next: () => this.done('Đã tạo người dùng'),
           error: (e) => this.fail(e),

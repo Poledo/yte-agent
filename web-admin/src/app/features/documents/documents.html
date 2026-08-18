@@ -76,7 +76,7 @@
 }
 
 <app-data-table
-  [columns]="columns"
+  [columns]="columns()"
   [data]="filtered()"
   [loading]="loading()"
   emptyIcon="menu_book"
@@ -100,6 +100,21 @@
     <span class="type-tag">{{ row.docType }}</span>
     @if (row.docNumber) {
       <div class="doc-num">{{ row.docNumber }}</div>
+    }
+  </ng-template>
+
+  <ng-template appColumnDef="facility" let-row>
+    @if (row.facilityId) {
+      <div class="fac-cell">
+        <span class="fac-name">{{ row.facilityName || row.facilityCode }}</span>
+        @if (row.facilityCode) {
+          <span class="fac-code">{{ row.facilityCode }}</span>
+        }
+      </div>
+    } @else {
+      <span class="badge shared" matTooltip="Mọi cơ sở đều tra cứu được văn bản này">
+        <mat-icon>public</mat-icon> Dùng chung
+      </span>
     }
   </ng-template>
 

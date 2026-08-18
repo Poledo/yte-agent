@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using AIValidation.Api.Data;
+using AIValidation.Api.Services.Tenancy;
 using Microsoft.EntityFrameworkCore;
 
 namespace AIValidation.Api.Services.Rag;
@@ -50,6 +51,7 @@ public class DocumentSearchService : IDocumentSearchService
     private readonly IDocumentReranker _reranker;
     private readonly IEmbeddingService _embedding;
     private readonly IEmbeddingIndex _embeddingIndex;
+    private readonly IKnowledgeScope _knowledgeScope;
     private readonly ILogger<DocumentSearchService> _logger;
 
     public DocumentSearchService(
@@ -57,12 +59,14 @@ public class DocumentSearchService : IDocumentSearchService
         IDocumentReranker reranker,
         IEmbeddingService embedding,
         IEmbeddingIndex embeddingIndex,
+        IKnowledgeScope knowledgeScope,
         ILogger<DocumentSearchService> logger)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _reranker = reranker ?? throw new ArgumentNullException(nameof(reranker));
         _embedding = embedding ?? throw new ArgumentNullException(nameof(embedding));
         _embeddingIndex = embeddingIndex ?? throw new ArgumentNullException(nameof(embeddingIndex));
+        _knowledgeScope = knowledgeScope ?? throw new ArgumentNullException(nameof(knowledgeScope));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -79,6 +83,14 @@ public class DocumentSearchService : IDocumentSearchService
         // tương lai) hoặc đã hết hiệu lực (ExpiryDate quá hạn)
         // thì loại khỏi mọi tầng truy hồi — trợ lý không trích dẫn văn bản cũ.
         var now = DateTime.UtcNow;
+
+        // Phạm vi kho tri thức của người hỏi: văn bản DÙNG CHUNG (FacilityId null) cộng
+        // văn bản riêng của cơ sở họ và các cấp trên. Tách thành cờ + mảng vì EF dịch
+        // `mảng.Contains(cột)` thành `= ANY(@p)`, còn so sánh null của biến bắt được thì
+        // sinh SQL lạ. scopeAll=true (không có danh tính cơ sở) giữ nguyên hành vi cũ.
+        var scopeIds = await _knowledgeScope.ApplicableFacilityIdsAsync(cancellationToken);
+        var scopeAll = scopeIds == null;
+        var scope = scopeIds ?? Array.Empty<long>();
 
         // Lấy nhiều ứng viên hơn topK để reranker có cái để chọn — càng nhiều ứng viên,
         // tài liệu nhỏ liên quan càng có cơ hội lọt vào trước khi rerank.
@@ -111,7 +123,9 @@ public class DocumentSearchService : IDocumentSearchService
                 {
                     var scoreById = hits.ToDictionary(h => h.ChunkId, h => h.Score);
                     var semanticChunks = await _db.DocumentChunks
-                        .Where(c => hitIds.Contains(c.Id))
+                        .Where(c => hitIds.Contains(c.Id)
+                            && (scopeAll || c.Document!.FacilityId == null
+                                || scope.Contains(c.Document.FacilityId.Value)))
                         .Select(c => new { Chunk = c, c.Document!.Title, c.Document.DocNumber })
                         .ToListAsync(cancellationToken);
                     // Duyệt theo thứ tự HIT (cosine giảm dần) chứ không theo thứ tự DB trả về
@@ -151,6 +165,7 @@ public class DocumentSearchService : IDocumentSearchService
             .Where(c => c.Document!.IsActive
                 && (c.Document.ExpiryDate == null || c.Document.ExpiryDate > now)
                     && (c.Document.EffectiveDate == null || c.Document.EffectiveDate <= now)
+                && (scopeAll || c.Document.FacilityId == null || scope.Contains(c.Document.FacilityId.Value))
                 && c.SearchVector!.Matches(EF.Functions.ToTsQuery("simple", tsQuery)))
             .Select(c => new FtsHit
             {
@@ -218,6 +233,7 @@ public class DocumentSearchService : IDocumentSearchService
                     .CountAsync(c => c.Document!.IsActive
                         && (c.Document.ExpiryDate == null || c.Document.ExpiryDate > now)
                     && (c.Document.EffectiveDate == null || c.Document.EffectiveDate <= now)
+                        && (scopeAll || c.Document.FacilityId == null || scope.Contains(c.Document.FacilityId.Value))
                         && EF.Functions.ILike(c.Content, $"%{variant}%"), cancellationToken);
                 variantFreq.Add((variant, count));
             }
@@ -249,6 +265,7 @@ public class DocumentSearchService : IDocumentSearchService
                 .Where(c => c.Document!.IsActive
                     && (c.Document.ExpiryDate == null || c.Document.ExpiryDate > now)
                     && (c.Document.EffectiveDate == null || c.Document.EffectiveDate <= now)
+                    && (scopeAll || c.Document.FacilityId == null || scope.Contains(c.Document.FacilityId.Value))
                     && EF.Functions.ILike(c.Content, $"%{variant}%"))
                 .Select(c => new { Chunk = c, c.Document!.Title, c.Document.DocNumber })
                 .Take(fetchLimit)
@@ -280,6 +297,7 @@ public class DocumentSearchService : IDocumentSearchService
                 .Where(c => c.Document!.IsActive
                     && (c.Document.ExpiryDate == null || c.Document.ExpiryDate > now)
                     && (c.Document.EffectiveDate == null || c.Document.EffectiveDate <= now)
+                    && (scopeAll || c.Document.FacilityId == null || scope.Contains(c.Document.FacilityId.Value))
                     && EF.Functions.ILike(c.Content, $"%{phrase}%"))
                 .Select(c => new { Chunk = c, c.Document!.Title, c.Document.DocNumber })
                 .Take(poolSize)

@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
@@ -12,6 +12,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { UsersApi } from '../../core/api/users.api';
 import { RolesApi } from '../../core/api/roles.api';
 import { RoleDto, UserDto } from '../../core/api/models';
+import { AuthService } from '../../core/auth.service';
 import { NotificationService } from '../../core/notification.service';
 import { ConfirmService } from '../../shared/confirm.service';
 import { PageHeader } from '../../shared/page-header/page-header';
@@ -44,18 +45,27 @@ export class Users {
   private readonly dialog = inject(MatDialog);
   private readonly notify = inject(NotificationService);
   private readonly confirm = inject(ConfirmService);
+  private readonly auth = inject(AuthService);
 
   readonly loading = signal(true);
   readonly users = signal<UserDto[]>([]);
   readonly roles = signal<RoleDto[]>([]);
   readonly search = new FormControl('', { nonNullable: true });
 
-  readonly columns: TableColumn[] = [
+  /**
+   * Cột "Cơ sở" chỉ có với quản trị hệ thống: quản trị cơ sở nhìn danh sách mà mọi
+   * dòng đều là cơ sở của họ thì cột đó chỉ tốn chỗ. Thêm/bớt phần tử ở đây chứ không
+   * *ngIf trên từng ô - MatTable dựng cột theo danh sách này.
+   */
+  readonly columns = computed<TableColumn[]>(() => [
     { key: 'fullName', header: 'Người dùng', sortable: true },
+    ...(this.auth.isSystemScope()
+      ? [{ key: 'facility', header: 'Cơ sở', width: '220px' } as TableColumn]
+      : []),
     { key: 'roles', header: 'Vai trò' },
     { key: 'status', header: 'Trạng thái', align: 'center', width: '140px' },
     { key: 'actions', header: '', align: 'end', width: '60px' },
-  ];
+  ]);
 
   constructor() {
     this.rolesApi.list().subscribe({

@@ -1,5 +1,6 @@
 using AIValidation.Api.Data;
 using AIValidation.Api.Data.Entities.Auth;
+using AIValidation.Api.Services.Tenancy;
 
 namespace AIValidation.Api.Services.Auth;
 
@@ -10,11 +11,13 @@ namespace AIValidation.Api.Services.Auth;
 public sealed class AuditService : IAuditService
 {
     private readonly AppDbContext _db;
+    private readonly ITenantScope _tenant;
     private readonly ILogger<AuditService> _logger;
 
-    public AuditService(AppDbContext db, ILogger<AuditService> logger)
+    public AuditService(AppDbContext db, ITenantScope tenant, ILogger<AuditService> logger)
     {
         _db = db;
+        _tenant = tenant;
         _logger = logger;
     }
 
@@ -41,6 +44,10 @@ public sealed class AuditService : IAuditService
                 EntityId = entityId,
                 Detail = detail,
                 IpAddress = ipAddress,
+                // Cơ sở của NGƯỜI THỰC HIỆN, không phải của đối tượng bị tác động: nhật ký
+                // trả lời câu hỏi "ai ở cơ sở nào đã làm gì", nên quản trị cơ sở soi được
+                // đúng thao tác của nhân viên mình.
+                FacilityId = _tenant.FacilityId,
                 CreatedAt = DateTime.UtcNow,
             });
             await _db.SaveChangesAsync(ct);

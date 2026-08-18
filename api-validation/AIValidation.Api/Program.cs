@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
-using AIValidation.Api.Authorization;
+using AIValidation.Api.Authorization.Dynamic;
 using AIValidation.Api.Configuration;
 using AIValidation.Api.Data;
 using AIValidation.Api.Data.Entities.Auth;
@@ -29,12 +29,13 @@ using AIValidation.Api.Providers.Xml130.Rules;
 using AIValidation.Api.Services;
 using AIValidation.Api.Services.Auth;
 using AIValidation.Api.Services.Catalog;
+using AIValidation.Api.Services.Extension;
 using AIValidation.Api.Services.Interfaces;
 using AIValidation.Api.Services.Licensing;
 using AIValidation.Api.Services.Rag;
+using AIValidation.Api.Services.Tenancy;
 using AIValidation.Api.Services.Xml130;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -117,7 +118,11 @@ builder.Services.AddCors(options =>
         policy
             .AllowAnyOrigin()
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            // AllowAnyHeader chỉ mở header GỬI LÊN. Header trả về thì trình duyệt giấu
+            // hết trừ vài cái chuẩn, nên không khai ETag ở đây là extension đọc ra null
+            // và cache theo ETag im lặng ngừng hoạt động - request nào cũng tải lại đủ.
+            .WithExposedHeaders("ETag");
     });
 });
 
@@ -226,15 +231,14 @@ if (!string.IsNullOrWhiteSpace(microsoftClientId))
     });
 }
 
-// Phân quyền: policy provider động cho "perm:*" + handler kiểm tra claim
+// Phân quyền động: quyền do bộ quét endpoint sinh ra và lưu CSDL, vai trò chỉ là một
+// tập mã quyền sửa được từ màn hình quản trị. Không hardcode danh sách quyền ở đâu cả.
 builder.Services.AddAuthorization();
-builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
-builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
+builder.Services.AddDynamicRbac(builder.Configuration);
 
 // Dịch vụ auth (interface-first, DI)
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
-builder.Services.AddScoped<IPermissionResolver, PermissionResolver>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IUsageRecorder, UsageRecorder>();
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -274,6 +278,11 @@ builder.Services.AddTransient<IOptions<LLMOptions>>(sp =>
 // Cấu hình extension (hình hài robot + ngưỡng hệ sinh hoạt) đổi được từ web-admin,
 // extension nạp qua GET /api/extension-config khi trang HIS tải xong (task-003).
 builder.Services.AddSingleton<IExtensionConfigStore, ExtensionConfigService>();
+
+// Cấu hình chung ở trên là NỀN; mỗi cơ sở KCB ghi đè được phần của mình. Bộ phân giải
+// dưới đây lần từ khóa bản quyền ra cơ sở rồi đi ngược cây cha tìm cấu hình gần nhất.
+// Scoped vì đọc AppDbContext.
+builder.Services.AddScoped<IFacilityExtensionConfigResolver, FacilityExtensionConfigResolver>();
 builder.Services.Configure<PromptOptions>(builder.Configuration.GetSection("Prompt"));
 builder.Services.Configure<KnowledgeOptions>(builder.Configuration.GetSection("Knowledge"));
 builder.Services.Configure<ValidationOptions>(builder.Configuration.GetSection("Validation"));
@@ -473,6 +482,13 @@ builder.Services.AddSingleton<IExcelCatalogReader, ExcelCatalogReader>();
 // cho từng hồ sơ khi kiểm tra cả lô XML 130.
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IFacilityTreeProvider, FacilityTreeProvider>();
+// Phạm vi dữ liệu theo cơ sở KCB của người đang gọi. Scoped vì nó đọc claim của
+// request hiện tại và nhớ lại kết quả tra cây trong suốt request đó.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ITenantScope, TenantScope>();
+// Phạm vi TRA CỨU kho tri thức — đi ngược lên cây cha, và nhận diện cơ sở qua khóa
+// bản quyền chứ không qua phiên đăng nhập (extension hỏi trợ lý khi chưa đăng nhập).
+builder.Services.AddScoped<IKnowledgeScope, KnowledgeScope>();
 builder.Services.AddScoped<ICatalogLookupProvider, CatalogLookupProvider>();
 builder.Services.AddScoped<ICatalogImportService, CatalogImportService>();
 
@@ -575,6 +591,11 @@ app.UseHttpsRedirection();
 
 // UseAuthentication PHẢI đứng trước UseAuthorization
 app.UseAuthentication();
+
+// Ghi nhật ký từ chối quyền — bọc NGOÀI UseAuthorization để đọc được kết quả kiểm
+// quyền lúc request đi ngược ra.
+app.UseDynamicRbacAudit();
+
 app.UseAuthorization();
 
 app.MapControllers();

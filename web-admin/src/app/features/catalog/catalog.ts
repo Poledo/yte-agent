@@ -67,7 +67,7 @@ export class Catalog {
   private readonly auth = inject(AuthService);
 
   /** Quyền nạp/gỡ danh mục vào kho tri thức — ẩn checkbox chọn + nút nạp nếu thiếu. */
-  readonly canKnowledge = computed(() => this.auth.hasPermission('Catalog.Knowledge'));
+  readonly canKnowledge = computed(() => this.auth.hasPermission('Catalog.AddManyToKnowledge'));
 
   readonly loading = signal(true);
   readonly sources = signal<CatalogSourceDto[]>([]);
@@ -98,7 +98,10 @@ export class Catalog {
       : []),
     { key: 'displayName', header: 'Danh mục', sortable: true },
     { key: 'catalogType', header: 'Loại', sortable: true, width: '150px' },
-    { key: 'facilityCode', header: 'Cơ sở KCB', sortable: true, width: '180px' },
+    // Quản trị cơ sở chỉ thấy danh mục của nhánh mình nên cột này chỉ tốn chỗ.
+    ...(this.auth.isSystemScope()
+      ? [{ key: 'facilityCode', header: 'Cơ sở KCB', sortable: true, width: '180px' } as TableColumn]
+      : []),
     { key: 'rowCount', header: 'Số dòng', align: 'end', width: '100px', sortable: true },
     { key: 'importedAt', header: 'Ngày nạp', width: '120px', sortable: true },
     { key: 'status', header: 'Trạng thái', align: 'center', width: '150px' },

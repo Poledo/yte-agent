@@ -1,3 +1,6 @@
+using System.Globalization;
+using System.Text;
+using AIValidation.Api.Authorization.Dynamic;
 using AIValidation.Api.Data;
 using AIValidation.Api.Data.Entities.Auth;
 using AIValidation.Api.Models.Auth;
@@ -12,15 +15,18 @@ public sealed class RoleAdminService : IRoleAdminService
     private readonly RoleManager<AppRole> _roleManager;
     private readonly AppDbContext _db;
     private readonly IAuditService _auditService;
+    private readonly IPermissionCache _permissionCache;
 
     public RoleAdminService(
         RoleManager<AppRole> roleManager,
         AppDbContext db,
-        IAuditService auditService)
+        IAuditService auditService,
+        IPermissionCache permissionCache)
     {
         _roleManager = roleManager;
         _db = db;
         _auditService = auditService;
+        _permissionCache = permissionCache;
     }
 
     /// <inheritdoc/>
@@ -64,6 +70,7 @@ public sealed class RoleAdminService : IRoleAdminService
         {
             Id = Guid.NewGuid(),
             Name = request.Name,
+            Code = await ResolveCodeAsync(request.Code, request.Name, ct),
             Description = request.Description,
             IsSystem = false,
         };
@@ -130,6 +137,10 @@ public sealed class RoleAdminService : IRoleAdminService
             return ServiceResult.Fail(string.Join(" ", deleted.Errors.Select(e => e.Description)));
         }
 
+        // Xóa vai trò kéo theo mọi dòng gán vai trò cho người dùng — ảnh chụp quyền
+        // đang cache của họ lập tức sai.
+        _permissionCache.InvalidateAll();
+
         await _auditService.LogAsync("Role.Delete", actorId, entityType: "Role", entityId: id.ToString(),
             detail: role.Name, ipAddress: ip, ct: ct);
         return ServiceResult.Ok("Đã xóa vai trò.");
@@ -156,13 +167,79 @@ public sealed class RoleAdminService : IRoleAdminService
     /// <inheritdoc/>
     public async Task<IReadOnlyList<PermissionGroupDto>> ListPermissionsAsync(CancellationToken ct = default)
     {
-        var permissions = await _db.Permissions.OrderBy(p => p.Group).ThenBy(p => p.Code).ToListAsync(ct);
+        var permissions = await _db.Permissions
+            .AsNoTracking()
+            .OrderBy(p => p.Category).ThenBy(p => p.Code)
+            .ToListAsync(ct);
+
         return permissions
-            .GroupBy(p => p.Group)
+            .GroupBy(p => p.Category)
             .Select(g => new PermissionGroupDto(
                 g.Key,
-                g.Select(p => new PermissionDto(p.Code, p.DisplayName, p.Group)).ToList()))
+                g.Select(p => new PermissionDto(
+                    p.Code, p.DisplayName, p.Category,
+                    p.HttpMethod, p.Route, p.IsActive, p.IsSystem)).ToList()))
             .ToList();
+    }
+
+    /// <summary>
+    /// Mã vai trò bất biến: lấy mã người dùng nhập, không có thì sinh từ tên. Trùng mã
+    /// thì nối số thứ tự — cột này unique, để đụng nhau là thao tác tạo vỡ ở tầng CSDL
+    /// với thông báo khó hiểu thay vì một mã hợp lệ.
+    /// </summary>
+    private async Task<string> ResolveCodeAsync(string? requested, string name, CancellationToken ct)
+    {
+        var seed = Slugify(string.IsNullOrWhiteSpace(requested) ? name : requested);
+        if (seed.Length == 0)
+        {
+            seed = "ROLE";
+        }
+        else if (seed.Length > 40)
+        {
+            // Cột Code dài tối đa 50; chừa chỗ cho hậu tố "_99" khi trùng
+            seed = seed[..40].TrimEnd('_');
+        }
+
+        var taken = await _db.Roles
+            .Where(r => r.Code.StartsWith(seed))
+            .Select(r => r.Code)
+            .ToListAsync(ct);
+
+        if (!taken.Contains(seed, StringComparer.OrdinalIgnoreCase))
+        {
+            return seed;
+        }
+
+        for (var i = 2; ; i++)
+        {
+            var candidate = $"{seed}_{i}";
+            if (!taken.Contains(candidate, StringComparer.OrdinalIgnoreCase))
+            {
+                return candidate;
+            }
+        }
+    }
+
+    /// <summary>"Quản trị cơ sở" → "QUAN_TRI_CO_SO". Bỏ dấu tiếng Việt, giữ A-Z 0-9 và gạch dưới.</summary>
+    private static string Slugify(string input)
+    {
+        var normalized = input.Trim().Normalize(NormalizationForm.FormD);
+        var sb = new StringBuilder(normalized.Length);
+        foreach (var ch in normalized)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(ch) == UnicodeCategory.NonSpacingMark)
+            {
+                continue;
+            }
+
+            // Đ/đ không phải là D có dấu phụ nên bước bỏ dấu ở trên không chạm tới
+            if (ch is 'Đ' or 'đ') { sb.Append('D'); continue; }
+
+            if (char.IsAsciiLetterOrDigit(ch)) sb.Append(char.ToUpperInvariant(ch));
+            else if (sb.Length > 0 && sb[^1] != '_') sb.Append('_');
+        }
+
+        return sb.ToString().Trim('_');
     }
 
     /// <summary>Thay thế toàn bộ quyền của role bằng tập mã hợp lệ được cung cấp.</summary>
@@ -183,6 +260,10 @@ public sealed class RoleAdminService : IRoleAdminService
         }
 
         await _db.SaveChangesAsync(ct);
+
+        // Không xóa cache thì người vừa được cấp quyền phải chờ hết TTL mới vào được,
+        // còn người vừa bị thu quyền vẫn đi lọt suốt quãng đó — nguy hiểm hơn nhiều.
+        _permissionCache.InvalidateAll();
     }
 
     private async Task<RoleDto> ToDtoAsync(AppRole role, CancellationToken ct)
@@ -195,6 +276,7 @@ public sealed class RoleAdminService : IRoleAdminService
             select p.Code)
             .ToListAsync(ct);
 
-        return new RoleDto(role.Id, role.Name ?? string.Empty, role.Description, role.IsSystem, permissions);
+        return new RoleDto(
+            role.Id, role.Name ?? string.Empty, role.Description, role.IsSystem, permissions, role.Code);
     }
 }

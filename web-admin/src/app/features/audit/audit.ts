@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
@@ -10,6 +10,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuditApi } from '../../core/api/audit.api';
 import { AuditLogDto } from '../../core/api/models';
+import { AuthService } from '../../core/auth.service';
 import { NotificationService } from '../../core/notification.service';
 import { PageHeader } from '../../shared/page-header/page-header';
 import { DataTable, TableColumn } from '../../shared/data-table/data-table';
@@ -37,6 +38,7 @@ import { ColumnDefDirective } from '../../shared/data-table/column-def.directive
 export class Audit {
   private readonly api = inject(AuditApi);
   private readonly notify = inject(NotificationService);
+  private readonly auth = inject(AuthService);
 
   readonly loading = signal(true);
   readonly logs = signal<AuditLogDto[]>([]);
@@ -51,13 +53,16 @@ export class Audit {
     { value: 'Role', label: 'Vai trò & quyền' },
   ];
 
-  readonly columns: TableColumn[] = [
+  readonly columns = computed<TableColumn[]>(() => [
     { key: 'createdAt', header: 'Thời điểm', sortable: true, width: '170px' },
     { key: 'action', header: 'Hành động', sortable: true, width: '170px' },
     { key: 'userName', header: 'Người thao tác', sortable: true },
+    ...(this.auth.isSystemScope()
+      ? [{ key: 'facility', header: 'Cơ sở', width: '180px' } as TableColumn]
+      : []),
     { key: 'target', header: 'Đối tượng' },
     { key: 'ipAddress', header: 'IP', width: '120px' },
-  ];
+  ]);
 
   constructor() {
     this.load();

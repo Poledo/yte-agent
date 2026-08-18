@@ -1,9 +1,11 @@
-using AIValidation.Api.Authorization;
 using AIValidation.Api.Data;
 using AIValidation.Api.Providers.Catalog;
 using AIValidation.Api.Services;
 using AIValidation.Api.Services.Catalog;
 using AIValidation.Api.Services.Rag;
+using AIValidation.Api.Services.Tenancy;
+using AIValidation.Api.Authorization.Dynamic;
+using AIValidation.Api.Data.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,6 +32,8 @@ public class CatalogController : ControllerBase
     private readonly IDocumentTextExtractor _textExtractor;
     private readonly IDocumentIngestService _documentIngest;
     private readonly IEmbeddingIndex _embeddingIndex;
+    private readonly ITenantScope _tenant;
+    private readonly IFacilityTreeProvider _facilityTree;
     private readonly AppDbContext _db;
     private readonly ILogger<CatalogController> _logger;
 
@@ -40,6 +44,8 @@ public class CatalogController : ControllerBase
         IDocumentTextExtractor textExtractor,
         IDocumentIngestService documentIngest,
         IEmbeddingIndex embeddingIndex,
+        ITenantScope tenant,
+        IFacilityTreeProvider facilityTree,
         AppDbContext db,
         ILogger<CatalogController> logger)
     {
@@ -49,6 +55,8 @@ public class CatalogController : ControllerBase
         _textExtractor = textExtractor ?? throw new ArgumentNullException(nameof(textExtractor));
         _documentIngest = documentIngest ?? throw new ArgumentNullException(nameof(documentIngest));
         _embeddingIndex = embeddingIndex ?? throw new ArgumentNullException(nameof(embeddingIndex));
+        _tenant = tenant ?? throw new ArgumentNullException(nameof(tenant));
+        _facilityTree = facilityTree ?? throw new ArgumentNullException(nameof(facilityTree));
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -68,6 +76,7 @@ public class CatalogController : ControllerBase
     /// skipUnchanged=true: file y hệt bản đang hiệu lực thì bỏ qua, không nạp lại —
     /// dùng cho extension nạp cả bộ danh mục thẳng từ HIS, phần lớn file không đổi.
     /// </summary>
+    [IgnorePermission("Extension gọi bằng khóa bản quyền, không có phiên đăng nhập")]
     [HttpPost("import")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CatalogImportResult))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -86,6 +95,19 @@ public class CatalogController : ControllerBase
 
         var file = Request.Form.Files[0];
         var replace = !string.Equals(mode, "append", StringComparison.OrdinalIgnoreCase);
+
+        // Endpoint này extension gọi bằng khóa bản quyền (không có phiên đăng nhập) — cổng
+        // giấy phép lo phần đó. Còn khi web-admin gọi thì phải chặn: quản trị cơ sở A nạp
+        // danh mục mang mã cơ sở C sẽ ghi đè danh mục đối chiếu của C.
+        if (_tenant.IsAuthenticated && !_tenant.IsSystemScope)
+        {
+            var scoped = await ResolveWriteFacilityAsync(facility, cancellationToken);
+            if (scoped.Denied != null)
+            {
+                return scoped.Denied;
+            }
+            facility = scoped.FacilityCode;
+        }
 
         try
         {
@@ -115,7 +137,7 @@ public class CatalogController : ControllerBase
                 {
                     buffer.Position = 0;
                     await IngestSourceKnowledgeAsync(
-                        result.DisplayName, file.FileName, buffer, cancellationToken);
+                        result.DisplayName, file.FileName, buffer, facility, cancellationToken);
                     message += " Toàn văn file cũng đã được nạp vào kho tri thức — trợ lý hỏi–đáp tra cứu được nội dung danh mục này.";
                 }
                 catch (Exception ex)
@@ -153,6 +175,14 @@ public class CatalogController : ControllerBase
             query = query.Where(s => s.IsActive);
         }
 
+        // Quản trị cơ sở chỉ thấy danh mục của nhánh mình, cộng danh mục DÙNG CHUNG
+        // (không gắn mã cơ sở) — thứ mọi cơ sở đều đối chiếu tới.
+        var tenant = await _tenant.GetFilterAsync(cancellationToken);
+        if (!tenant.IsSystemScope)
+        {
+            query = query.Where(s => s.FacilityCode == null || tenant.Codes.Contains(s.FacilityCode));
+        }
+
         var sources = await query
             .OrderByDescending(s => s.ImportedAt)
             .Select(s => new
@@ -179,6 +209,11 @@ public class CatalogController : ControllerBase
             .ToListAsync(cancellationToken);
         var inKnowledgeSet = inKnowledge.ToHashSet();
 
+        // Tên cơ sở lấy từ cache cây đơn vị, không join thêm bảng. Luôn trả về, kể cả cho
+        // quản trị cơ sở — web-admin tự quyết có hiện cột "Cơ sở" hay không.
+        var facilityNames = await _facilityTree.MapByCodesAsync(
+            sources.Select(s => s.FacilityCode).Where(c => c != null)!, cancellationToken);
+
         var result = sources.Select(s => new
         {
             s.Id,
@@ -186,6 +221,9 @@ public class CatalogController : ControllerBase
             s.DisplayName,
             s.FileName,
             s.FacilityCode,
+            FacilityName = s.FacilityCode != null && facilityNames.TryGetValue(s.FacilityCode, out var f)
+                ? f.Name
+                : null,
             s.RowCount,
             s.ImportedAt,
             s.IsActive,
@@ -212,6 +250,12 @@ public class CatalogController : ControllerBase
             return NotFound(new { message = $"Không tìm thấy danh mục #{id}." });
         }
 
+        var denied = await GuardWriteAsync(source, cancellationToken);
+        if (denied != null)
+        {
+            return denied;
+        }
+
         var displayName = source.DisplayName;
         var rowCount = source.RowCount;
         var catalogType = source.CatalogType;
@@ -219,10 +263,7 @@ public class CatalogController : ControllerBase
 
         // Xóa bản tri thức toàn văn nạp kèm (cùng tên file) — chunk + vector HNSW
         // biến mất theo cascade DocumentChunk → MedicalDocument.
-        var knowledgeDocs = await _db.MedicalDocuments
-            .Where(d => d.SourceFileName == fileName)
-            .ToListAsync(cancellationToken);
-        _db.MedicalDocuments.RemoveRange(knowledgeDocs);
+        var removedDocs = await RemoveSourceKnowledgeAsync(fileName, source.FacilityCode, cancellationToken);
 
         // Xóa nguồn danh mục — catalog_items biến mất theo cascade CatalogItem → CatalogSource.
         _db.CatalogSources.Remove(source);
@@ -231,7 +272,7 @@ public class CatalogController : ControllerBase
 
         _logger.LogInformation(
             "Đã XÓA HẲN danh mục {Type} #{Id} ({File}) + {Docs} bản tri thức kèm theo",
-            catalogType, id, fileName, knowledgeDocs.Count);
+            catalogType, id, fileName, removedDocs);
         return Ok(new
         {
             message = $"Đã xóa hẳn danh mục \"{displayName}\" ({rowCount} dòng) khỏi hệ thống."
@@ -246,7 +287,15 @@ public class CatalogController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> DeleteAllSourcesAsync(CancellationToken cancellationToken)
     {
-        var sources = await _db.CatalogSources.ToListAsync(cancellationToken);
+        // "Tất cả" của quản trị cơ sở = tất cả trong nhánh của họ. Danh mục dùng chung
+        // (không mã cơ sở) không nằm trong đó — một cú bấm nút của một cơ sở không được
+        // phép dọn sạch danh mục mà cả hệ thống đang đối chiếu.
+        var tenant = await _tenant.GetFilterAsync(cancellationToken);
+        var scopedSources = tenant.IsSystemScope
+            ? _db.CatalogSources
+            : _db.CatalogSources.Where(s => s.FacilityCode != null && tenant.Codes.Contains(s.FacilityCode));
+
+        var sources = await scopedSources.ToListAsync(cancellationToken);
         if (sources.Count == 0)
         {
             return Ok(new { RemovedCount = 0, message = "Không có danh mục nào để xóa." });
@@ -257,9 +306,15 @@ public class CatalogController : ControllerBase
             .Where(f => !string.IsNullOrEmpty(f))
             .Distinct()
             .ToList();
-        var knowledgeDocs = await _db.MedicalDocuments
-            .Where(d => fileNames.Contains(d.SourceFileName))
-            .ToListAsync(cancellationToken);
+        // Khớp theo tên file là khớp lỏng: hai cơ sở nạp file trùng tên ("DMT.xlsx") là
+        // chuyện thường. Thêm rào phạm vi để cơ sở này không xóa bản tri thức của cơ sở kia.
+        var docsQuery = _db.MedicalDocuments.Where(d => fileNames.Contains(d.SourceFileName));
+        if (!tenant.IsSystemScope)
+        {
+            docsQuery = docsQuery.Where(d => d.FacilityId != null && tenant.Ids.Contains(d.FacilityId.Value));
+        }
+
+        var knowledgeDocs = await docsQuery.ToListAsync(cancellationToken);
         _db.MedicalDocuments.RemoveRange(knowledgeDocs);
         _db.CatalogSources.RemoveRange(sources);
         await _db.SaveChangesAsync(cancellationToken);
@@ -284,6 +339,12 @@ public class CatalogController : ControllerBase
         if (source == null)
         {
             return NotFound(new { message = $"Không tìm thấy danh mục #{id}." });
+        }
+
+        var denied = await GuardWriteAsync(source, cancellationToken);
+        if (denied != null)
+        {
+            return denied;
         }
 
         source.IsActive = true;
@@ -312,7 +373,6 @@ public class CatalogController : ControllerBase
     /// được nạp trước khi hệ thống lưu file gốc thì không nạp được — báo lỗi rõ ràng.
     /// </summary>
     [HttpPost("sources/{id:long}/knowledge")]
-    [RequirePermission(Permissions.CatalogKnowledge)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -322,6 +382,12 @@ public class CatalogController : ControllerBase
         if (source == null)
         {
             return NotFound(new { message = $"Không tìm thấy danh mục #{id}." });
+        }
+
+        var denied = await GuardWriteAsync(source, cancellationToken);
+        if (denied != null)
+        {
+            return denied;
         }
 
         var stored = _fileStorage.Find("catalog", id);
@@ -337,7 +403,8 @@ public class CatalogController : ControllerBase
         try
         {
             await using var stream = System.IO.File.OpenRead(stored.Value.PhysicalPath);
-            await IngestSourceKnowledgeAsync(source.DisplayName, source.FileName, stream, cancellationToken);
+            await IngestSourceKnowledgeAsync(
+                source.DisplayName, source.FileName, stream, source.FacilityCode, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -363,7 +430,6 @@ public class CatalogController : ControllerBase
     /// nội dung danh mục này). Không đụng tới dữ liệu đối chiếu của danh mục.
     /// </summary>
     [HttpDelete("sources/{id:long}/knowledge")]
-    [RequirePermission(Permissions.CatalogKnowledge)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RemoveFromKnowledgeAsync(long id, CancellationToken cancellationToken)
@@ -374,7 +440,13 @@ public class CatalogController : ControllerBase
             return NotFound(new { message = $"Không tìm thấy danh mục #{id}." });
         }
 
-        var removed = await RemoveSourceKnowledgeAsync(source.FileName, cancellationToken);
+        var denied = await GuardWriteAsync(source, cancellationToken);
+        if (denied != null)
+        {
+            return denied;
+        }
+
+        var removed = await RemoveSourceKnowledgeAsync(source.FileName, source.FacilityCode, cancellationToken);
         _logger.LogInformation("Đã gỡ danh mục {Type} #{Id} ({File}) khỏi kho tri thức ({Docs} bản)",
             source.CatalogType, id, source.FileName, removed);
         return Ok(new
@@ -390,7 +462,6 @@ public class CatalogController : ControllerBase
     /// Danh mục thiếu file gốc hoặc lỗi được đưa vào "failed" chứ không làm hỏng cả lô.
     /// </summary>
     [HttpPost("sources/knowledge")]
-    [RequirePermission(Permissions.CatalogKnowledge)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> AddManyToKnowledgeAsync(
         [FromBody] IngestKnowledgeBatchRequest request, CancellationToken cancellationToken)
@@ -413,6 +484,19 @@ public class CatalogController : ControllerBase
                 continue;
             }
 
+            // Nạp cả lô nhưng vẫn xét phạm vi từng dòng: chọn nhầm một dòng ngoài nhánh
+            // thì dòng đó vào "failed", phần còn lại vẫn chạy.
+            if (await GuardWriteAsync(source, cancellationToken) != null)
+            {
+                failed.Add(new
+                {
+                    id,
+                    name = source.DisplayName,
+                    message = "Danh mục thuộc cơ sở ngoài phạm vi quản lý của bạn.",
+                });
+                continue;
+            }
+
             var stored = _fileStorage.Find("catalog", id);
             if (stored == null)
             {
@@ -423,7 +507,8 @@ public class CatalogController : ControllerBase
             try
             {
                 await using var stream = System.IO.File.OpenRead(stored.Value.PhysicalPath);
-                await IngestSourceKnowledgeAsync(source.DisplayName, source.FileName, stream, cancellationToken);
+                await IngestSourceKnowledgeAsync(
+                    source.DisplayName, source.FileName, stream, source.FacilityCode, cancellationToken);
                 successCount++;
             }
             catch (Exception ex)
@@ -477,6 +562,14 @@ public class CatalogController : ControllerBase
             query = query.Where(i => EF.Functions.ILike(i.Name, $"%{q}%"));
         }
 
+        // Lọc phạm vi đặt SAU bộ lọc do client truyền: client có ép facility=<cơ sở khác>
+        // thì mệnh đề này vẫn cắt sạch, không có đường vòng.
+        var tenant = await _tenant.GetFilterAsync(cancellationToken);
+        if (!tenant.IsSystemScope)
+        {
+            query = query.Where(i => i.FacilityCode == null || tenant.Codes.Contains(i.FacilityCode));
+        }
+
         var take = limit is > 0 and <= 500 ? limit : 50;
         var items = await query
             .OrderBy(i => i.Name)
@@ -506,8 +599,24 @@ public class CatalogController : ControllerBase
     [HttpGet("sources/{id:long}/file")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public IActionResult GetSourceFile(long id, [FromQuery] bool download)
+    public async Task<IActionResult> GetSourceFileAsync(
+        long id, [FromQuery] bool download, CancellationToken cancellationToken)
     {
+        // File gốc là dữ liệu nhạy cảm hơn cả bảng danh mục (giá viện phí, mã nội bộ),
+        // nên phải soi phạm vi trước khi chạm tới đĩa.
+        var source = await _db.CatalogSources.FindAsync(new object[] { id }, cancellationToken);
+        if (source == null)
+        {
+            return NotFound(new { message = $"Không tìm thấy danh mục #{id}." });
+        }
+
+        if (!_tenant.IsSystemScope
+            && source.FacilityCode != null
+            && !await _tenant.CanAccessAsync(source.FacilityCode, cancellationToken))
+        {
+            return TenantForbid.OutOfScope(source.FacilityCode, $"Danh mục \"{source.DisplayName}\"");
+        }
+
         var stored = _fileStorage.Find("catalog", id);
         if (stored == null)
         {
@@ -542,30 +651,99 @@ public class CatalogController : ControllerBase
     }
 
     /// <summary>
+    /// Xác định mã cơ sở được ghi vào cho người gọi thuộc phạm vi một cơ sở:
+    /// không truyền thì ÉP bằng cơ sở của chính họ, có truyền thì phải nằm trong nhánh.
+    /// </summary>
+    private async Task<(string? FacilityCode, IActionResult? Denied)> ResolveWriteFacilityAsync(
+        string? requested, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(requested))
+        {
+            var own = _tenant.FacilityId.HasValue
+                ? await _facilityTree.FindByIdAsync(_tenant.FacilityId.Value, cancellationToken)
+                : null;
+
+            if (own == null)
+            {
+                return (null, TenantForbid.OutOfScope(
+                    what: "Tài khoản của bạn chưa gắn với cơ sở KCB nào nên không nạp được danh mục;"));
+            }
+
+            return (own.Code, null);
+        }
+
+        var code = requested.Trim();
+        return await _tenant.CanAccessAsync(code, cancellationToken)
+            ? (code, null)
+            : (null, TenantForbid.OutOfScope(code, "Danh mục của cơ sở này"));
+    }
+
+    /// <summary>
+    /// Chặn thao tác lên một nguồn danh mục ngoài phạm vi. Trả null nghĩa là được phép.
+    ///
+    /// Nguồn không có mã cơ sở là danh mục DÙNG CHUNG toàn hệ thống — quản trị cơ sở đọc
+    /// được nhưng không được sửa/xóa, vì một thao tác của họ sẽ ảnh hưởng mọi cơ sở khác.
+    /// </summary>
+    private async Task<IActionResult?> GuardWriteAsync(
+        CatalogSource source, CancellationToken cancellationToken)
+    {
+        if (_tenant.IsSystemScope)
+        {
+            return null;
+        }
+
+        return await _tenant.CanAccessAsync(source.FacilityCode ?? string.Empty, cancellationToken)
+            ? null
+            : TenantForbid.OutOfScope(source.FacilityCode, $"Danh mục \"{source.DisplayName}\"");
+    }
+
+    /// <summary>
     /// Nạp toàn văn một file danh mục (đủ mọi sheet) vào kho tri thức: trích text →
     /// xóa bản tri thức cũ cùng tên file (tránh trùng) → ingest. Ném ngoại lệ nếu lỗi.
     /// </summary>
     private async Task IngestSourceKnowledgeAsync(
-        string displayName, string fileName, Stream fileStream, CancellationToken cancellationToken)
+        string displayName,
+        string fileName,
+        Stream fileStream,
+        string? facilityCode,
+        CancellationToken cancellationToken)
     {
         var text = await _textExtractor.ExtractAsync(fileName, fileStream, cancellationToken);
-        await RemoveSourceKnowledgeAsync(fileName, cancellationToken);
+        await RemoveSourceKnowledgeAsync(fileName, facilityCode, cancellationToken);
+
+        // Bản toàn văn thừa hưởng đúng cơ sở của danh mục sinh ra nó: danh mục riêng của
+        // một cơ sở mà nạp thành văn bản dùng chung thì trợ lý của cơ sở khác sẽ trích dẫn
+        // bảng giá không phải của họ.
+        var facility = string.IsNullOrWhiteSpace(facilityCode)
+            ? null
+            : await _facilityTree.FindByCodeAsync(facilityCode, cancellationToken);
+
         await _documentIngest.IngestAsync(
             $"{displayName} — {fileName}",
             text,
             docType: "DanhMuc",
             sourceFileName: fileName,
+            facilityId: facility?.Id,
             cancellationToken: cancellationToken);
     }
 
     /// <summary>
-    /// Xóa HẲN bản tri thức toàn văn của một danh mục (theo tên file) — chunk + vector
-    /// HNSW biến mất theo cascade. Trả về số bản đã xóa.
+    /// Xóa HẲN bản tri thức toàn văn của một danh mục (theo tên file VÀ cơ sở) — chunk +
+    /// vector HNSW biến mất theo cascade. Trả về số bản đã xóa.
+    ///
+    /// Phải kèm cơ sở: hai cơ sở nạp hai file cùng tên ("DMT.xlsx") là chuyện thường,
+    /// khớp mỗi tên file thì cơ sở nạp sau xóa mất bản tri thức của cơ sở nạp trước.
     /// </summary>
-    private async Task<int> RemoveSourceKnowledgeAsync(string fileName, CancellationToken cancellationToken)
+    private async Task<int> RemoveSourceKnowledgeAsync(
+        string fileName, string? facilityCode, CancellationToken cancellationToken)
     {
+        var facility = string.IsNullOrWhiteSpace(facilityCode)
+            ? null
+            : await _facilityTree.FindByCodeAsync(facilityCode, cancellationToken);
+        var facilityId = facility?.Id;
+
         var docs = await _db.MedicalDocuments
-            .Where(d => d.SourceFileName == fileName)
+            .Where(d => d.SourceFileName == fileName && d.FacilityId == facilityId)
             .ToListAsync(cancellationToken);
         if (docs.Count > 0)
         {

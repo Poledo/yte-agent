@@ -60,4 +60,24 @@
     background: var(--mat-sys-surface-container-high);
     color: var(--mat-sys-on-surface-variant);
   }
+  /* Tài khoản cấp hệ thống - không thuộc cơ sở nào. */
+  &.system {
+    background: var(--mat-sys-secondary-container);
+    color: var(--mat-sys-on-secondary-container);
+  }
+}
+
+/* Ô "Cơ sở": tên đầy đủ ở trên, mã KCB ở dưới. */
+.fac-cell {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+.fac-name {
+  font-size: 13.5px;
+}
+.fac-code {
+  font-size: 11.5px;
+  color: var(--mat-sys-on-surface-variant);
+  font-family: 'Roboto Mono', monospace;
 }

@@ -1,4 +1,3 @@
-using AIValidation.Api.Authorization;
 using AIValidation.Api.Data.Entities.Auth;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -6,9 +5,11 @@ using Microsoft.EntityFrameworkCore;
 namespace AIValidation.Api.Data.Seed;
 
 /// <summary>
-/// Seed dữ liệu khởi tạo cho module xác thực/RBAC: danh mục Permission cố định,
-/// các role mặc định (SystemAdmin/Manager/Viewer) và tài khoản quản trị mặc định.
-/// Gọi lúc startup sau khi migrate. An toàn khi chạy lại (idempotent).
+/// Seed dữ liệu khởi tạo cho module xác thực/RBAC: các vai trò hệ thống và tài khoản
+/// quản trị mặc định. Gọi lúc startup sau khi migrate. An toàn khi chạy lại (idempotent).
+///
+/// Danh mục QUYỀN không còn được seed ở đây: quyền do bộ quét endpoint sinh ra sau khi
+/// ứng dụng đã dựng xong bảng định tuyến (xem PermissionScannerHostedService).
 /// </summary>
 public static class AuthSeeder
 {
@@ -23,105 +24,69 @@ public static class AuthSeeder
         var config = sp.GetRequiredService<IConfiguration>();
         var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("AuthSeeder");
 
-        await SeedPermissionsAsync(db);
         await SeedRolesAsync(db, roleManager);
         await SeedAdminUserAsync(userManager, config, logger);
     }
 
-    /// <summary>Seed/đồng bộ danh mục quyền cố định từ <see cref="Permissions.All"/>.</summary>
-    private static async Task SeedPermissionsAsync(AppDbContext db)
-    {
-        var existingCodes = await db.Permissions.Select(p => p.Code).ToListAsync();
-        var missing = Permissions.All.Where(p => !existingCodes.Contains(p.Code)).ToList();
-
-        foreach (var def in missing)
-        {
-            db.Permissions.Add(new Permission
-            {
-                Id = Guid.NewGuid(),
-                Code = def.Code,
-                DisplayName = def.DisplayName,
-                Group = def.Group,
-                CreatedAt = DateTime.UtcNow,
-            });
-        }
-
-        if (missing.Count > 0)
-        {
-            await db.SaveChangesAsync();
-        }
-    }
-
-    /// <summary>Seed các role mặc định và gán quyền tương ứng.</summary>
+    /// <summary>
+    /// Đặt mã bất biến cho các vai trò có sẵn và bổ sung vai trò quản trị cơ sở.
+    /// Không gán quyền ở đây: quyền của ADMIN do bộ quét tự cấp, quyền của các vai trò
+    /// còn lại do người quản trị tự tick ở màn hình Vai trò.
+    /// </summary>
     private static async Task SeedRolesAsync(AppDbContext db, RoleManager<AppRole> roleManager)
     {
-        // SystemAdmin: toàn quyền (chỉ cần System.Admin — handler bỏ qua kiểm tra chi tiết)
-        await EnsureRoleAsync(db, roleManager, "SystemAdmin", "Quản trị hệ thống - toàn quyền", isSystem: true,
-            new[] { Permissions.SystemAdmin });
+        // Vai trò cũ giữ nguyên tên hiển thị, chỉ nhận mã chuẩn. Migration đã điền mã
+        // suy từ tên (SYSTEMADMIN, VIEWER...) nên ở đây là bước chuẩn hóa lại.
+        await EnsureCodeAsync(db, roleManager, roleName: "SystemAdmin", code: SystemRoles.Admin);
+        await EnsureCodeAsync(db, roleManager, roleName: "Viewer", code: SystemRoles.Guest);
 
-        // Manager: mọi View + Manage nghiệp vụ, TRỪ User/Role/System
-        var managerPerms = new[]
-        {
-            Permissions.DocumentView, Permissions.DocumentManage,
-            Permissions.KnowledgeView, Permissions.KnowledgeManage,
-            Permissions.CatalogView, Permissions.CatalogManage, Permissions.CatalogKnowledge,
-            Permissions.ValidationView, Permissions.ValidationExecute,
-            Permissions.AiChat,
-            Permissions.PromptManage,
-            Permissions.AuditView,
-        };
-        await EnsureRoleAsync(db, roleManager, "Manager", "Quản lý nghiệp vụ", isSystem: true, managerPerms);
+        await EnsureRoleAsync(db, roleManager,
+            code: SystemRoles.FacilityAdmin,
+            name: "Quản trị cơ sở",
+            description: "Quản trị một cơ sở KCB và toàn bộ nhánh cấp dưới");
 
-        // Viewer: chỉ các *.View + AI.Chat
-        var viewerPerms = new[]
-        {
-            Permissions.DocumentView,
-            Permissions.KnowledgeView,
-            Permissions.CatalogView,
-            Permissions.ValidationView,
-            Permissions.AiChat,
-        };
-        await EnsureRoleAsync(db, roleManager, "Viewer", "Chỉ xem", isSystem: true, viewerPerms);
+        await db.SaveChangesAsync();
     }
 
-    /// <summary>Tạo role nếu chưa có và bổ sung các quyền còn thiếu (không xóa quyền đã có).</summary>
-    private static async Task EnsureRoleAsync(
-        AppDbContext db, RoleManager<AppRole> roleManager,
-        string name, string description, bool isSystem, string[] permissionCodes)
+    /// <summary>Đặt mã cho một vai trò đã tồn tại theo tên; bỏ qua nếu vai trò không có.</summary>
+    private static async Task EnsureCodeAsync(
+        AppDbContext db, RoleManager<AppRole> roleManager, string roleName, string code)
     {
-        var role = await roleManager.FindByNameAsync(name);
-        if (role == null)
+        var role = await roleManager.FindByNameAsync(roleName);
+        if (role is null || role.Code == code)
         {
-            role = new AppRole
-            {
-                Id = Guid.NewGuid(),
-                Name = name,
-                Description = description,
-                IsSystem = isSystem,
-            };
-            await roleManager.CreateAsync(role);
+            return;
         }
 
-        var permissionIds = await db.Permissions
-            .Where(p => permissionCodes.Contains(p.Code))
-            .Select(p => p.Id)
-            .ToListAsync();
-
-        var existingLinks = await db.RolePermissions
-            .Where(rp => rp.RoleId == role.Id)
-            .Select(rp => rp.PermissionId)
-            .ToListAsync();
-
-        var toAdd = permissionIds.Except(existingLinks).ToList();
-        foreach (var pid in toAdd)
+        // Mã có index duy nhất: nếu vai trò khác đã giữ mã này thì để yên, tránh làm
+        // đổ cả quá trình seed vì một xung đột tên.
+        var taken = await db.Roles.AnyAsync(r => r.Code == code && r.Id != role.Id);
+        if (taken)
         {
-            db.RolePermissions.Add(new RolePermission { RoleId = role.Id, PermissionId = pid });
+            return;
         }
 
-        if (toAdd.Count > 0)
+        role.Code = code;
+        db.Roles.Update(role);
+    }
+
+    /// <summary>Tạo vai trò theo mã nếu chưa có.</summary>
+    private static async Task EnsureRoleAsync(
+        AppDbContext db, RoleManager<AppRole> roleManager, string code, string name, string description)
+    {
+        if (await db.Roles.AnyAsync(r => r.Code == code))
         {
-            await db.SaveChangesAsync();
+            return;
         }
+
+        await roleManager.CreateAsync(new AppRole
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            Code = code,
+            Description = description,
+            IsSystem = true,
+        });
     }
 
     /// <summary>
@@ -163,6 +128,7 @@ public static class AuthSeeder
                 FullName = "Quản trị hệ thống",
                 EmailConfirmed = true,
                 IsActive = true,
+                IsSuperAdmin = true,
                 CreatedAt = DateTime.UtcNow,
             };
 
@@ -173,6 +139,13 @@ public static class AuthSeeder
                     string.Join("; ", created.Errors.Select(e => e.Description)));
                 return;
             }
+        }
+        else if (!admin.IsSuperAdmin)
+        {
+            // Chốt chặn cuối: lỡ tay gỡ hết quyền của vai trò ADMIN thì vẫn còn một
+            // tài khoản vào được để sửa lại.
+            admin.IsSuperAdmin = true;
+            await userManager.UpdateAsync(admin);
         }
 
         if (!await userManager.IsInRoleAsync(admin, "SystemAdmin"))

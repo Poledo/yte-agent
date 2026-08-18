@@ -1,6 +1,6 @@
 using AIValidation.Api.Data;
 using AIValidation.Api.Services;
-using Microsoft.AspNetCore.Authorization;
+using AIValidation.Api.Services.Tenancy;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,17 +20,38 @@ namespace AIValidation.Api.Controllers;
 // endpoint theo dõi người dùng → client báo net::ERR_BLOCKED_BY_CLIENT.
 [ApiController]
 [Route("api/dashboard")]
-[Authorize]
 public class StatsController : ControllerBase
 {
     /// <summary>Việt Nam không có giờ mùa hè — cộng thẳng 7 tiếng, chạy đúng trên cả Linux container.</summary>
     private static readonly TimeSpan VnOffset = TimeSpan.FromHours(7);
 
     private readonly AppDbContext _db;
+    private readonly ITenantScope _tenant;
 
-    public StatsController(AppDbContext db)
+    public StatsController(AppDbContext db, ITenantScope tenant)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _tenant = tenant;
+    }
+
+    /// <summary>
+    /// Lọc lượt sử dụng theo cơ sở của người đang xem.
+    ///
+    /// Lượt KHÔNG có mã cơ sở (extension chưa nhập khóa bản quyền, hoặc gọi từ web-admin)
+    /// bị loại khỏi tầm nhìn quản trị cơ sở: không quy được về cơ sở nào thì coi là dữ liệu
+    /// cấp hệ thống, gộp vào sẽ thổi phồng số liệu của cơ sở.
+    /// </summary>
+    private async Task<IQueryable<Data.Entities.UsageEvent>> ScopedEventsAsync(CancellationToken ct)
+    {
+        var query = _db.UsageEvents.AsNoTracking();
+        var tenant = await _tenant.GetFilterAsync(ct);
+        if (tenant.IsSystemScope)
+        {
+            return query;
+        }
+
+        var codes = tenant.Codes;
+        return query.Where(e => e.FacilityCode != null && codes.Contains(e.FacilityCode));
     }
 
     /// <summary>Chuỗi thống kê lượt hỏi đáp AI + kiểm tra XML 130 theo khoảng ngày.</summary>
@@ -57,7 +78,8 @@ public class StatsController : ControllerBase
         var fromUtc = DateTime.SpecifyKind(fromDate - VnOffset, DateTimeKind.Utc);
         var toUtc = DateTime.SpecifyKind(toDate.AddDays(1) - VnOffset, DateTimeKind.Utc);
 
-        var events = await _db.UsageEvents.AsNoTracking()
+        var scoped = await ScopedEventsAsync(cancellationToken);
+        var events = await scoped
             .Where(e => e.CreatedAt >= fromUtc && e.CreatedAt < toUtc)
             .Select(e => new { e.EventType, e.CreatedAt, e.HosoCount, e.ErrorCount, e.WarningCount, e.XuatToanRisk })
             .ToListAsync(cancellationToken);
@@ -132,8 +154,8 @@ public class StatsController : ControllerBase
         var fromUtc = DateTime.SpecifyKind(fromDate - VnOffset, DateTimeKind.Utc);
         var toUtc = DateTime.SpecifyKind(toDate.AddDays(1) - VnOffset, DateTimeKind.Utc);
 
-        var query = _db.UsageEvents.AsNoTracking()
-            .Where(e => e.CreatedAt >= fromUtc && e.CreatedAt < toUtc);
+        var scoped = await ScopedEventsAsync(cancellationToken);
+        var query = scoped.Where(e => e.CreatedAt >= fromUtc && e.CreatedAt < toUtc);
         if (!string.IsNullOrWhiteSpace(type))
         {
             query = query.Where(e => e.EventType == type);
@@ -168,8 +190,10 @@ public class StatsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetEventDetailAsync(long id, CancellationToken cancellationToken)
     {
-        var e = await _db.UsageEvents.AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        // Lọc phạm vi ngay trong truy vấn chứ không kiểm sau khi lấy: ngoài phạm vi thì
+        // trả 404 y như không tồn tại, không để lộ rằng lượt #id có thật ở cơ sở khác.
+        var scoped = await ScopedEventsAsync(cancellationToken);
+        var e = await scoped.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (e == null)
         {
             return NotFound(new { message = $"Không tìm thấy lượt #{id}." });

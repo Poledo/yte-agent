@@ -1,5 +1,4 @@
 using System.Text.Json;
-using AIValidation.Api.Authorization;
 using AIValidation.Api.Configuration;
 using AIValidation.Api.Services.Auth;
 using Microsoft.AspNetCore.Mvc;
@@ -11,7 +10,6 @@ namespace AIValidation.Api.Controllers.Auth;
 /// đổi model, kiểm tra kết nối. Yêu cầu quyền System.Admin.
 /// </summary>
 [Route("api/admin/llm-config")]
-[RequirePermission(Permissions.SystemAdmin)]
 public sealed class LlmConfigController : AuthControllerBase
 {
     private readonly ILlmSettings _settings;

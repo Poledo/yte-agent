@@ -1,6 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using AIValidation.Api.Authorization;
+using AIValidation.Api.Authorization.Dynamic;
 using AIValidation.Api.Configuration;
 using AIValidation.Api.Data.Entities.Auth;
 using Microsoft.Extensions.Options;
@@ -9,8 +9,8 @@ using Microsoft.IdentityModel.Tokens;
 namespace AIValidation.Api.Services.Auth;
 
 /// <summary>
-/// Sinh access token JWT ký bằng HMAC-SHA256. Nhúng claim danh tính, role và
-/// mỗi quyền một claim "permission" (đã gộp từ các role của user).
+/// Sinh access token JWT ký bằng HMAC-SHA256. Nhúng claim danh tính, vai trò và trục
+/// cơ sở KCB — quyền KHÔNG nằm trong token (xem <see cref="IJwtTokenService"/>).
 /// </summary>
 public sealed class JwtTokenService : IJwtTokenService
 {
@@ -29,7 +29,7 @@ public sealed class JwtTokenService : IJwtTokenService
     public (string Token, DateTime ExpiresAt) CreateAccessToken(
         AppUser user,
         IEnumerable<string> roles,
-        IEnumerable<string> permissions)
+        string? facilityCode = null)
     {
         var now = DateTime.UtcNow;
         var expiresAt = now.AddMinutes(_options.AccessTokenMinutes);
@@ -41,16 +41,24 @@ public sealed class JwtTokenService : IJwtTokenService
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new("name", user.FullName),
             new(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
+            // Cờ này chỉ để bỏ qua sớm phần kiểm quyền; giá trị thật vẫn được đối chiếu
+            // lại với CSDL nên token cũ không thể tự phong quyền cho mình.
+            new(RbacClaimTypes.IsSuperAdmin, user.IsSuperAdmin ? "true" : "false"),
         };
+
+        if (user.FacilityId.HasValue)
+        {
+            claims.Add(new Claim(RbacClaimTypes.FacilityId, user.FacilityId.Value.ToString()));
+        }
+
+        if (!string.IsNullOrWhiteSpace(facilityCode))
+        {
+            claims.Add(new Claim(RbacClaimTypes.FacilityCode, facilityCode));
+        }
 
         foreach (var role in roles.Distinct())
         {
             claims.Add(new Claim(ClaimTypes.Role, role));
-        }
-
-        foreach (var permission in permissions.Distinct())
-        {
-            claims.Add(new Claim(PermissionAuthorizationHandler.PermissionClaimType, permission));
         }
 
         var token = new JwtSecurityToken(

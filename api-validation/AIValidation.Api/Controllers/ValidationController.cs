@@ -1,5 +1,6 @@
 ﻿using AIValidation.Api.Models;
 using AIValidation.Api.Services.Interfaces;
+using AIValidation.Api.Authorization.Dynamic;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 
@@ -119,6 +120,7 @@ public class ValidationController : ControllerBase
     /// <exception cref="ArgumentNullException">Nếu request null (defensive check).</exception>
     /// <exception cref="OperationCanceledException">Nếu operation bị hủy (propagated tới middleware).</exception>
     /// <exception cref="InvalidOperationException">Nếu validation workflow fail (propagated tới middleware).</exception>
+    [IgnorePermission("Extension gọi bằng khóa bản quyền, không có phiên đăng nhập")]
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ValidationResponse))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

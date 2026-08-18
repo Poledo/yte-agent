@@ -114,6 +114,12 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, Guid>
     /// <summary>DbSet cho AuditLog - nhật ký kiểm toán các hành động quan trọng.</summary>
     public DbSet<AuditLog> AuditLogs { get; set; }
 
+    /// <summary>DbSet cho PermissionAuditLog - nhật ký các lần bị tầng phân quyền từ chối.</summary>
+    public DbSet<PermissionAuditLog> PermissionAuditLogs { get; set; }
+
+    /// <summary>DbSet cho FacilityExtensionConfig - cấu hình hiển thị robot riêng của từng cơ sở.</summary>
+    public DbSet<FacilityExtensionConfig> FacilityExtensionConfigs { get; set; }
+
     /// <summary>DbSet cho UsageEvent - lượt sử dụng (hỏi đáp AI, kiểm tra XML 130) phục vụ thống kê dashboard.</summary>
     public DbSet<UsageEvent> UsageEvents { get; set; }
 
@@ -331,7 +337,33 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, Guid>
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.HasIndex(e => e.DocType);
+
+            // Xóa cơ sở thì văn bản nội bộ của nó trở thành văn bản dùng chung chứ
+            // không biến mất — nội dung do người dùng nạp, mất là mất hẳn.
+            entity.HasOne<Facility>()
+                .WithMany()
+                .HasForeignKey(e => e.FacilityId)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.HasIndex(e => e.FacilityId);
+
             entity.ToTable("medical_documents", schema: "public");
+        });
+
+        // Cấu hình hiển thị robot riêng của từng cơ sở (không có dòng = dùng của cấp trên)
+        modelBuilder.Entity<FacilityExtensionConfig>(entity =>
+        {
+            entity.HasKey(e => e.FacilityId);
+            entity.Property(e => e.FacilityId).ValueGeneratedNever();
+            entity.Property(e => e.ConfigJson).IsRequired().HasColumnType("jsonb");
+            entity.Property(e => e.UpdatedBy).HasMaxLength(256);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasOne(e => e.Facility)
+                .WithMany()
+                .HasForeignKey(e => e.FacilityId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.ToTable("facility_extension_configs", schema: "public");
         });
 
         // Configure DocumentChunk entity với tsvector full-text search
@@ -452,11 +484,22 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, Guid>
             entity.ToTable("app_users", schema: "public");
             entity.Property(e => e.FullName).HasMaxLength(255).IsRequired();
             entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.IsSuperAdmin).HasDefaultValue(false);
+
+            // Xóa cơ sở KHÔNG được xóa theo tài khoản: tài khoản còn hồ sơ đăng nhập,
+            // nhật ký, refresh token. Chuyển về null = tài khoản cấp hệ thống.
+            entity.HasOne(e => e.Facility)
+                .WithMany()
+                .HasForeignKey(e => e.FacilityId)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.HasIndex(e => e.FacilityId);
         });
         modelBuilder.Entity<AppRole>(entity =>
         {
             entity.ToTable("app_roles", schema: "public");
             entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.Code).IsRequired().HasMaxLength(50);
+            entity.HasIndex(e => e.Code).IsUnique();
         });
         modelBuilder.Entity<Microsoft.AspNetCore.Identity.IdentityUserRole<Guid>>()
             .ToTable("app_user_roles", schema: "public");
@@ -469,15 +512,43 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, Guid>
         modelBuilder.Entity<Microsoft.AspNetCore.Identity.IdentityRoleClaim<Guid>>()
             .ToTable("app_role_claims", schema: "public");
 
-        // Permission: mã quyền duy nhất
+        // Permission: mã quyền duy nhất, sinh từ bộ quét endpoint
         modelBuilder.Entity<Permission>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Code).IsRequired().HasMaxLength(100);
             entity.Property(e => e.DisplayName).IsRequired().HasMaxLength(255);
-            entity.Property(e => e.Group).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Category).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.HttpMethod).IsRequired().HasMaxLength(10).HasDefaultValue(string.Empty);
+            entity.Property(e => e.Route).IsRequired().HasMaxLength(300).HasDefaultValue(string.Empty);
+            entity.Property(e => e.ControllerName).IsRequired().HasMaxLength(100).HasDefaultValue(string.Empty);
+            entity.Property(e => e.ActionName).IsRequired().HasMaxLength(100).HasDefaultValue(string.Empty);
+            entity.Property(e => e.IsSystem).HasDefaultValue(true);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.UpdatedDate).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.HasIndex(e => e.Code).IsUnique();
+            // Bộ quét nhận diện quyền bằng cặp (controller, action) chứ không bằng Code:
+            // đổi tên controller thì Code đổi theo, tra bằng Code sẽ đẻ ra bản ghi trùng.
+            entity.HasIndex(e => new { e.ControllerName, e.ActionName });
             entity.ToTable("permissions", schema: "public");
+        });
+
+        // PermissionAuditLog: chỉ ghi lần bị từ chối
+        modelBuilder.Entity<PermissionAuditLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
+            entity.Property(e => e.UserName).HasMaxLength(256);
+            entity.Property(e => e.PermissionCode).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.HttpMethod).IsRequired().HasMaxLength(10);
+            entity.Property(e => e.Path).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.IpAddress).HasMaxLength(64);
+            // Lưu TÊN enum: bảng này để người soi log đọc bằng SQL, không phải để join
+            entity.Property(e => e.Result).HasConversion<string>().HasMaxLength(30);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.HasIndex(e => e.CreatedAt);
+            entity.HasIndex(e => new { e.PermissionCode, e.CreatedAt });
+            entity.ToTable("permission_audit_logs", schema: "public");
         });
 
         // RolePermission: khóa chính kép (RoleId, PermissionId)
@@ -530,6 +601,14 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, Guid>
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => e.CreatedAt);
             entity.HasIndex(e => e.Action);
+
+            // Cơ sở bị xóa vẫn phải giữ nhật ký — đây là bằng chứng truy vết
+            entity.HasOne<Facility>()
+                .WithMany()
+                .HasForeignKey(e => e.FacilityId)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.HasIndex(e => e.FacilityId);
+
             entity.ToTable("audit_logs", schema: "public");
         });
     }

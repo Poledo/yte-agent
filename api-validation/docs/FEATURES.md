@@ -72,15 +72,24 @@ Ngoài 6 rule engine, hệ thống kiểm tra **455 trường của cả 15 bả
 
 ## 6. Cấu hình & quản trị hệ thống (web admin)
 
-Trang **Cấu hình hệ thống** cho quản trị viên (RBAC — quyền `System.Admin`) chỉnh vận hành mà không cần build lại/khởi động lại:
+Trang **Cấu hình hệ thống** cho quản trị viên (RBAC động - mỗi endpoint một mã quyền `{Controller}.{Action}`, ví dụ `LlmConfig.Update`, `RateLimitConfig.Update`) chỉnh vận hành mà không cần build lại/khởi động lại:
 
 - **Nạp đặc tả cấu trúc XML130**: upload file Excel định nghĩa 15 bảng chỉ tiêu (QĐ130 + QĐ4750 + điều chỉnh 2024). Hệ thống đọc mọi sheet "Bảng 1..15", cập nhật kiểu dữ liệu/kích thước/diễn giải, thêm/bớt trường, tự nhận diện trường ngày và danh mục giá trị từ cột diễn giải — **điều kiện kiểm tra hồ sơ đổi theo file ngay**, giữ nguyên các điều kiện đã tinh chỉnh của trường cũ. Ghi đè bền ra `Storage/field_specs.json` (sống sót khi restart pod). Endpoint: `POST /api/xml130/field-specs/import`, `GET /api/xml130/field-specs`.
 - **Ngưỡng chống spam request (rate limit)**: chỉnh giới hạn request/phút/IP cho toàn API và các endpoint nhạy cảm (đăng nhập, quên mật khẩu, hỏi đáp AI, nạp đặc tả). **Áp dụng ngay không cần restart** (xem [PERFORMANCE-SECURITY.md](PERFORMANCE-SECURITY.md)). Endpoint: `GET/PUT /api/admin/rate-limit`.
 - **Chuyển AI online/offline**: đổi giữa OpenRouter (cloud) và Ollama (local) + đổi model, kiểm tra kết nối — không cần restart. Endpoint: `GET/PUT /api/admin/llm-config`.
 - **Lịch đồng bộ danh mục ICD-10**: bật/tắt và đặt giờ tự động lấy dữ liệu ICD mỗi ngày; nút "Đồng bộ ngay".
-- **Phân quyền (RBAC)**: quản lý người dùng, vai trò, quyền; nhật ký kiểm toán (audit log) mọi thay đổi cấu hình.
+- **Phân quyền (RBAC động)**: quản lý người dùng, vai trò, quyền; nhật ký kiểm toán (audit log) mọi thay đổi cấu hình. Bảng quyền **không nằm trong mã nguồn** mà do bộ quét endpoint sinh ra lúc khởi động (mã `{Controller}.{Action}`, gom nhóm theo controller): thêm một API mới là màn hình **Quyền** có ngay dòng mới để gán, không phải build lại. Ở đó quản trị viên bật/tắt từng quyền (tắt là chặn ngay, không cần khởi động lại), sửa tên hiển thị tiếng Việt, bấm **Quét lại**, và soi **Nhật ký từ chối** - mỗi lần 403 đều ghi rõ thiếu mã quyền nào và vì lý do gì (chưa đăng nhập / không có vai trò / quyền bị tắt / chưa được cấp).
 
-## 7. Bán theo cơ sở KCB: khóa bản quyền & tính tiền
+## 7. Nhiều cơ sở KCB trên một hệ thống
+
+Một bản cài phục vụ nhiều cơ sở KCB mà dữ liệu không lẫn vào nhau, theo đúng **cây đơn vị** (Sở Y tế → Trung tâm Y tế huyện → Trạm Y tế xã):
+
+- **Quản trị hệ thống** thấy toàn bộ dữ liệu, quản danh mục chuẩn quốc gia (ICD-10, DVKT), cấu hình LLM, giấy phép và phân quyền. Các bảng Người dùng, Kho tri thức, Nhật ký, Tính tiền, Giấy phép có thêm cột **Cơ sở** hiện `Tên (mã)` để biết dòng đó của ai.
+- **Quản trị cơ sở** chỉ thấy cơ sở mình **và cả nhánh cấp dưới**: tự tạo tài khoản, tự nạp danh mục HIS, tự nạp kho tri thức riêng, tự cấu hình robot. Màn hình của họ **không** hiện cột Cơ sở - mọi dòng đều là của họ, cột đó chỉ tốn chỗ. Ghi dữ liệu ra ngoài phạm vi bị chặn ở server kèm lý do, không âm thầm bỏ qua.
+- **Dùng chung hay dùng riêng**: văn bản kho tri thức để trống cơ sở là **dùng chung** cho mọi đơn vị; gắn cơ sở thì chỉ nhánh đó tra ra. Danh mục HIS thì kế thừa ngược lên cây - cơ sở chưa nạp thì dùng danh mục của cấp trên.
+- **Cấu hình robot theo cơ sở**: mỗi cơ sở đặt được diện mạo/hành vi robot riêng, chưa đặt thì thừa hưởng cấp trên rồi mới đến cấu hình chung. Tiện ích nhận diện cơ sở bằng chính **khóa bản quyền** đã khai ở popup, nên đổi khóa sang cơ sở khác là robot đổi theo, không cần cài lại.
+
+## 8. Bán theo cơ sở KCB: khóa bản quyền & tính tiền
 
 Mô hình thương mại: mỗi **cơ sở KCB** ký một hợp đồng, được cấp một **khóa bản quyền** riêng; sản lượng dùng thật của từng cơ sở được ghi vào sổ để lập bảng kê và chốt hóa đơn.
 

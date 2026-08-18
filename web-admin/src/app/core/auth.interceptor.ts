@@ -12,10 +12,22 @@ import { BehaviorSubject, Observable, catchError, filter, switchMap, take, throw
 import { environment } from '../../environments/environment';
 import { TokenStore } from './token.store';
 import { AuthService } from './auth.service';
+import { NotificationService } from './notification.service';
 
 // Trạng thái refresh chia sẻ giữa các request song song
 let isRefreshing = false;
 const refreshDone$ = new BehaviorSubject<string | null>(null);
+
+/**
+ * Thân phản hồi 403 do tầng phân quyền dựng (PermissionAuthorizationResultHandler).
+ * `permissionCode` rỗng khi endpoint chưa có mã quyền nào trong bảng - lúc đó phải
+ * quét lại chứ không phải cấp thêm quyền, nên thông báo phải nói khác nhau.
+ */
+interface ForbiddenBody {
+  permissionCode?: string;
+  reason?: string;
+  result?: string;
+}
 
 /** Gắn Bearer token; khi 401 thì tự refresh rồi thử lại request. */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
@@ -23,6 +35,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
   const router = inject(Router);
   const http = inject(HttpClient);
+  const notify = inject(NotificationService);
 
   // Không gắn token cho các endpoint auth công khai
   const isAuthEndpoint =
@@ -43,10 +56,30 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
       if (err.status === 401 && !isAuthEndpoint && tokens.refreshToken) {
         return handle401(req, next, tokens, auth, router, http);
       }
+      if (err.status === 403) {
+        notify.error(forbiddenMessage(err));
+      }
       return throwError(() => err);
     }),
   );
 };
+
+/**
+ * Dựng thông báo 403 nêu ĐÚNG mã quyền còn thiếu - thứ giúp người quản trị tự vào màn
+ * hình Vai trò tick thêm một ô, thay vì phải mở log máy chủ để đoán.
+ */
+function forbiddenMessage(err: HttpErrorResponse): string {
+  const body = (err.error ?? {}) as ForbiddenBody;
+  const reason = body.reason?.trim();
+
+  // Ngoài phạm vi cơ sở quản lý: máy chủ đã nói rõ lý do, thêm mã quyền vào chỉ gây
+  // hiểu nhầm là thiếu quyền (cấp thêm quyền cũng không vào được cơ sở của người khác).
+  if (!body.permissionCode) {
+    return reason || 'Bạn không có quyền thực hiện thao tác này.';
+  }
+
+  return `${reason || 'Bạn không có quyền thực hiện thao tác này.'} (mã quyền: ${body.permissionCode})`;
+}
 
 function handle401(
   req: HttpRequest<unknown>,

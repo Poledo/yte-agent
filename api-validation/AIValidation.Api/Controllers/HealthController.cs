@@ -1,6 +1,7 @@
 using AIValidation.Api.Data;
 using AIValidation.Api.Data.Repositories.Interfaces;
 using AIValidation.Api.Models;
+using AIValidation.Api.Authorization.Dynamic;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AIValidation.Api.Controllers;
@@ -30,6 +31,7 @@ public class HealthController : ControllerBase
 
     /// <summary>Get overall system health status.</summary>
     /// <returns>HealthResponse with system status information</returns>
+    [IgnorePermission("Đầu dò sức khỏe của hạ tầng, gọi trước khi có tài khoản")]
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(HealthResponse))]
     public ActionResult<HealthResponse> GetHealth()
@@ -50,6 +52,7 @@ public class HealthController : ControllerBase
     /// <summary>Check database connectivity.</summary>
     /// <param name="cancellationToken">Cancellation token for async operation</param>
     /// <returns>DatabaseHealthResponse with connection status</returns>
+    [IgnorePermission("Đầu dò sức khỏe của hạ tầng, gọi trước khi có tài khoản")]
     [HttpGet("database")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(DatabaseHealthResponse))]
     public async Task<ActionResult<DatabaseHealthResponse>> GetDatabaseHealth(CancellationToken cancellationToken)
@@ -88,6 +91,7 @@ public class HealthController : ControllerBase
     /// <summary>Check repository functionality.</summary>
     /// <param name="cancellationToken">Cancellation token for async operation</param>
     /// <returns>RepositoryHealthResponse with sample data</returns>
+    [IgnorePermission("Đầu dò sức khỏe của hạ tầng, gọi trước khi có tài khoản")]
     [HttpGet("repository")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(RepositoryHealthResponse))]
     public async Task<ActionResult<RepositoryHealthResponse>> GetRepositoryHealth(CancellationToken cancellationToken)

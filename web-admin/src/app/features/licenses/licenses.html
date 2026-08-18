@@ -10,7 +10,7 @@
     <mat-icon matPrefix>search</mat-icon>
     <input matInput [formControl]="searchCtrl" placeholder="Tìm cơ sở / mã / gói cước..." />
   </mat-form-field>
-  <button *appHasPermission="'License.Manage'" [matButton]="'filled'" color="primary" (click)="add()">
+  <button *appHasPermission="'License.Create'" [matButton]="'filled'" color="primary" (click)="add()">
     <mat-icon>add</mat-icon>
     Cấp hợp đồng
   </button>
@@ -97,7 +97,7 @@
   <ng-template appColumnDef="actions" let-row>
     @if (row.revokedAt) {
       <button
-        *appHasPermission="'License.Manage'"
+        *appHasPermission="'License.Restore'"
         matIconButton
         matTooltip="Khôi phục (khóa cũ hoạt động lại)"
         (click)="restore(row)"
@@ -106,7 +106,7 @@
       </button>
     } @else {
       <button
-        *appHasPermission="'License.Manage'"
+        *appHasPermission="'License.Update'"
         matIconButton
         matTooltip="Sửa điều khoản"
         (click)="edit(row)"
@@ -114,7 +114,7 @@
         <mat-icon>edit</mat-icon>
       </button>
       <button
-        *appHasPermission="'License.Manage'"
+        *appHasPermission="'License.Rotate'"
         matIconButton
         matTooltip="Cấp lại khóa (khóa cũ chết ngay)"
         (click)="rotate(row)"
@@ -122,7 +122,7 @@
         <mat-icon>autorenew</mat-icon>
       </button>
       <button
-        *appHasPermission="'License.Manage'"
+        *appHasPermission="'License.Revoke'"
         matIconButton
         matTooltip="Thu hồi hợp đồng"
         (click)="revoke(row)"

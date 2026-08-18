@@ -3,6 +3,9 @@ using AIValidation.Api.Data;
 using AIValidation.Api.Services;
 using AIValidation.Api.Services.Licensing;
 using AIValidation.Api.Services.Rag;
+using AIValidation.Api.Services.Tenancy;
+using AIValidation.Api.Providers.Catalog;
+using AIValidation.Api.Authorization.Dynamic;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
@@ -42,6 +45,8 @@ public class AssistantController : ControllerBase
     private readonly IUsageRecorder _usageRecorder;
     private readonly ILicenseContext _license;
     private readonly IBillingRecorder _billing;
+    private readonly ITenantScope _tenant;
+    private readonly IFacilityTreeProvider _facilityTree;
     private readonly ILogger<AssistantController> _logger;
     // Dùng đúng cấu hình JSON của MVC (camelCase + enum) để /ask stream ra
     // response y hệt Ok(answer) trước đây — extension không phải đổi gì.
@@ -60,12 +65,16 @@ public class AssistantController : ControllerBase
         IUsageRecorder usageRecorder,
         ILicenseContext license,
         IBillingRecorder billing,
+        ITenantScope tenant,
+        IFacilityTreeProvider facilityTree,
         IOptions<Microsoft.AspNetCore.Mvc.JsonOptions> jsonOptions,
         ILogger<AssistantController> logger)
     {
         _usageRecorder = usageRecorder ?? throw new ArgumentNullException(nameof(usageRecorder));
         _license = license ?? throw new ArgumentNullException(nameof(license));
         _billing = billing ?? throw new ArgumentNullException(nameof(billing));
+        _tenant = tenant ?? throw new ArgumentNullException(nameof(tenant));
+        _facilityTree = facilityTree ?? throw new ArgumentNullException(nameof(facilityTree));
         _ingestService = ingestService ?? throw new ArgumentNullException(nameof(ingestService));
         _assistantService = assistantService ?? throw new ArgumentNullException(nameof(assistantService));
         _searchService = searchService ?? throw new ArgumentNullException(nameof(searchService));
@@ -267,8 +276,16 @@ public class AssistantController : ControllerBase
         // Nạp lại văn bản đã có (trùng tên file hoặc trùng tiêu đề): tự THAY THẾ —
         // gỡ mềm bản cũ để trợ lý không tra ra chunk trùng lặp (câu trả lời dẫn nguồn đôi),
         // và báo rõ trong kết quả. Bản cũ vẫn khôi phục được (danh sách "kèm đã gỡ").
+        // Cơ sở SỞ HỮU văn bản = cơ sở của người nạp. Quản trị hệ thống nạp thì
+        // FacilityId để trống, nghĩa là văn bản dùng chung cho toàn ngành.
+        var ownerFacilityId = _tenant.IsSystemScope ? null : _tenant.FacilityId;
+
+        // Chỉ coi là TRÙNG khi cùng một cơ sở sở hữu: hai bệnh viện cùng nạp "Quy trình
+        // khám.docx" là hai văn bản khác nhau, gỡ nhầm của nhau thì mất kho tri thức mà
+        // không ai biết vì thao tác vẫn báo thành công.
         var duplicates = await _db.MedicalDocuments
             .Where(d => d.IsActive
+                && d.FacilityId == ownerFacilityId
                 && ((sourceFileName != null && d.SourceFileName == sourceFileName) || d.Title == title))
             .ToListAsync(cancellationToken);
         foreach (var old in duplicates)
@@ -285,6 +302,7 @@ public class AssistantController : ControllerBase
 
         var document = await _ingestService.IngestAsync(
             title!, content, docType!, docNumber, issuedBy, sourceFileName,
+            facilityId: ownerFacilityId,
             cancellationToken: cancellationToken);
 
         // Lưu file gốc để xem/tải lại (chỉ khi nạp qua file)
@@ -320,9 +338,18 @@ public class AssistantController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> DeleteAllDocumentsAsync(CancellationToken cancellationToken)
     {
-        var documents = await _db.MedicalDocuments
-            .Where(d => d.IsActive)
-            .ToListAsync(cancellationToken);
+        // Chỉ dọn văn bản của nhánh mình. Văn bản dùng chung KHÔNG nằm trong tầm với của
+        // quản trị cơ sở: một cú "dọn kho" của họ mà xóa thông tư của cả tỉnh thì mọi cơ
+        // sở khác mất căn cứ trả lời cùng lúc.
+        var tenant = await _tenant.GetFilterAsync(cancellationToken);
+        var query = _db.MedicalDocuments.Where(d => d.IsActive);
+        if (!tenant.IsSystemScope)
+        {
+            var ids = tenant.Ids;
+            query = query.Where(d => d.FacilityId != null && ids.Contains(d.FacilityId.Value));
+        }
+
+        var documents = await query.ToListAsync(cancellationToken);
         foreach (var document in documents)
         {
             document.IsActive = false;
@@ -357,6 +384,15 @@ public class AssistantController : ControllerBase
             query = query.Where(d => d.IsActive);
         }
 
+        // Văn bản DÙNG CHUNG (FacilityId null) hiện cho mọi người — đó là thông tư,
+        // nghị định cả ngành dùng. Văn bản riêng chỉ hiện trong nhánh quản lý của mình.
+        var tenant = await _tenant.GetFilterAsync(cancellationToken);
+        if (!tenant.IsSystemScope)
+        {
+            var ids = tenant.Ids;
+            query = query.Where(d => d.FacilityId == null || ids.Contains(d.FacilityId.Value));
+        }
+
         var documents = await query
             .OrderByDescending(d => d.CreatedAt)
             .Select(d => new
@@ -371,11 +407,36 @@ public class AssistantController : ControllerBase
                 d.CreatedAt,
                 d.EffectiveDate,
                 d.ExpiryDate,
+                d.FacilityId,
                 ChunkCount = d.Chunks.Count
             })
             .ToListAsync(cancellationToken);
 
-        return Ok(documents);
+        // Cột "Cơ sở" — web-admin chỉ hiện cho quản trị hệ thống, nhưng API luôn trả
+        // để không phải gọi thêm một vòng tra tên đơn vị cho từng dòng.
+        var facilities = await _facilityTree.MapByIdsAsync(
+            documents.Where(d => d.FacilityId.HasValue).Select(d => d.FacilityId!.Value),
+            cancellationToken);
+
+        return Ok(documents.Select(d => new
+        {
+            d.Id,
+            d.Title,
+            d.DocType,
+            d.DocNumber,
+            d.IssuedBy,
+            d.SourceFileName,
+            d.IsActive,
+            d.CreatedAt,
+            d.EffectiveDate,
+            d.ExpiryDate,
+            d.ChunkCount,
+            d.FacilityId,
+            FacilityCode = d.FacilityId.HasValue && facilities.TryGetValue(d.FacilityId.Value, out var f)
+                ? f.Code : null,
+            FacilityName = d.FacilityId.HasValue && facilities.TryGetValue(d.FacilityId.Value, out var f2)
+                ? f2.Name : null
+        }));
     }
 
     /// <summary>
@@ -387,9 +448,16 @@ public class AssistantController : ControllerBase
     public async Task<IActionResult> DeleteExpiredDocumentsAsync(CancellationToken cancellationToken)
     {
         var now = DateTime.UtcNow;
-        var expired = await _db.MedicalDocuments
-            .Where(d => d.IsActive && d.ExpiryDate != null && d.ExpiryDate <= now)
-            .ToListAsync(cancellationToken);
+        var tenant = await _tenant.GetFilterAsync(cancellationToken);
+        var query = _db.MedicalDocuments
+            .Where(d => d.IsActive && d.ExpiryDate != null && d.ExpiryDate <= now);
+        if (!tenant.IsSystemScope)
+        {
+            var ids = tenant.Ids;
+            query = query.Where(d => d.FacilityId != null && ids.Contains(d.FacilityId.Value));
+        }
+
+        var expired = await query.ToListAsync(cancellationToken);
         foreach (var document in expired)
         {
             document.IsActive = false;
@@ -427,6 +495,12 @@ public class AssistantController : ControllerBase
         if (document == null)
         {
             return NotFound(new { message = $"Không tìm thấy văn bản #{id}." });
+        }
+
+        var denied = await GuardWriteAsync(document.FacilityId, cancellationToken);
+        if (denied != null)
+        {
+            return denied;
         }
 
         // Npgsql chỉ nhận UTC cho timestamptz
@@ -472,6 +546,7 @@ public class AssistantController : ControllerBase
                 d.IsActive,
                 d.CreatedAt,
                 ChunkCount = d.Chunks.Count,
+                d.FacilityId,
                 d.Content
             })
             .FirstOrDefaultAsync(cancellationToken);
@@ -480,15 +555,60 @@ public class AssistantController : ControllerBase
         {
             return NotFound(new { message = $"Không tìm thấy văn bản #{id}." });
         }
-        return Ok(document);
+
+        var denied = await GuardReadAsync(document.FacilityId, cancellationToken);
+        if (denied != null)
+        {
+            return denied;
+        }
+
+        var facility = document.FacilityId.HasValue
+            ? await _facilityTree.FindByIdAsync(document.FacilityId.Value, cancellationToken)
+            : null;
+
+        return Ok(new
+        {
+            document.Id,
+            document.Title,
+            document.DocType,
+            document.DocNumber,
+            document.IssuedBy,
+            document.SourceFileName,
+            document.IsActive,
+            document.CreatedAt,
+            document.ChunkCount,
+            document.FacilityId,
+            FacilityCode = facility?.Code,
+            FacilityName = facility?.Name,
+            document.Content
+        });
     }
 
     /// <summary>Tải/xem file gốc của văn bản (nếu đã lưu khi nạp). download=true: ép tải về.</summary>
     [HttpGet("documents/{id:long}/file")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public IActionResult GetDocumentFile(long id, [FromQuery] bool download)
+    // Hậu tố Async KHÔNG đổi tên action (ASP.NET tự cắt) nên mã quyền vẫn là
+    // Assistant.GetDocumentFile — chỉ cần bất đồng bộ để tra được cơ sở sở hữu trước
+    // khi đưa file gốc ra ngoài.
+    public async Task<IActionResult> GetDocumentFileAsync(
+        long id, [FromQuery] bool download, CancellationToken cancellationToken)
     {
+        var owner = await _db.MedicalDocuments
+            .Where(d => d.Id == id)
+            .Select(d => new { d.FacilityId })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (owner == null)
+        {
+            return NotFound(new { message = $"Không tìm thấy văn bản #{id}." });
+        }
+
+        var denied = await GuardReadAsync(owner.FacilityId, cancellationToken);
+        if (denied != null)
+        {
+            return denied;
+        }
+
         var stored = _fileStorage.Find("documents", id);
         if (stored == null)
         {
@@ -518,6 +638,12 @@ public class AssistantController : ControllerBase
             return NotFound(new { message = $"Không tìm thấy văn bản #{id}." });
         }
 
+        var denied = await GuardWriteAsync(document.FacilityId, cancellationToken);
+        if (denied != null)
+        {
+            return denied;
+        }
+
         document.IsActive = false;
         await _db.SaveChangesAsync(cancellationToken);
         _embeddingIndex.Invalidate();
@@ -535,6 +661,12 @@ public class AssistantController : ControllerBase
         if (document == null)
         {
             return NotFound(new { message = $"Không tìm thấy văn bản #{id}." });
+        }
+
+        var denied = await GuardWriteAsync(document.FacilityId, cancellationToken);
+        if (denied != null)
+        {
+            return denied;
         }
 
         document.IsActive = true;
@@ -564,6 +696,7 @@ public class AssistantController : ControllerBase
     /// sửa client. Header X-Accel-Buffering:no để cả 2 tầng nginx (web-admin +
     /// ingress) không gom buffer, đẩy byte ra LB ngay.
     /// </remarks>
+    [IgnorePermission("Extension gọi bằng khóa bản quyền, không có phiên đăng nhập")]
     [HttpPost("ask")]
     // Chỉ endpoint này gắn cổng cấp phép: các endpoint quản trị văn bản trong cùng
     // controller do web-admin gọi bằng JWT, không có khóa bản quyền của cơ sở.
@@ -678,5 +811,40 @@ public class AssistantController : ControllerBase
                 "MẤT DÒNG SỔ TÍNH TIỀN (hỏi đáp) — giấy phép {LicenseId} ({Facility})",
                 license.Id, license.FacilityCode);
         }
+    }
+
+    /// <summary>
+    /// Được phép ĐỌC văn bản của cơ sở này không. Văn bản dùng chung
+    /// (<paramref name="facilityId"/> null) thì ai cũng đọc được — đó là thông tư,
+    /// nghị định của cả ngành. Trả <c>null</c> nghĩa là cho qua.
+    /// </summary>
+    private async Task<IActionResult?> GuardReadAsync(long? facilityId, CancellationToken cancellationToken)
+    {
+        var tenant = await _tenant.GetFilterAsync(cancellationToken);
+        if (tenant.IsSystemScope || !facilityId.HasValue || tenant.Allows(facilityId))
+        {
+            return null;
+        }
+
+        var facility = await _facilityTree.FindByIdAsync(facilityId.Value, cancellationToken);
+        return TenantForbid.OutOfScope(facility?.Code, "Văn bản này");
+    }
+
+    /// <summary>
+    /// Được phép SỬA/GỠ văn bản của cơ sở này không. Chặt hơn phần đọc: văn bản dùng
+    /// chung chỉ quản trị hệ thống được đụng — cả ngành đang dựa vào nó.
+    /// </summary>
+    private async Task<IActionResult?> GuardWriteAsync(long? facilityId, CancellationToken cancellationToken)
+    {
+        var tenant = await _tenant.GetFilterAsync(cancellationToken);
+        if (tenant.IsSystemScope || tenant.Allows(facilityId))
+        {
+            return null;
+        }
+
+        var facility = facilityId.HasValue
+            ? await _facilityTree.FindByIdAsync(facilityId.Value, cancellationToken)
+            : null;
+        return TenantForbid.OutOfScope(facility?.Code, "Văn bản này");
     }
 }

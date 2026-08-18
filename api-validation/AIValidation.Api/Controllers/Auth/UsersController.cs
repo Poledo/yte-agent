@@ -1,4 +1,3 @@
-using AIValidation.Api.Authorization;
 using AIValidation.Api.Models.Auth;
 using AIValidation.Api.Services.Auth;
 using Microsoft.AspNetCore.Mvc;
@@ -9,7 +8,6 @@ namespace AIValidation.Api.Controllers.Auth;
 /// Quản trị người dùng. Yêu cầu quyền User.Manage cho toàn bộ endpoint.
 /// </summary>
 [Route("api/admin/users")]
-[RequirePermission(Permissions.UserManage)]
 public sealed class UsersController : AuthControllerBase
 {
     private readonly IUserAdminService _service;

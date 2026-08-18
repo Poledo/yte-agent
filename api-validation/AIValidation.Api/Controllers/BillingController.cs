@@ -1,9 +1,8 @@
-using AIValidation.Api.Authorization;
 using AIValidation.Api.Data;
 using AIValidation.Api.Data.Entities.Licensing;
 using AIValidation.Api.Services;
 using AIValidation.Api.Services.Licensing;
-using Microsoft.AspNetCore.Authorization;
+using AIValidation.Api.Services.Tenancy;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,15 +22,16 @@ namespace AIValidation.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
 public class BillingController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly ITenantScope _tenant;
     private readonly ILogger<BillingController> _logger;
 
-    public BillingController(AppDbContext db, ILogger<BillingController> logger)
+    public BillingController(AppDbContext db, ITenantScope tenant, ILogger<BillingController> logger)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _tenant = tenant ?? throw new ArgumentNullException(nameof(tenant));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -40,7 +40,6 @@ public class BillingController : ControllerBase
     /// giá hiện hành. Không truyền kỳ thì lấy kỳ đang chạy.
     /// </summary>
     [HttpGet("usage")]
-    [RequirePermission(Permissions.BillingView)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(BillingPeriodDto))]
     public async Task<IActionResult> GetUsageAsync(
         [FromQuery] int? period, CancellationToken cancellationToken)
@@ -54,11 +53,22 @@ public class BillingController : ControllerBase
             .ToListAsync(cancellationToken);
 
         var licenseIds = rows.Select(r => r.LicenseId).Distinct().ToList();
-        var licenses = await _db.FacilityLicenses
+        var licenseQuery = _db.FacilityLicenses
             .Include(l => l.Facility)
             .Where(l => licenseIds.Contains(l.Id))
-            .AsNoTracking()
-            .ToListAsync(cancellationToken);
+            .AsNoTracking();
+
+        // Lọc ở tầng hợp đồng chứ không ở tầng bản ghi sổ: hợp đồng phủ cả nhánh thì sản
+        // lượng của đơn vị con vẫn tính cho bên đứng tên hợp đồng, cắt theo bản ghi sẽ ra
+        // một con số không khớp hóa đơn nào.
+        var tenant = await _tenant.GetFilterAsync(cancellationToken);
+        if (!tenant.IsSystemScope)
+        {
+            var ids = tenant.Ids;
+            licenseQuery = licenseQuery.Where(l => ids.Contains(l.FacilityId));
+        }
+
+        var licenses = await licenseQuery.ToListAsync(cancellationToken);
 
         var closed = await _db.BillingInvoices
             .Where(i => i.PeriodMonth == target)
@@ -89,7 +99,6 @@ public class BillingController : ControllerBase
     /// Dùng khi khách hàng thắc mắc con số trên hóa đơn.
     /// </summary>
     [HttpGet("usage/{licenseId:long}")]
-    [RequirePermission(Permissions.BillingView)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(BillingDetailDto))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetDetailAsync(
@@ -104,6 +113,12 @@ public class BillingController : ControllerBase
         if (license == null)
         {
             return NotFound(new { message = "Không tìm thấy hợp đồng." });
+        }
+
+        var tenant = await _tenant.GetFilterAsync(cancellationToken);
+        if (!tenant.Allows(license.FacilityId))
+        {
+            return TenantForbid.OutOfScope(license.FacilityCode, "Hợp đồng này");
         }
 
         var records = await _db.BillingRecords
@@ -160,7 +175,6 @@ public class BillingController : ControllerBase
 
     /// <summary>Danh sách hóa đơn đã chốt, mới nhất trước.</summary>
     [HttpGet("invoices")]
-    [RequirePermission(Permissions.BillingView)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<InvoiceDto>))]
     public async Task<IActionResult> GetInvoicesAsync(
         [FromQuery] int? period, [FromQuery] long? licenseId, CancellationToken cancellationToken)
@@ -173,6 +187,15 @@ public class BillingController : ControllerBase
         if (licenseId.HasValue)
         {
             query = query.Where(i => i.LicenseId == licenseId.Value);
+        }
+
+        // Hóa đơn lưu sẵn mã cơ sở đứng tên nên lọc thẳng theo mã, không phải join lại
+        // bảng hợp đồng — mã trên hóa đơn là mã tại thời điểm chốt, đúng thứ cần đối soát.
+        var tenant = await _tenant.GetFilterAsync(cancellationToken);
+        if (!tenant.IsSystemScope)
+        {
+            var codes = tenant.Codes;
+            query = query.Where(i => codes.Contains(i.FacilityCode));
         }
 
         var invoices = await query
@@ -190,13 +213,24 @@ public class BillingController : ControllerBase
     /// những hợp đồng đã có hóa đơn được bỏ qua và báo lại số lượng.
     /// </summary>
     [HttpPost("close")]
-    [RequirePermission(Permissions.BillingClose)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CloseResultDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CloseAsync(
         [FromBody] ClosePeriodRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+
+        // Chốt sổ là phát hành chứng từ cho TOÀN hệ thống, không cắt được theo nhánh:
+        // chốt một phần rồi chốt tiếp phần còn lại sẽ ra hai bộ hóa đơn cùng kỳ với hai
+        // mốc thời gian, đối soát cuối kỳ không lần ra. Chỉ quản trị hệ thống được chốt.
+        if (!_tenant.IsSystemScope)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new
+            {
+                message = "Chốt sổ tính tiền là thao tác cấp hệ thống, cơ sở KCB không thực hiện được.",
+                reason = "SystemScopeOnly",
+            });
+        }
 
         var current = IBillingRecorder.PeriodOf(DateTime.UtcNow);
         if (request.Period > current)

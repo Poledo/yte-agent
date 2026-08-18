@@ -110,8 +110,28 @@ Mặc định `Licensing:Mode` = `Off` nên bản chạy thử **không cần kh
 }
 ```
 
-Trình tự khuyến nghị: chạy `Off` để sổ sản lượng có dữ liệu → cấp khóa cho từng cơ sở ở web admin (**Hợp đồng cơ sở**) → chuyển `Warn` đối soát log xem còn máy trạm nào chưa khai khóa → mới bật `Enforce`. Chi tiết tính năng: [FEATURES.md](FEATURES.md) mục 7.
+Trình tự khuyến nghị: chạy `Off` để sổ sản lượng có dữ liệu → cấp khóa cho từng cơ sở ở web admin (**Hợp đồng cơ sở**) → chuyển `Warn` đối soát log xem còn máy trạm nào chưa khai khóa → mới bật `Enforce`. Chi tiết tính năng: [FEATURES.md](FEATURES.md) mục 8.
 
 Phía máy trạm: mở popup extension → mục **Khóa bản quyền** → dán khóa được cấp, khai mã cơ sở KCB và mã nhân viên → **Lưu**. Khóa chỉ lưu trên máy đó và có hiệu lực ngay.
+
+## 7. Phân quyền động (RBAC)
+
+Bảng quyền không nằm trong mã nguồn: mỗi lần khởi động, bộ quét duyệt toàn bộ endpoint và đồng bộ vào bảng `permissions` với mã `{Controller}.{Action}`. Endpoint bị gỡ chỉ bị **tắt** (`IsActive=false`), không xóa, nên gán quyền cũ không mất khi route đổi.
+
+```json
+"Rbac": {
+  "Enabled": true,
+  "Mode": "Audit",              // Audit = cho request đi tiếp + ghi nhật ký từ chối | Enforce = chặn thật
+  "AutoScanOnStartup": true,    // quét endpoint lúc khởi động
+  "AutoGrantToRoleCode": "ADMIN", // quyền mới quét được tự cấp cho vai trò ADMIN
+  "CacheSeconds": 300,
+  "LogDeniedToDatabase": true,
+  "IncludeRoutePrefixes": [ "api/" ]
+}
+```
+
+Trình tự khuyến nghị khi lên bản mới: giữ `Mode = "Audit"` vài ngày → mở web admin mục **Quyền → Nhật ký từ chối** xem vai trò nào còn thiếu mã quyền nào → cấp bù ở mục **Vai trò & quyền** → mới đổi sang `Enforce`. Bật `Enforce` ngay khi chưa soi log là rủi ro: tài khoản không phải quản trị hệ thống sẽ nhận 403 hàng loạt.
+
+Tài khoản **quản trị hệ thống** (`IsSuperAdmin`) bỏ qua mọi kiểm tra quyền và thấy dữ liệu của mọi cơ sở; tài khoản gắn cơ sở chỉ thấy cơ sở đó và nhánh cấp dưới. Xem [FEATURES.md](FEATURES.md) mục 7.
 
 Triển khai server thật: xem [OPERATIONS.md](OPERATIONS.md).

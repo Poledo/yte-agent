@@ -1,4 +1,3 @@
-using AIValidation.Api.Authorization;
 using AIValidation.Api.Configuration;
 using AIValidation.Api.Services.Auth;
 using Microsoft.AspNetCore.Mvc;
@@ -10,7 +9,6 @@ namespace AIValidation.Api.Controllers.Auth;
 /// không cần restart. Yêu cầu quyền System.Admin.
 /// </summary>
 [Route("api/admin/rate-limit")]
-[RequirePermission(Permissions.SystemAdmin)]
 public sealed class RateLimitConfigController : AuthControllerBase
 {
     private readonly IRateLimitSettings _settings;

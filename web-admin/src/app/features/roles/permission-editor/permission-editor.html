@@ -20,7 +20,7 @@
   </mat-form-field>
 
   <mat-accordion multi class="groups">
-    @for (g of filteredGroups(); track g.group) {
+    @for (g of filteredGroups(); track g.category) {
       <mat-expansion-panel [expanded]="!!searchCtrl.value">
         <mat-expansion-panel-header>
           <mat-panel-title>
@@ -30,8 +30,8 @@
               (change)="toggleGroup(g, $event.checked)"
               (click)="$event.stopPropagation()"
             ></mat-checkbox>
-            <mat-icon class="g-icon">{{ groupIcon(g.group) }}</mat-icon>
-            <span class="g-name">{{ groupLabel(g.group) }}</span>
+            <mat-icon class="g-icon">{{ groupIcon(g.category) }}</mat-icon>
+            <span class="g-name">{{ groupLabel(g.category) }}</span>
           </mat-panel-title>
           <mat-panel-description>
             <span class="g-count">{{ groupSelectedCount(g) }}/{{ g.permissions.length }}</span>
@@ -47,8 +47,17 @@
                 (change)="toggle(p.code, $event.checked)"
               ></mat-checkbox>
               <div class="perm-text">
-                <span class="perm-name">{{ p.displayName }}</span>
-                <span class="perm-code">{{ p.code }}</span>
+                <span class="perm-name">
+                  {{ p.displayName }}
+                  @if (!p.isActive) {
+                    <!-- Quyền bị TẮT ở màn hình Quyền: gán cho vai trò cũng vô nghĩa,
+                         không nói ra thì người quản trị tick xong vẫn nhận 403. -->
+                    <span class="perm-off" title="Quyền đang tắt - gán vào vai trò cũng không có tác dụng">
+                      đang tắt
+                    </span>
+                  }
+                </span>
+                <span class="perm-code" [title]="p.httpMethod + ' /' + p.route">{{ p.code }}</span>
               </div>
             </label>
           }

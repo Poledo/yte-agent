@@ -9,7 +9,7 @@
 </app-page-header>
 
 <app-data-table
-  [columns]="columns"
+  [columns]="columns()"
   [data]="users()"
   [loading]="loading()"
   emptyIcon="group_off"
@@ -25,6 +25,20 @@
         <span class="uc-email">{{ row.email }}</span>
       </div>
     </div>
+  </ng-template>
+
+  <!-- Cột cơ sở (chỉ hiện với quản trị hệ thống) -->
+  <ng-template appColumnDef="facility" let-row>
+    @if (row.isSuperAdmin) {
+      <span class="badge system"><mat-icon>public</mat-icon> Quản trị hệ thống</span>
+    } @else if (row.facilityCode) {
+      <div class="fac-cell">
+        <span class="fac-name">{{ row.facilityName || row.facilityCode }}</span>
+        <span class="fac-code">{{ row.facilityCode }}</span>
+      </div>
+    } @else {
+      <span class="badge system"><mat-icon>public</mat-icon> Cấp hệ thống</span>
+    }
   </ng-template>
 
   <!-- Cột vai trò -->

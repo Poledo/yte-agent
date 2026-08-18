@@ -1,9 +1,8 @@
-using AIValidation.Api.Authorization;
 using AIValidation.Api.Data;
 using AIValidation.Api.Data.Entities.Licensing;
 using AIValidation.Api.Services;
 using AIValidation.Api.Services.Licensing;
-using Microsoft.AspNetCore.Authorization;
+using AIValidation.Api.Services.Tenancy;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,29 +24,30 @@ namespace AIValidation.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
 public class LicenseController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly ILicenseKeyGenerator _keyGenerator;
     private readonly ILicenseResolver _resolver;
+    private readonly ITenantScope _tenant;
     private readonly ILogger<LicenseController> _logger;
 
     public LicenseController(
         AppDbContext db,
         ILicenseKeyGenerator keyGenerator,
         ILicenseResolver resolver,
+        ITenantScope tenant,
         ILogger<LicenseController> logger)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _keyGenerator = keyGenerator ?? throw new ArgumentNullException(nameof(keyGenerator));
         _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
+        _tenant = tenant ?? throw new ArgumentNullException(nameof(tenant));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <summary>Danh sách hợp đồng, kèm sản lượng đã dùng của kỳ đang chạy.</summary>
     [HttpGet]
-    [RequirePermission(Permissions.LicenseView)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<LicenseDto>))]
     public async Task<IActionResult> GetAllAsync(
         [FromQuery] bool includeRevoked, CancellationToken cancellationToken)
@@ -56,6 +56,13 @@ public class LicenseController : ControllerBase
         if (!includeRevoked)
         {
             query = query.Where(l => l.RevokedAt == null);
+        }
+
+        var tenant = await _tenant.GetFilterAsync(cancellationToken);
+        if (!tenant.IsSystemScope)
+        {
+            var ids = tenant.Ids;
+            query = query.Where(l => ids.Contains(l.FacilityId));
         }
 
         var licenses = await query.OrderBy(l => l.FacilityCode).ToListAsync(cancellationToken);
@@ -79,7 +86,6 @@ public class LicenseController : ControllerBase
     /// web admin phải bắt người dùng chép lại trước khi đóng hộp thoại.
     /// </summary>
     [HttpPost]
-    [RequirePermission(Permissions.LicenseManage)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IssuedLicenseDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateAsync(
@@ -92,6 +98,10 @@ public class LicenseController : ControllerBase
         if (facility == null)
         {
             return BadRequest(new { message = "Đơn vị không tồn tại." });
+        }
+        if (await GuardAsync(facility.Id, facility.Code, cancellationToken) is { } denied)
+        {
+            return denied;
         }
 
         // Một đơn vị một hợp đồng còn hiệu lực: hai khóa cùng lúc thì không biết
@@ -149,7 +159,6 @@ public class LicenseController : ControllerBase
 
     /// <summary>Sửa điều khoản hợp đồng. KHÔNG đổi khóa và KHÔNG đổi đơn vị đứng tên.</summary>
     [HttpPut("{id:long}")]
-    [RequirePermission(Permissions.LicenseManage)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(LicenseDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -164,6 +173,10 @@ public class LicenseController : ControllerBase
         if (license == null)
         {
             return NotFound(new { message = "Không tìm thấy hợp đồng." });
+        }
+        if (await GuardAsync(license.FacilityId, license.FacilityCode, cancellationToken) is { } denied)
+        {
+            return denied;
         }
 
         var error = Validate(request);
@@ -195,7 +208,6 @@ public class LicenseController : ControllerBase
     /// hiệu lực NGAY khi lưu — hợp đồng, sản lượng và hóa đơn giữ nguyên.
     /// </summary>
     [HttpPost("{id:long}/rotate")]
-    [RequirePermission(Permissions.LicenseManage)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IssuedLicenseDto))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RotateAsync(long id, CancellationToken cancellationToken)
@@ -206,6 +218,10 @@ public class LicenseController : ControllerBase
         if (license == null)
         {
             return NotFound(new { message = "Không tìm thấy hợp đồng." });
+        }
+        if (await GuardAsync(license.FacilityId, license.FacilityCode, cancellationToken) is { } denied)
+        {
+            return denied;
         }
 
         var generated = _keyGenerator.Generate(license.FacilityCode);
@@ -227,7 +243,6 @@ public class LicenseController : ControllerBase
 
     /// <summary>Thu hồi hợp đồng: khóa ngừng hoạt động, sản lượng đã ghi giữ nguyên để đối soát.</summary>
     [HttpPost("{id:long}/revoke")]
-    [RequirePermission(Permissions.LicenseManage)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RevokeAsync(long id, CancellationToken cancellationToken)
@@ -236,6 +251,10 @@ public class LicenseController : ControllerBase
         if (license == null)
         {
             return NotFound(new { message = "Không tìm thấy hợp đồng." });
+        }
+        if (await GuardAsync(license.FacilityId, license.FacilityCode, cancellationToken) is { } denied)
+        {
+            return denied;
         }
 
         license.RevokedAt = DateTime.UtcNow;
@@ -249,7 +268,6 @@ public class LicenseController : ControllerBase
 
     /// <summary>Bỏ thu hồi (thu hồi nhầm). Khóa cũ hoạt động lại vì bản băm chưa hề đổi.</summary>
     [HttpPost("{id:long}/restore")]
-    [RequirePermission(Permissions.LicenseManage)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -259,6 +277,10 @@ public class LicenseController : ControllerBase
         if (license == null)
         {
             return NotFound(new { message = "Không tìm thấy hợp đồng." });
+        }
+        if (await GuardAsync(license.FacilityId, license.FacilityCode, cancellationToken) is { } denied)
+        {
+            return denied;
         }
 
         var conflict = await _db.FacilityLicenses
@@ -275,6 +297,14 @@ public class LicenseController : ControllerBase
         _resolver.Invalidate();
 
         return Ok(new { message = $"Đã khôi phục hợp đồng của đơn vị {license.FacilityCode}." });
+    }
+
+    /// <summary>403 nếu hợp đồng thuộc cơ sở ngoài nhánh của người gọi; null nghĩa là cho phép.</summary>
+    private async Task<IActionResult?> GuardAsync(
+        long facilityId, string facilityCode, CancellationToken cancellationToken)
+    {
+        var tenant = await _tenant.GetFilterAsync(cancellationToken);
+        return tenant.Allows(facilityId) ? null : TenantForbid.OutOfScope(facilityCode, "Hợp đồng này");
     }
 
     /// <summary>Kiểm tra điều khoản trước khi lưu.</summary>

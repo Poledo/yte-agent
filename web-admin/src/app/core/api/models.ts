@@ -12,7 +12,20 @@ export interface LoginRequest {
   password: string;
 }
 
-export interface AuthResult {
+/**
+ * Phần danh tính theo cơ sở KCB, có mặt ở cả kết quả đăng nhập lẫn `/me`.
+ *
+ * `facilityId = null` KHÔNG có nghĩa "dùng chung" mà là "tài khoản cấp hệ thống":
+ * cùng với `isSuperAdmin`, đây là hai cách để một tài khoản thấy toàn bộ dữ liệu.
+ */
+export interface FacilityIdentity {
+  facilityId?: number | null;
+  facilityCode?: string | null;
+  facilityName?: string | null;
+  isSuperAdmin: boolean;
+}
+
+export interface AuthResult extends FacilityIdentity {
   accessToken: string;
   accessTokenExpiresAt: string;
   refreshToken: string;
@@ -20,10 +33,11 @@ export interface AuthResult {
   email: string;
   fullName: string;
   roles: string[];
+  /** Mã quyền PHẲNG đã lọc quyền bị tắt. Quản trị hệ thống trả đúng một phần tử `"*"`. */
   permissions: string[];
 }
 
-export interface MeResponse {
+export interface MeResponse extends FacilityIdentity {
   id: string;
   email: string;
   fullName: string;
@@ -63,6 +77,11 @@ export interface UserDto {
   isLockedOut: boolean;
   createdAt: string;
   roles: string[];
+  facilityId?: number | null;
+  /** Chỉ để hiện cột "Cơ sở" cho quản trị hệ thống — quản trị cơ sở không thấy cột này. */
+  facilityCode?: string | null;
+  facilityName?: string | null;
+  isSuperAdmin: boolean;
 }
 
 export interface CreateUserRequest {
@@ -70,6 +89,11 @@ export interface CreateUserRequest {
   password: string;
   fullName: string;
   roles?: string[];
+  /**
+   * Chỉ quản trị HỆ THỐNG được chọn cơ sở; quản trị cơ sở gửi lên gì máy chủ cũng ép
+   * về cơ sở của chính họ, nên web-admin ẩn luôn ô này cho họ.
+   */
+  facilityId?: number | null;
 }
 
 export interface UpdateUserRequest {
@@ -88,12 +112,16 @@ export interface RoleDto {
   description?: string | null;
   isSystem: boolean;
   permissions: string[];
+  /** Mã bất biến (vd `ADMIN`) — tên hiển thị đổi được, mã thì không. */
+  code: string;
 }
 
 export interface CreateRoleRequest {
   name: string;
   description?: string | null;
   permissions?: string[];
+  /** Bỏ trống thì máy chủ tự sinh từ tên (viết HOA, bỏ dấu). */
+  code?: string | null;
 }
 
 export interface UpdateRoleRequest {
@@ -104,15 +132,118 @@ export interface AssignPermissionsRequest {
   permissions: string[];
 }
 
+/**
+ * Một quyền trong bảng quyền. Bảng này do bộ quét endpoint sinh ra, KHÔNG thêm/xóa
+ * bằng tay: mã quyền là `{Controller}.{Action}`, người quản trị chỉ bật/tắt và sửa
+ * tên hiển thị.
+ */
 export interface PermissionDto {
   code: string;
   displayName: string;
-  group: string;
+  /** Tên controller sinh ra quyền, dùng để gom nhóm. */
+  category: string;
+  /** Có thể là cụm ghép "GET,POST" khi một action nhận nhiều verb. */
+  httpMethod: string;
+  route: string;
+  isActive: boolean;
+  /** Do bộ quét sinh (true) hay người quản trị tự tạo (false). */
+  isSystem: boolean;
 }
 
 export interface PermissionGroupDto {
-  group: string;
+  category: string;
   permissions: PermissionDto[];
+}
+
+/** Một trang của bảng quyền (GET /api/admin/permissions). */
+export interface PermissionPageDto {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: PermissionDto[];
+}
+
+/** Giá trị lọc có sẵn + số đếm, để dựng dropdown mà không phải tải cả bảng. */
+export interface PermissionFacetsDto {
+  categories: string[];
+  httpMethods: string[];
+  total: number;
+  activeCount: number;
+  inactiveCount: number;
+}
+
+/** So bảng quyền trong CSDL với endpoint đang chạy: "quét lại có đổi gì không". */
+export interface PermissionSyncStatusDto {
+  endpointCount: number;
+  dbCount: number;
+  activeCount: number;
+  /** Endpoint có thật nhưng chưa có trong CSDL — quét lại là có. */
+  missingCount: number;
+  /** Quyền còn bật trong CSDL nhưng endpoint đã bị gỡ. */
+  orphanCount: number;
+  missingCodes: string[];
+  orphanCodes: string[];
+  lastScanAt?: string | null;
+}
+
+/** Kết quả một lần quét lại. */
+export interface PermissionSyncResultDto {
+  scanned: number;
+  added: number;
+  updated: number;
+  deactivated: number;
+  reactivated: number;
+  /** Số quyền mới tự cấp cho vai trò ADMIN — thêm API mới không tự khóa chính mình. */
+  autoGranted: number;
+  completedAt: string;
+}
+
+export interface BulkTogglePermissionsRequest {
+  codes: string[];
+  isActive: boolean;
+}
+
+export interface UpdatePermissionDisplayNameRequest {
+  displayName: string;
+}
+
+/** Lý do bị tầng phân quyền từ chối — khớp enum PermissionAuditResult phía API. */
+export type PermissionAuditResult =
+  | 'PermissionNotFound'
+  | 'PermissionDisabled'
+  | 'NoRole'
+  | 'Denied'
+  | 'Unauthenticated'
+  | 'AuditOnly';
+
+/** Nhãn tiếng Việt của từng lý do, kèm gợi ý cách xử lý ở tooltip. */
+export const PERMISSION_AUDIT_LABELS: Record<PermissionAuditResult, string> = {
+  PermissionNotFound: 'Chưa có mã quyền',
+  PermissionDisabled: 'Quyền đang tắt',
+  NoRole: 'Chưa có vai trò',
+  Denied: 'Vai trò thiếu quyền',
+  Unauthenticated: 'Chưa đăng nhập',
+  AuditOnly: 'Chỉ ghi nhận (chế độ thử)',
+};
+
+/** Một lần bị từ chối. Chỉ lần TỪ CHỐI mới được ghi, đi lọt thì không để lại gì. */
+export interface PermissionAuditLogDto {
+  id: string;
+  userId?: string | null;
+  userName?: string | null;
+  permissionCode?: string | null;
+  httpMethod: string;
+  path: string;
+  result: PermissionAuditResult;
+  ipAddress?: string | null;
+  createdAt: string;
+}
+
+export interface PermissionAuditPageDto {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: PermissionAuditLogDto[];
 }
 
 // --- Documents (RAG) ---
@@ -130,6 +261,10 @@ export interface DocumentDto {
   /** Ngày hết hiệu lực (null = còn hiệu lực). Văn bản hết hạn bị RAG tự loại. */
   expiryDate?: string | null;
   chunkCount: number;
+  /** null = văn bản DÙNG CHUNG toàn hệ thống (thông tư, nghị định cả ngành dùng). */
+  facilityId?: number | null;
+  facilityCode?: string | null;
+  facilityName?: string | null;
 }
 
 /** Chi tiết văn bản: metadata + toàn văn nội dung đã trích xuất. */
@@ -208,6 +343,26 @@ export interface ExtensionConfigDto {
   appearance: RobotAppearanceDto;
 }
 
+/** Một cơ sở đang có cấu hình robot RIÊNG (ghi đè cấu hình chung). */
+export interface FacilityRobotOverrideDto {
+  facilityId: number;
+  facilityCode?: string | null;
+  facilityName?: string | null;
+  updatedAt: string;
+  updatedBy?: string | null;
+}
+
+/**
+ * Cấu hình robot hiệu lực của một cơ sở.
+ * `hasOwnConfig=false` nghĩa là đang xem bản thừa hưởng — sửa mà không lưu thì cơ sở
+ * vẫn chưa có gì của riêng nó.
+ */
+export interface FacilityRobotConfigDto {
+  hasOwnConfig: boolean;
+  inheritedFrom?: { facilityId: number; code?: string | null; name?: string | null } | null;
+  effective: ExtensionConfigDto;
+}
+
 // --- Audit (admin) ---
 export interface AuditLogDto {
   id: string;
@@ -219,6 +374,10 @@ export interface AuditLogDto {
   detail?: string | null;
   ipAddress?: string | null;
   createdAt: string;
+  /** null = thao tác cấp hệ thống (KHÔNG phải "dùng chung"). */
+  facilityId?: number | null;
+  facilityCode?: string | null;
+  facilityName?: string | null;
 }
 
 export interface AuditPageDto {
@@ -235,6 +394,8 @@ export interface CatalogSourceDto {
   displayName: string;
   fileName: string;
   facilityCode?: string | null;
+  /** Tên cơ sở lấy từ cache cây đơn vị — chỉ hiện cho quản trị hệ thống. */
+  facilityName?: string | null;
   rowCount: number;
   importedAt: string;
   isActive: boolean;

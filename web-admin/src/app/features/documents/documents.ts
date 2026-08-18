@@ -14,6 +14,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { DocumentsApi, EmbeddingsStatusDto } from '../../core/api/documents.api';
 import { DocumentDto } from '../../core/api/models';
+import { AuthService } from '../../core/auth.service';
 import { NotificationService } from '../../core/notification.service';
 import { ConfirmService } from '../../shared/confirm.service';
 import { PageHeader } from '../../shared/page-header/page-header';
@@ -52,6 +53,7 @@ export class Documents {
   private readonly notify = inject(NotificationService);
   private readonly confirm = inject(ConfirmService);
   private readonly dialog = inject(MatDialog);
+  private readonly auth = inject(AuthService);
 
   readonly loading = signal(true);
   readonly documents = signal<DocumentDto[]>([]);
@@ -64,15 +66,20 @@ export class Documents {
   /** Icon + màu theo loại file gốc của văn bản. */
   readonly fileIcon = fileTypeIcon;
 
-  readonly columns: TableColumn[] = [
+  readonly columns = computed<TableColumn[]>(() => [
     { key: 'title', header: 'Văn bản', sortable: true },
     { key: 'docType', header: 'Loại', sortable: true, width: '120px' },
+    // Chỉ quản trị hệ thống mới cần phân biệt văn bản dùng chung với văn bản riêng
+    // của từng cơ sở - quản trị cơ sở nhìn đâu cũng là nhánh của mình.
+    ...(this.auth.isSystemScope()
+      ? [{ key: 'facility', header: 'Cơ sở', width: '190px' } as TableColumn]
+      : []),
     { key: 'validity', header: 'Hiệu lực', width: '170px' },
     { key: 'chunkCount', header: 'Số đoạn', align: 'end', width: '90px', sortable: true },
     { key: 'createdAt', header: 'Ngày nạp', width: '110px', sortable: true },
     { key: 'status', header: 'Trạng thái', align: 'center', width: '125px' },
     { key: 'actions', header: '', align: 'end', width: '130px' },
-  ];
+  ]);
 
   /** Số văn bản đang hiệu lực trong kho nhưng ĐÃ hết hạn theo ngày hết hiệu lực. */
   readonly expiredCount = computed(

@@ -8,7 +8,7 @@
     <input matInput [formControl]="searchCtrl" placeholder="Tìm danh mục / tên file..." />
   </mat-form-field>
   @if (selectedCount() > 0) {
-    <button *appHasPermission="'Catalog.Knowledge'" [matButton]="'filled'" color="accent" (click)="addSelectedToKnowledge()">
+    <button *appHasPermission="'Catalog.AddManyToKnowledge'" [matButton]="'filled'" color="accent" (click)="addSelectedToKnowledge()">
       <mat-icon>library_add</mat-icon>
       Nạp {{ selectedCount() }} mục vào kho tri thức
     </button>

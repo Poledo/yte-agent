@@ -28,6 +28,10 @@ public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 
 /// <summary>
 /// Kết quả trả về sau đăng nhập/đăng ký/làm mới: access token + refresh token.
+///
+/// <paramref name="Permissions"/> là danh sách mã quyền PHẲNG, đã lọc bỏ quyền bị tắt.
+/// Tài khoản quản trị hệ thống trả đúng một phần tử <c>"*"</c>: liệt kê cả trăm mã cho
+/// người vốn đi qua mọi cửa chỉ làm token phình to mà không thêm thông tin nào.
 /// </summary>
 public record AuthResult(
     string AccessToken,
@@ -37,7 +41,11 @@ public record AuthResult(
     string Email,
     string FullName,
     IReadOnlyList<string> Roles,
-    IReadOnlyList<string> Permissions);
+    IReadOnlyList<string> Permissions,
+    long? FacilityId = null,
+    string? FacilityCode = null,
+    string? FacilityName = null,
+    bool IsSuperAdmin = false);
 
 /// <summary>Thông tin user hiện tại (endpoint GET me).</summary>
 public record MeResponse(
@@ -46,4 +54,8 @@ public record MeResponse(
     string FullName,
     bool EmailConfirmed,
     IReadOnlyList<string> Roles,
-    IReadOnlyList<string> Permissions);
+    IReadOnlyList<string> Permissions,
+    long? FacilityId = null,
+    string? FacilityCode = null,
+    string? FacilityName = null,
+    bool IsSuperAdmin = false);

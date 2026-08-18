@@ -1,5 +1,6 @@
-using AIValidation.Api.Authorization;
 using AIValidation.Api.Data;
+using AIValidation.Api.Providers.Catalog;
+using AIValidation.Api.Services.Tenancy;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,16 +10,19 @@ namespace AIValidation.Api.Controllers.Auth;
 /// Đọc nhật ký kiểm toán. Yêu cầu quyền Audit.View.
 /// </summary>
 [Route("api/admin/audit")]
-[RequirePermission(Permissions.AuditView)]
 public sealed class AuditController : AuthControllerBase
 {
     private const int MaxPageSize = 100;
 
     private readonly AppDbContext _db;
+    private readonly ITenantScope _tenant;
+    private readonly IFacilityTreeProvider _facilityTree;
 
-    public AuditController(AppDbContext db)
+    public AuditController(AppDbContext db, ITenantScope tenant, IFacilityTreeProvider facilityTree)
     {
         _db = db;
+        _tenant = tenant;
+        _facilityTree = facilityTree;
     }
 
     /// <summary>
@@ -38,6 +42,15 @@ public sealed class AuditController : AuthControllerBase
         pageSize = pageSize is > 0 and <= MaxPageSize ? pageSize : 20;
 
         var query = _db.AuditLogs.AsNoTracking();
+
+        // Thao tác cấp hệ thống (FacilityId null) không lọt xuống quản trị cơ sở: nhật ký
+        // của quản trị hệ thống lộ ra là lộ luôn cả cấu trúc quản trị bên trên.
+        var tenant = await _tenant.GetFilterAsync(ct);
+        if (!tenant.IsSystemScope)
+        {
+            var ids = tenant.Ids;
+            query = query.Where(l => l.FacilityId != null && ids.Contains(l.FacilityId.Value));
+        }
 
         if (!string.IsNullOrWhiteSpace(action))
         {
@@ -70,10 +83,34 @@ public sealed class AuditController : AuthControllerBase
                 l.EntityId,
                 l.Detail,
                 l.IpAddress,
+                l.FacilityId,
                 l.CreatedAt,
             })
             .ToListAsync(ct);
 
-        return Ok(new { total, page, pageSize, items });
+        // Mã/tên cơ sở lấy từ cache cây đơn vị — web-admin chỉ hiện cột này cho quản trị
+        // hệ thống, quản trị cơ sở thì mọi dòng đều cùng một cơ sở nên cột đó vô nghĩa.
+        var facilities = await _facilityTree.MapByIdsAsync(
+            items.Where(i => i.FacilityId.HasValue).Select(i => i.FacilityId!.Value), ct);
+
+        var rows = items.Select(i => new
+        {
+            i.Id,
+            i.Action,
+            i.UserId,
+            i.UserName,
+            i.EntityType,
+            i.EntityId,
+            i.Detail,
+            i.IpAddress,
+            i.CreatedAt,
+            i.FacilityId,
+            FacilityCode = i.FacilityId.HasValue && facilities.TryGetValue(i.FacilityId.Value, out var f)
+                ? f.Code : null,
+            FacilityName = i.FacilityId.HasValue && facilities.TryGetValue(i.FacilityId.Value, out var f2)
+                ? f2.Name : null,
+        });
+
+        return Ok(new { total, page, pageSize, items = rows });
     }
 }

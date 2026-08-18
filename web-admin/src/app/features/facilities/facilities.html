@@ -15,7 +15,7 @@
   <mat-slide-toggle [checked]="showInactive()" (change)="toggleInactive($event.checked)">
     Hiện đã ngưng
   </mat-slide-toggle>
-  <button *appHasPermission="'Catalog.Manage'" [matButton]="'filled'" color="primary" (click)="add()">
+  <button *appHasPermission="'Facility.Create'" [matButton]="'filled'" color="primary" (click)="add()">
     <mat-icon>add</mat-icon>
     Thêm đơn vị gốc
   </button>
@@ -105,7 +105,7 @@
       }
     </span>
 
-    <span class="node-actions" *appHasPermission="'Catalog.Manage'">
+    <span class="node-actions" *appHasPermission="['Facility.Create', 'Facility.Update', 'Facility.Delete']">
       <button matIconButton matTooltip="Thêm đơn vị cấp dưới" (click)="add(node)">
         <mat-icon>add</mat-icon>
       </button>

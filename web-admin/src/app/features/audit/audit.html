@@ -17,7 +17,7 @@
 </app-page-header>
 
 <app-data-table
-  [columns]="columns"
+  [columns]="columns()"
   [data]="logs()"
   [loading]="loading()"
   [pageSize]="15"
@@ -40,6 +40,19 @@
       <span>{{ row.userName }}</span>
     } @else {
       <span class="muted">Ẩn danh / hệ thống</span>
+    }
+  </ng-template>
+
+  <ng-template appColumnDef="facility" let-row>
+    @if (row.facilityId) {
+      <div class="fac-cell">
+        <span class="fac-name">{{ row.facilityName || row.facilityCode }}</span>
+        @if (row.facilityCode) {
+          <span class="fac-code">{{ row.facilityCode }}</span>
+        }
+      </div>
+    } @else {
+      <span class="muted">Cấp hệ thống</span>
     }
   </ng-template>
 

@@ -1,5 +1,7 @@
+using AIValidation.Api.Authorization.Dynamic;
 using AIValidation.Api.Data.Entities.Auth;
 using AIValidation.Api.Models.Auth;
+using AIValidation.Api.Providers.Catalog;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 
@@ -15,7 +17,8 @@ public sealed class AuthService : IAuthService
     private readonly UserManager<AppUser> _userManager;
     private readonly IJwtTokenService _jwtTokenService;
     private readonly IRefreshTokenService _refreshTokenService;
-    private readonly IPermissionResolver _permissionResolver;
+    private readonly IPermissionCache _permissionCache;
+    private readonly IFacilityTreeProvider _facilityTree;
     private readonly IAuditService _auditService;
     private readonly IEmailSender _emailSender;
     private readonly EmailOptions _emailOptions;
@@ -25,7 +28,8 @@ public sealed class AuthService : IAuthService
         UserManager<AppUser> userManager,
         IJwtTokenService jwtTokenService,
         IRefreshTokenService refreshTokenService,
-        IPermissionResolver permissionResolver,
+        IPermissionCache permissionCache,
+        IFacilityTreeProvider facilityTree,
         IAuditService auditService,
         IEmailSender emailSender,
         IOptions<EmailOptions> emailOptions,
@@ -34,7 +38,8 @@ public sealed class AuthService : IAuthService
         _userManager = userManager;
         _jwtTokenService = jwtTokenService;
         _refreshTokenService = refreshTokenService;
-        _permissionResolver = permissionResolver;
+        _permissionCache = permissionCache;
+        _facilityTree = facilityTree;
         _auditService = auditService;
         _emailSender = emailSender;
         _emailOptions = emailOptions.Value;
@@ -133,12 +138,15 @@ public sealed class AuthService : IAuthService
             return ServiceResult<AuthResult>.Fail("Tài khoản không tồn tại hoặc đã bị khóa.", 401);
         }
 
-        var (roles, permissions) = await GetRolesAndPermissionsAsync(user);
-        var (accessToken, expiresAt) = _jwtTokenService.CreateAccessToken(user, roles, permissions);
+        var profile = await GetProfileAsync(user, ct);
+        var (accessToken, expiresAt) = _jwtTokenService.CreateAccessToken(
+            user, profile.Roles, profile.Facility?.Code);
 
         var result = new AuthResult(
             accessToken, expiresAt, rotated.Value.RawToken,
-            user.Id, user.Email ?? string.Empty, user.FullName, roles, permissions);
+            user.Id, user.Email ?? string.Empty, user.FullName,
+            profile.Roles, profile.Permissions,
+            user.FacilityId, profile.Facility?.Code, profile.Facility?.Name, profile.IsSuperAdmin);
 
         return ServiceResult<AuthResult>.Ok(result, "Làm mới phiên thành công.");
     }
@@ -291,10 +299,11 @@ public sealed class AuthService : IAuthService
             return ServiceResult<MeResponse>.Fail("Không tìm thấy tài khoản.", 404);
         }
 
-        var (roles, permissions) = await GetRolesAndPermissionsAsync(user);
+        var profile = await GetProfileAsync(user, ct);
         var me = new MeResponse(
             user.Id, user.Email ?? string.Empty, user.FullName,
-            user.EmailConfirmed, roles, permissions);
+            user.EmailConfirmed, profile.Roles, profile.Permissions,
+            user.FacilityId, profile.Facility?.Code, profile.Facility?.Name, profile.IsSuperAdmin);
 
         return ServiceResult<MeResponse>.Ok(me);
     }
@@ -302,20 +311,58 @@ public sealed class AuthService : IAuthService
     /// <inheritdoc/>
     public async Task<AuthResult> BuildAuthResultAsync(AppUser user, string? ip, CancellationToken ct = default)
     {
-        var (roles, permissions) = await GetRolesAndPermissionsAsync(user);
-        var (accessToken, expiresAt) = _jwtTokenService.CreateAccessToken(user, roles, permissions);
+        var profile = await GetProfileAsync(user, ct);
+        var (accessToken, expiresAt) = _jwtTokenService.CreateAccessToken(
+            user, profile.Roles, profile.Facility?.Code);
         var (refreshToken, _) = await _refreshTokenService.IssueAsync(user.Id, ip, ct);
 
         return new AuthResult(
             accessToken, expiresAt, refreshToken,
-            user.Id, user.Email ?? string.Empty, user.FullName, roles, permissions);
+            user.Id, user.Email ?? string.Empty, user.FullName,
+            profile.Roles, profile.Permissions,
+            user.FacilityId, profile.Facility?.Code, profile.Facility?.Name, profile.IsSuperAdmin);
     }
 
-    private async Task<(IReadOnlyList<string> Roles, IReadOnlyList<string> Permissions)> GetRolesAndPermissionsAsync(AppUser user)
+    /// <summary>Vai trò + mã quyền + cơ sở KCB của tài khoản, dùng chung cho login/refresh/me.</summary>
+    private sealed record UserProfile(
+        IReadOnlyList<string> Roles,
+        IReadOnlyList<string> Permissions,
+        FacilityRef? Facility,
+        bool IsSuperAdmin);
+
+    /// <summary>
+    /// Dựng hồ sơ quyền của tài khoản. Mã quyền lấy từ <see cref="IPermissionCache"/> —
+    /// đúng nguồn mà bộ kiểm quyền lúc request dùng, nên những gì web-admin hiện ra
+    /// luôn khớp với những gì server thực sự cho qua.
+    /// </summary>
+    private async Task<UserProfile> GetProfileAsync(AppUser user, CancellationToken ct)
     {
         var roles = (await _userManager.GetRolesAsync(user)).ToList();
-        var permissions = await _permissionResolver.GetPermissionsForRolesAsync(roles);
-        return (roles, permissions);
+
+        IReadOnlyList<string> permissions;
+        if (user.IsSuperAdmin)
+        {
+            permissions = new[] { "*" };
+        }
+        else
+        {
+            var snapshot = await _permissionCache.GetUserSnapshotAsync(user.Id, ct);
+            // Quyền bị tắt ở màn hình Quyền bị loại ngay tại đây: để lọt xuống giao diện
+            // thì người dùng thấy nút, bấm vào và nhận 403 mà không hiểu vì sao.
+            var states = await _permissionCache.GetPermissionStatesAsync(ct);
+            permissions = snapshot == null
+                ? Array.Empty<string>()
+                : snapshot.Codes
+                    .Where(code => states.TryGetValue(code, out var active) && active)
+                    .OrderBy(code => code, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+        }
+
+        var facility = user.FacilityId.HasValue
+            ? await _facilityTree.FindByIdAsync(user.FacilityId.Value, ct)
+            : null;
+
+        return new UserProfile(roles, permissions, facility, user.IsSuperAdmin);
     }
 
     private static string DescribeIdentityErrors(IdentityResult result)

@@ -18,7 +18,7 @@ import { applyPastelTheme } from '../shared/PastelTheme'
 import { ValidationEngine, RequiredRule, DateCompareRule, RegexRule, ICDInactiveRule } from './validation'
 import { ValidationPipeline } from './pipeline'
 import { ChatPanel, PaymentListStore } from './chat'
-import { createRobotRenderer, loadExtensionConfig } from './robot'
+import { createRobotRenderer, loadExtensionConfig, watchLicenseKeyChanges } from './robot'
 import type { RobotRenderer } from './robot'
 import { PopupController } from './robot/PopupController'
 import { LifeDirector } from './robot/life'
@@ -141,6 +141,20 @@ async function initializeContent(): Promise<void> {
     // Màu chủ đạo = nguyên màu robot cấu hình trên web admin (1 màu phẳng):
     // đặt biến --zc-* ở documentElement để thấm vào mọi shadow root (panel, chat, tour).
     applyPastelTheme(document.documentElement, config.appearance.color)
+
+    // Cấu hình robot ăn theo cơ sở KCB, mà cơ sở được nhận diện bằng khóa bản quyền:
+    // nhập khóa của cơ sở khác thì bản đang đệm thuộc về cơ sở cũ, phải bỏ đi. Màu
+    // thương hiệu đổi được ngay tại chỗ; hình hài robot thì đợi lần tải trang sau —
+    // KHÔNG tự reload trang HIS vì người dùng có thể đang nhập dở một hồ sơ.
+    watchLicenseKeyChanges(() => {
+        void loadExtensionConfig().then((next) => {
+            applyPastelTheme(document.documentElement, next.appearance.color)
+            if (next.robotRenderer !== config.robotRenderer) {
+                console.log('[ExtensionConfig] Đổi khóa bản quyền: hình hài robot mới áp dụng ở lần tải trang sau.')
+            }
+        })
+    })
+
     const robot: RobotRenderer = createRobotRenderer(config.robotRenderer, config.thresholds, config.appearance)
     // Nút nổi 🤖 mặc định KHỞI TẠO ẨN (tránh "nhấp nháy nút rồi mới ra robot" lúc chờ tải
     // model 3D 1–2s). Chỉ HIỆN lại khi hình hài là "Nút thường" (không tự làm launcher):

@@ -186,10 +186,10 @@ export class Dashboard {
     forkJoin({
       documents: this.docsApi.list().pipe(catchError(() => of<null>(null))),
       catalog: this.catalogApi.sources().pipe(catchError(() => of<null>(null))),
-      users: this.auth.hasPermission('User.Manage')
+      users: this.auth.hasPermission('Users.List')
         ? this.usersApi.list().pipe(catchError(() => of<null>(null)))
         : of<null>(null),
-      roles: this.auth.hasPermission('Role.Manage')
+      roles: this.auth.hasPermission('Roles.List')
         ? this.rolesApi.list().pipe(catchError(() => of<null>(null)))
         : of<null>(null),
     }).subscribe((res) => {

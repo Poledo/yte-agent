@@ -3,84 +3,98 @@ export interface MenuItem {
   label: string;
   icon: string;
   route: string;
-  /** Cần ít nhất một trong các quyền này; rỗng = luôn hiện. */
-  permissions: string[];
+  /**
+   * Nhóm quyền của màn hình (vd `'Catalog.'`). Có BẤT KỲ quyền nào thuộc nhóm là hiện
+   * mục menu; rỗng = luôn hiện.
+   *
+   * Gác theo tiền tố chứ không theo mã: mã quyền giờ mịn tới từng endpoint, liệt kê
+   * đủ mã của một màn hình vào đây thì thêm một API mới là menu lại sai.
+   */
+  permissionPrefix: string[];
 }
 
 /** Danh sách menu, lọc theo quyền tại runtime. */
 export const MENU: MenuItem[] = [
-  { label: 'Tổng quan', icon: 'dashboard', route: '/dashboard', permissions: [] },
-  { label: 'Lịch sử hoạt động', icon: 'manage_search', route: '/activity', permissions: [] },
+  { label: 'Tổng quan', icon: 'dashboard', route: '/dashboard', permissionPrefix: [] },
+  { label: 'Lịch sử hoạt động', icon: 'manage_search', route: '/activity', permissionPrefix: [] },
   {
     label: 'Người dùng',
     icon: 'group',
     route: '/users',
-    permissions: ['User.Manage'],
+    permissionPrefix: ['Users.'],
   },
   {
-    label: 'Vai trò & quyền',
+    label: 'Vai trò',
     icon: 'admin_panel_settings',
     route: '/roles',
-    permissions: ['Role.Manage'],
+    permissionPrefix: ['Roles.'],
+  },
+  {
+    label: 'Quyền',
+    icon: 'key_vertical',
+    route: '/permissions',
+    permissionPrefix: ['Permissions.'],
   },
   {
     label: 'Kho tri thức',
     icon: 'menu_book',
     route: '/documents',
-    permissions: ['Document.View', 'Document.Manage', 'Knowledge.View', 'Knowledge.Manage'],
+    permissionPrefix: ['Assistant.'],
   },
   {
     label: 'Danh mục HIS',
     icon: 'inventory_2',
     route: '/catalog',
-    permissions: ['Catalog.View', 'Catalog.Manage'],
+    permissionPrefix: ['Catalog.'],
   },
   {
     label: 'Cây đơn vị',
     icon: 'account_tree',
     route: '/facilities',
-    permissions: ['Catalog.View', 'Catalog.Manage'],
+    permissionPrefix: ['Facility.'],
   },
   {
     label: 'Hợp đồng cơ sở',
     icon: 'key',
     route: '/licenses',
-    permissions: ['License.View', 'License.Manage'],
+    permissionPrefix: ['License.'],
   },
   {
     label: 'Tính tiền',
     icon: 'receipt_long',
     route: '/billing',
-    permissions: ['Billing.View'],
+    permissionPrefix: ['Billing.'],
   },
   {
     label: 'Tải văn bản',
     icon: 'cloud_download',
     route: '/legal',
-    permissions: ['Document.View', 'Document.Manage', 'Knowledge.View', 'Knowledge.Manage'],
+    permissionPrefix: ['Legal.'],
   },
   {
     label: 'Nhật ký kiểm toán',
     icon: 'history',
     route: '/audit',
-    permissions: ['Audit.View'],
+    permissionPrefix: ['Audit.'],
   },
   {
     label: 'Cấu hình AI',
     icon: 'smart_toy',
     route: '/ai-config',
-    permissions: ['System.Admin'],
+    permissionPrefix: ['LlmConfig.'],
   },
   {
     label: 'Cấu hình robot',
     icon: 'view_in_ar',
     route: '/robot-config',
-    permissions: ['System.Admin'],
+    permissionPrefix: ['ExtensionConfigAdmin.'],
   },
   {
     label: 'Cấu hình hệ thống',
     icon: 'settings',
     route: '/system-config',
-    permissions: ['System.Admin'],
+    permissionPrefix: ['RateLimitConfig.', 'Icd.', 'Xml130.'],
   },
 ];
+// Mục "Giới thiệu dự án" không nằm trong danh sách này: nó ở chân sidebar
+// (main-layout.html) vì trỏ ra trang toàn màn hình bên ngoài khung quản trị.

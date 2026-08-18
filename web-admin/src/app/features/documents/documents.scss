@@ -101,6 +101,11 @@
     background: var(--mat-sys-surface-container-high);
     color: var(--mat-sys-on-surface-variant);
   }
+  /* Văn bản không gắn cơ sở nào - cả hệ thống tra cứu được. */
+  &.shared {
+    background: var(--mat-sys-secondary-container);
+    color: var(--mat-sys-on-secondary-container);
+  }
 }
 
 /* Cột hiệu lực — cả ô là nút bấm mở dialog nhập ngày */
@@ -175,4 +180,19 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Ô "Cơ sở" (chỉ quản trị hệ thống thấy): tên đầy đủ ở trên, mã KCB ở dưới. */
+.fac-cell {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+.fac-name {
+  font-size: 13.5px;
+}
+.fac-code {
+  font-size: 11.5px;
+  color: var(--mat-sys-on-surface-variant);
+  font-family: 'Roboto Mono', monospace;
 }

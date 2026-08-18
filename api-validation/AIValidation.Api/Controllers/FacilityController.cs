@@ -1,7 +1,7 @@
-using AIValidation.Api.Authorization;
 using AIValidation.Api.Data;
 using AIValidation.Api.Data.Entities;
 using AIValidation.Api.Providers.Catalog;
+using AIValidation.Api.Services.Tenancy;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,15 +26,18 @@ public class FacilityController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly IFacilityTreeProvider _facilityTree;
+    private readonly ITenantScope _tenant;
     private readonly ILogger<FacilityController> _logger;
 
     public FacilityController(
         AppDbContext db,
         IFacilityTreeProvider facilityTree,
+        ITenantScope tenant,
         ILogger<FacilityController> logger)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _facilityTree = facilityTree ?? throw new ArgumentNullException(nameof(facilityTree));
+        _tenant = tenant ?? throw new ArgumentNullException(nameof(tenant));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -60,12 +63,18 @@ public class FacilityController : ControllerBase
 
     /// <summary>Thêm một đơn vị mới.</summary>
     [HttpPost]
-    [RequirePermission(Permissions.CatalogManage)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateAsync(
         [FromBody] FacilityRequest request, CancellationToken cancellationToken)
     {
+        // Đơn vị mới phải treo dưới một đơn vị trong phạm vi. Không có cấp trên nghĩa là
+        // tạo một cây mới ngang hàng — chỉ quản trị hệ thống làm được.
+        if (await GuardParentAsync(request.ParentId, cancellationToken) is { } parentDenied)
+        {
+            return parentDenied;
+        }
+
         var validation = await ValidateAsync(request, editingId: null, cancellationToken);
         if (validation != null)
         {
@@ -99,7 +108,6 @@ public class FacilityController : ControllerBase
 
     /// <summary>Sửa một đơn vị: đổi tên, đổi đơn vị cấp trên, bật/tắt kế thừa danh mục.</summary>
     [HttpPut("{id:long}")]
-    [RequirePermission(Permissions.CatalogManage)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -110,6 +118,16 @@ public class FacilityController : ControllerBase
         if (facility == null)
         {
             return NotFound(new { message = $"Không tìm thấy đơn vị #{id}." });
+        }
+        if (await GuardFacilityAsync(facility.Id, facility.Code, cancellationToken) is { } denied)
+        {
+            return denied;
+        }
+        // Đổi cấp trên sang một đơn vị ngoài phạm vi = tự nhấc cả nhánh của mình sang
+        // cây khác. Phải chặn cả đích đến, không chỉ đơn vị bị sửa.
+        if (await GuardParentAsync(request.ParentId, cancellationToken) is { } parentDenied)
+        {
+            return parentDenied;
         }
 
         var validation = await ValidateAsync(request, editingId: id, cancellationToken);
@@ -144,7 +162,6 @@ public class FacilityController : ControllerBase
     /// (vẫn đối chiếu được theo mã cơ sở), chỉ mất quan hệ kế thừa với cấp trên.
     /// </summary>
     [HttpDelete("{id:long}")]
-    [RequirePermission(Permissions.CatalogManage)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteAsync(long id, CancellationToken cancellationToken)
@@ -153,6 +170,21 @@ public class FacilityController : ControllerBase
         if (facility == null)
         {
             return NotFound(new { message = $"Không tìm thấy đơn vị #{id}." });
+        }
+        if (await GuardFacilityAsync(facility.Id, facility.Code, cancellationToken) is { } denied)
+        {
+            return denied;
+        }
+        // Xóa chính cơ sở gốc của mình thì mọi tài khoản, danh mục và giấy phép của cơ sở
+        // đó mất chỗ neo, và người vừa bấm nút cũng mất luôn phạm vi để đăng nhập lại.
+        if (!_tenant.IsSystemScope && _tenant.FacilityId == id)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new
+            {
+                message = $"Đơn vị \"{facility.Name}\" là cơ sở gốc của tài khoản bạn nên không tự xóa được. "
+                    + "Hãy liên hệ quản trị hệ thống.",
+                reason = "CannotDeleteOwnFacility",
+            });
         }
 
         var childCount = await _db.Facilities.CountAsync(f => f.ParentId == id, cancellationToken);
@@ -181,6 +213,12 @@ public class FacilityController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetCatalogScopeAsync(string code, CancellationToken cancellationToken)
     {
+        var tenant = await _tenant.GetFilterAsync(cancellationToken);
+        if (!tenant.Allows(code))
+        {
+            return TenantForbid.OutOfScope(code, "Đơn vị này");
+        }
+
         var chain = await _facilityTree.GetCatalogChainAsync(code, cancellationToken);
         var chainList = chain.ToList();
 
@@ -209,6 +247,38 @@ public class FacilityController : ControllerBase
         return Ok(new { facilityCode = code, chain = chainList, catalogs = effective });
     }
 
+    /// <summary>403 nếu đơn vị nằm ngoài nhánh của người gọi; null nghĩa là cho phép.</summary>
+    private async Task<IActionResult?> GuardFacilityAsync(
+        long facilityId, string facilityCode, CancellationToken cancellationToken)
+    {
+        var tenant = await _tenant.GetFilterAsync(cancellationToken);
+        return tenant.Allows(facilityId) ? null : TenantForbid.OutOfScope(facilityCode, "Đơn vị này");
+    }
+
+    /// <summary>
+    /// 403 nếu đơn vị cấp trên nằm ngoài nhánh của người gọi; null nghĩa là cho phép.
+    /// Không có cấp trên (<c>null</c>) chỉ quản trị hệ thống mới được, vì đó là tạo cây mới.
+    /// </summary>
+    private async Task<IActionResult?> GuardParentAsync(long? parentId, CancellationToken cancellationToken)
+    {
+        var tenant = await _tenant.GetFilterAsync(cancellationToken);
+        if (tenant.IsSystemScope)
+        {
+            return null;
+        }
+        if (!parentId.HasValue)
+        {
+            return TenantForbid.OutOfScope(null, "Đơn vị gốc (không có cấp trên)");
+        }
+        if (tenant.Allows(parentId))
+        {
+            return null;
+        }
+
+        var parent = await _facilityTree.FindByIdAsync(parentId.Value, cancellationToken);
+        return TenantForbid.OutOfScope(parent?.Code, "Đơn vị cấp trên");
+    }
+
     /// <summary>Đọc danh sách đơn vị kèm số loại danh mục HIS mỗi đơn vị tự nạp.</summary>
     private async Task<List<FacilityDto>> LoadAsync(bool includeInactive, CancellationToken cancellationToken)
     {
@@ -216,6 +286,15 @@ public class FacilityController : ControllerBase
         if (!includeInactive)
         {
             query = query.Where(f => f.IsActive);
+        }
+
+        // Quản trị cơ sở chỉ thấy nhánh của mình. Đơn vị cấp trên bị lọc ra nên khi ghép
+        // cây, cơ sở của họ tự thành gốc — đúng ý "cây bắt đầu từ chính cơ sở họ".
+        var tenant = await _tenant.GetFilterAsync(cancellationToken);
+        if (!tenant.IsSystemScope)
+        {
+            var ids = tenant.Ids;
+            query = query.Where(f => ids.Contains(f.Id));
         }
 
         var facilities = await query

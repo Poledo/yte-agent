@@ -7,6 +7,7 @@ using AIValidation.Api.Providers.Xml130;
 using AIValidation.Api.Services;
 using AIValidation.Api.Services.Licensing;
 using AIValidation.Api.Services.Xml130;
+using AIValidation.Api.Authorization.Dynamic;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
@@ -67,6 +68,7 @@ public class Xml130Controller : ControllerBase
     /// - text/xml hoặc application/xml raw body.
     /// Query: useAi=true để sinh thêm nhận định AI (cần cấu hình LLM ApiKey).
     /// </summary>
+    [IgnorePermission("Extension gọi bằng khóa bản quyền, không có phiên đăng nhập")]
     [HttpPost("validate")]
     [Consumes("multipart/form-data", "text/xml", "application/xml", "text/plain")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Xml130ValidationResponse))]
@@ -244,6 +246,7 @@ public class Xml130Controller : ControllerBase
     /// trùng giường, một bác sĩ làm việc trên nhiều bệnh nhân cùng thời điểm,
     /// cùng bệnh nhân có 2 đợt điều trị chồng thời gian...
     /// </summary>
+    [IgnorePermission("Extension gọi bằng khóa bản quyền, không có phiên đăng nhập")]
     [HttpPost("validate-batch")]
     [Consumes("multipart/form-data")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Xml130BatchValidationResponse))]
@@ -323,6 +326,7 @@ public class Xml130Controller : ControllerBase
     /// đối chiếu chéo, chạy trước vì cần đủ mọi hồ sơ) → "hoso" (kết quả từng hồ sơ,
     /// kèm tiến độ) → "done". Client hiển thị dần, không phải chờ một cục.
     /// </summary>
+    [IgnorePermission("Extension gọi bằng khóa bản quyền, không có phiên đăng nhập")]
     [HttpPost("validate-batch-stream")]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(1024L * 1024 * 1024)]

@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -8,9 +8,19 @@ import { MatInputModule } from '@angular/material/input';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSelectModule } from '@angular/material/select';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { RobotConfigApi } from '../../core/api/robot-config.api';
-import { ExtensionConfigDto, RobotRendererId, RobotStageThreshold } from '../../core/api/models';
+import { FacilityApi } from '../../core/api/facility.api';
+import {
+  ExtensionConfigDto,
+  FacilityDto,
+  RobotRendererId,
+  RobotStageThreshold,
+} from '../../core/api/models';
+import { AuthService } from '../../core/auth.service';
 import { NotificationService } from '../../core/notification.service';
+import { ConfirmService } from '../../shared/confirm.service';
 import { PageHeader } from '../../shared/page-header/page-header';
 
 /** Một hình hài robot chọn được (khớp ROBOT_RENDERERS của extension). */
@@ -56,6 +66,8 @@ interface StageCategory {
     MatRadioModule,
     MatSlideToggleModule,
     MatProgressBarModule,
+    MatSelectModule,
+    MatTooltipModule,
     PageHeader,
   ],
   templateUrl: './robot-config.html',
@@ -64,10 +76,37 @@ interface StageCategory {
 export class RobotConfig {
   private readonly fb = inject(FormBuilder);
   private readonly api = inject(RobotConfigApi);
+  private readonly facilityApi = inject(FacilityApi);
   private readonly notify = inject(NotificationService);
+  private readonly confirm = inject(ConfirmService);
+  private readonly auth = inject(AuthService);
 
   readonly loading = signal(true);
   readonly saving = signal(false);
+
+  /**
+   * Phạm vi đang sửa: null = cấu hình CHUNG toàn hệ thống, số = một cơ sở KCB.
+   * Quản trị cơ sở không sửa được cấu hình chung (API trả 403) nên vào là chọn sẵn
+   * cơ sở của họ, và dropdown không có lựa chọn "chung".
+   */
+  readonly scopeCtrl = new FormControl<number | null>(null);
+  readonly isSystemScope = this.auth.isSystemScope();
+  readonly facilities = signal<FacilityDto[]>([]);
+  /** Id các cơ sở đã có cấu hình riêng - đánh dấu trong dropdown cho khỏi phải bấm thử. */
+  readonly overriddenIds = signal<Set<number>>(new Set());
+  /** Cơ sở đang xem có bản riêng hay đang thừa hưởng cấp trên / cấu hình chung. */
+  readonly hasOwnConfig = signal(true);
+  readonly inheritedFrom = signal<{ code?: string | null; name?: string | null } | null>(null);
+
+  readonly scopeLabel = computed(() => {
+    const id = this.scope();
+    if (id === null) return 'cấu hình chung toàn hệ thống';
+    const f = this.facilities().find((x) => x.id === id);
+    return f ? `${f.name} (${f.code})` : 'cơ sở đã chọn';
+  });
+
+  /** Cơ sở đang chọn (signal để template và computed cùng thấy thay đổi). */
+  readonly scope = signal<number | null>(null);
 
   /** Ba hình hài (nguồn sự thật khớp extension). */
   readonly renderers: RendererOption[] = [
@@ -167,26 +206,105 @@ export class RobotConfig {
   });
 
   constructor() {
+    // Quản trị cơ sở mở màn hình là sửa ngay cơ sở của mình, không phải chọn lại.
+    if (!this.isSystemScope) {
+      const own = this.auth.facilityId();
+      this.scopeCtrl.setValue(own);
+      this.scope.set(own);
+    }
+    this.loadFacilities();
     this.load();
+    this.scopeCtrl.valueChanges.subscribe((v) => {
+      this.scope.set(v ?? null);
+      this.load();
+    });
+  }
+
+  private loadFacilities(): void {
+    this.facilityApi.list().subscribe({
+      // Danh sách đã được API lọc theo phạm vi: quản trị cơ sở chỉ thấy nhánh của mình.
+      next: (list) => this.facilities.set(list),
+      error: () => this.facilities.set([]),
+    });
+    this.api.overrides().subscribe({
+      next: (list) => this.overriddenIds.set(new Set(list.map((o) => o.facilityId))),
+      // Thiếu dấu "đã ghi đè" chỉ mất chỉ dẫn phụ, màn hình vẫn dùng được.
+      error: () => this.overriddenIds.set(new Set()),
+    });
   }
 
   load(): void {
     this.loading.set(true);
-    this.api.get().subscribe({
-      next: (cfg) => {
-        this.form.controls.robotRenderer.setValue(cfg.robotRenderer);
-        this.form.controls.waitEscalationRandom.setValue(cfg.life?.waitEscalationRandom ?? false);
-        this.patchCategory('waitEscalation', cfg.life?.waitEscalation);
-        this.patchCategory('seasons', cfg.life?.seasons);
-        this.patchCategory('aging', cfg.life?.aging);
-        this.patchAppearance(cfg.appearance);
+    const id = this.scope();
+
+    if (id === null) {
+      this.hasOwnConfig.set(true);
+      this.inheritedFrom.set(null);
+      this.api.get().subscribe({
+        next: (cfg) => {
+          this.patchAll(cfg);
+          this.loading.set(false);
+        },
+        error: () => {
+          this.notify.error('Không tải được cấu hình robot');
+          this.loading.set(false);
+        },
+      });
+      return;
+    }
+
+    this.api.getForFacility(id).subscribe({
+      next: (res) => {
+        this.hasOwnConfig.set(res.hasOwnConfig);
+        this.inheritedFrom.set(res.inheritedFrom ?? null);
+        this.patchAll(res.effective);
         this.loading.set(false);
       },
-      error: () => {
-        this.notify.error('Không tải được cấu hình robot');
+      error: (e) => {
+        this.notify.error(e?.error?.message ?? 'Không tải được cấu hình robot của cơ sở');
         this.loading.set(false);
       },
     });
+  }
+
+  /** Áp một bộ cấu hình từ API lên toàn bộ form. */
+  private patchAll(cfg: ExtensionConfigDto): void {
+    this.form.controls.robotRenderer.setValue(cfg.robotRenderer);
+    this.form.controls.waitEscalationRandom.setValue(cfg.life?.waitEscalationRandom ?? false);
+    this.patchCategory('waitEscalation', cfg.life?.waitEscalation);
+    this.patchCategory('seasons', cfg.life?.seasons);
+    this.patchCategory('aging', cfg.life?.aging);
+    this.patchAppearance(cfg.appearance);
+  }
+
+  /** Bỏ cấu hình riêng của cơ sở đang chọn để quay lại thừa hưởng cấp trên. */
+  clearOverride(): void {
+    const id = this.scope();
+    if (id === null) return;
+    this.confirm
+      .open({
+        title: 'Bỏ cấu hình riêng',
+        message:
+          `Bỏ cấu hình robot riêng của ${this.scopeLabel()}? Cơ sở sẽ quay lại dùng cấu hình `
+          + 'của cấp trên, hoặc cấu hình chung nếu cấp trên cũng chưa đặt.',
+        danger: true,
+        confirmText: 'Bỏ cấu hình riêng',
+      })
+      .subscribe((yes) => {
+        if (!yes) return;
+        this.api.clearForFacility(id).subscribe({
+          next: (res) => {
+            this.notify.success(res.message);
+            this.overriddenIds.update((s) => {
+              const next = new Set(s);
+              next.delete(id);
+              return next;
+            });
+            this.load();
+          },
+          error: (e) => this.notify.error(e?.error?.message ?? 'Không bỏ được cấu hình riêng'),
+        });
+      });
   }
 
   save(): void {
@@ -212,9 +330,18 @@ export class RobotConfig {
         logoDataUrl: this.logoDataUrl(),
       },
     };
-    this.api.update(body).subscribe({
+    const id = this.scope();
+    const request = id === null ? this.api.update(body) : this.api.updateForFacility(id, body);
+
+    request.subscribe({
       next: (res) => {
         this.notify.success(res.message);
+        if (id !== null) {
+          // Lưu lần đầu là cơ sở đã có bản riêng - đổi nhãn "đang thừa hưởng" ngay.
+          this.hasOwnConfig.set(true);
+          this.inheritedFrom.set(null);
+          this.overriddenIds.update((s) => new Set(s).add(id));
+        }
         this.saving.set(false);
       },
       error: (e) => {

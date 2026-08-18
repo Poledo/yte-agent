@@ -37,7 +37,11 @@ export class RolesApi {
     return this.http.put(`${this.base}/${id}/permissions`, body);
   }
 
+  /**
+   * Toàn bộ quyền gom theo nhóm cho màn hình gán quyền.
+   * Phải gọi /grouped chứ không phải gốc: gốc đã đổi sang trả kết quả phân trang.
+   */
   listPermissions(): Observable<PermissionGroupDto[]> {
-    return this.http.get<PermissionGroupDto[]>(this.permBase);
+    return this.http.get<PermissionGroupDto[]>(`${this.permBase}/grouped`);
   }
 }

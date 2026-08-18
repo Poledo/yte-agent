@@ -17,6 +17,11 @@
             <div class="rc-title">
               <div class="rc-name">
                 {{ role.name }}
+                @if (role.code) {
+                  <!-- Mã bất biến: tên hiển thị đổi được, mã thì không - seeder và
+                       cấu hình tự cấp quyền đều bám theo mã này. -->
+                  <span class="rc-code" matTooltip="Mã vai trò (không đổi được)">{{ role.code }}</span>
+                }
                 @if (role.isSystem) {
                   <span class="sys-badge">Hệ thống</span>
                 }

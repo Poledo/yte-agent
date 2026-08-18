@@ -14,6 +14,11 @@ public interface IDocumentIngestService
     /// effectiveDate/expiryDate: ngày hiệu lực / hết hiệu lực của văn bản (nếu biết).
     /// Văn bản quá expiryDate bị loại khỏi truy hồi RAG — trợ lý không trích dẫn
     /// văn bản đã hết hiệu lực.
+    ///
+    /// facilityId: cơ sở sở hữu văn bản. <c>null</c> = văn bản DÙNG CHUNG toàn hệ
+    /// thống, mọi cơ sở đều tra ra (thông tư, nghị định...). Người nạp thuộc một cơ
+    /// sở thì tầng gọi phải truyền cơ sở đó vào, nếu không văn bản riêng của họ sẽ
+    /// lọt vào kết quả truy hồi của cơ sở khác.
     /// </summary>
     Task<MedicalDocument> IngestAsync(
         string title,
@@ -24,6 +29,7 @@ public interface IDocumentIngestService
         string? sourceFileName = null,
         DateTime? effectiveDate = null,
         DateTime? expiryDate = null,
+        long? facilityId = null,
         CancellationToken cancellationToken = default);
 }
 
@@ -56,6 +62,7 @@ public class DocumentIngestService : IDocumentIngestService
         string? sourceFileName = null,
         DateTime? effectiveDate = null,
         DateTime? expiryDate = null,
+        long? facilityId = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(title);
@@ -72,6 +79,7 @@ public class DocumentIngestService : IDocumentIngestService
             DocNumber = docNumber,
             IssuedBy = issuedBy,
             SourceFileName = sourceFileName,
+            FacilityId = facilityId,
             // Npgsql chỉ nhận UTC cho timestamptz — ngày parse từ văn bản thường Kind=Unspecified
             EffectiveDate = effectiveDate is { Kind: DateTimeKind.Unspecified } e
                 ? DateTime.SpecifyKind(e, DateTimeKind.Utc) : effectiveDate,

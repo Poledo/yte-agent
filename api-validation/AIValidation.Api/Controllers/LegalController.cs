@@ -1,6 +1,7 @@
 using AIValidation.Api.Data;
 using AIValidation.Api.Data.Entities;
 using AIValidation.Api.Services.Rag;
+using AIValidation.Api.Services.Tenancy;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,20 +24,37 @@ public class LegalController : ControllerBase
 {
     private readonly ILegalDocumentFetchService _fetchService;
     private readonly IDocumentIngestService _ingestService;
+    private readonly ITenantScope _tenant;
     private readonly AppDbContext _db;
     private readonly ILogger<LegalController> _logger;
 
     public LegalController(
         ILegalDocumentFetchService fetchService,
         IDocumentIngestService ingestService,
+        ITenantScope tenant,
         AppDbContext db,
         ILogger<LegalController> logger)
     {
         _fetchService = fetchService ?? throw new ArgumentNullException(nameof(fetchService));
         _ingestService = ingestService ?? throw new ArgumentNullException(nameof(ingestService));
+        _tenant = tenant ?? throw new ArgumentNullException(nameof(tenant));
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
+
+    /// <summary>
+    /// Cơ sở sở hữu văn bản mà người đang gọi nạp vào kho tri thức: quản trị hệ thống
+    /// nạp thì để trống (dùng chung toàn ngành), quản trị cơ sở nạp thì thuộc cơ sở họ.
+    /// </summary>
+    private long? OwnerFacilityId => _tenant.IsSystemScope ? null : _tenant.FacilityId;
+
+    /// <summary>
+    /// Khóa nhận dạng văn bản vbpl trong kho tri thức. Trạng thái "đã nạp" tra theo khóa
+    /// này + cơ sở sở hữu, KHÔNG tra theo <c>KnowledgeDocumentId</c>: cột đó chỉ giữ được
+    /// một id, nên khi cơ sở thứ hai nạp cùng một thông tư nó bị ghi đè và cơ sở đầu tiên
+    /// đột nhiên thấy văn bản của mình "chưa nạp".
+    /// </summary>
+    private static string SourceKeyOf(string itemId) => $"vbpl-{itemId}";
 
     /// <summary>
     /// Tìm văn bản trên vbpl.vn. keyword: từ khóa/lĩnh vực; from/to: lọc theo ngày
@@ -175,7 +193,9 @@ public class LegalController : ControllerBase
     public async Task<IActionResult> ListDownloadsAsync(CancellationToken cancellationToken)
     {
         // Trạng thái "đã nạp" xác nhận lại với kho tri thức: văn bản bị gỡ khỏi kho
-        // thì coi như chưa nạp (cho phép nạp lại).
+        // thì coi như chưa nạp (cho phép nạp lại). Xét theo CƠ SỞ của người đang xem —
+        // cơ sở khác đã nạp không làm mình mất quyền nạp cho kho của mình.
+        var owner = OwnerFacilityId;
         var list = await _db.LegalDownloads
             .OrderByDescending(d => d.DownloadedAt)
             .Select(d => new
@@ -190,8 +210,8 @@ public class LegalController : ControllerBase
                 d.SourceUrl,
                 d.DownloadedAt,
                 ContentLength = d.Content.Length,
-                Ingested = d.KnowledgeDocumentId != null
-                    && _db.MedicalDocuments.Any(m => m.Id == d.KnowledgeDocumentId && m.IsActive),
+                Ingested = _db.MedicalDocuments.Any(m =>
+                    m.SourceFileName == "vbpl-" + d.ItemId && m.IsActive && m.FacilityId == owner),
                 d.IngestedAt
             })
             .ToListAsync(cancellationToken);
@@ -235,15 +255,19 @@ public class LegalController : ControllerBase
             .Where(d => request.Ids.Contains(d.Id))
             .ToListAsync(cancellationToken);
 
+        var owner = OwnerFacilityId;
         var results = new List<IngestItemResult>();
         foreach (var download in downloads)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            // Đã nạp và bản trong kho còn hiệu lực → bỏ qua (tránh chunk trùng)
-            var stillActive = download.KnowledgeDocumentId != null
-                && await _db.MedicalDocuments.AnyAsync(
-                    m => m.Id == download.KnowledgeDocumentId && m.IsActive, cancellationToken);
+            // Đã nạp và bản trong kho còn hiệu lực → bỏ qua (tránh chunk trùng).
+            // Xét trong phạm vi CƠ SỞ của người nạp: cùng một thông tư, mỗi cơ sở giữ
+            // bản riêng trong kho của mình.
+            var sourceKey = SourceKeyOf(download.ItemId);
+            var stillActive = await _db.MedicalDocuments.AnyAsync(
+                m => m.SourceFileName == sourceKey && m.IsActive && m.FacilityId == owner,
+                cancellationToken);
             if (stillActive)
             {
                 results.Add(new IngestItemResult(download.Id, download.Title, "skipped", "Đã có trong kho tri thức — bỏ qua."));
@@ -252,10 +276,10 @@ public class LegalController : ControllerBase
 
             try
             {
-                // Gỡ mềm bản cũ cùng nguồn (nếu có) để không trùng chunk
-                var sourceKey = $"vbpl-{download.ItemId}";
+                // Gỡ mềm bản cũ cùng nguồn CỦA CHÍNH CƠ SỞ NÀY để không trùng chunk —
+                // không đụng bản của cơ sở khác.
                 var oldDocs = await _db.MedicalDocuments
-                    .Where(m => m.IsActive && m.SourceFileName == sourceKey)
+                    .Where(m => m.IsActive && m.SourceFileName == sourceKey && m.FacilityId == owner)
                     .ToListAsync(cancellationToken);
                 foreach (var old in oldDocs)
                 {
@@ -271,6 +295,7 @@ public class LegalController : ControllerBase
                     sourceFileName: sourceKey,
                     effectiveDate: download.EffectiveDate,
                     expiryDate: download.ExpiryDate,
+                    facilityId: owner,
                     cancellationToken: cancellationToken);
 
                 download.KnowledgeDocumentId = document.Id;
@@ -317,14 +342,20 @@ public class LegalController : ControllerBase
         }
 
         var downloads = await _db.LegalDownloads
-            .Where(d => request.Ids.Contains(d.Id) && d.KnowledgeDocumentId != null)
+            .Where(d => request.Ids.Contains(d.Id))
             .ToListAsync(cancellationToken);
 
+        var owner = OwnerFacilityId;
         var removed = 0;
         foreach (var download in downloads)
         {
+            // Chỉ gỡ bản trong kho CỦA CƠ SỞ MÌNH. Quản trị cơ sở bấm "gỡ" mà xóa mất
+            // bản dùng chung của toàn ngành là hỏng kho tri thức của mọi cơ sở khác.
+            var sourceKey = SourceKeyOf(download.ItemId);
             var document = await _db.MedicalDocuments
-                .FirstOrDefaultAsync(m => m.Id == download.KnowledgeDocumentId && m.IsActive, cancellationToken);
+                .FirstOrDefaultAsync(
+                    m => m.SourceFileName == sourceKey && m.IsActive && m.FacilityId == owner,
+                    cancellationToken);
             if (document != null)
             {
                 document.IsActive = false;

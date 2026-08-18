@@ -41,6 +41,15 @@ public class MedicalDocument
     /// <summary>Toàn văn nội dung đã trích xuất.</summary>
     public required string Content { get; set; }
 
+    /// <summary>
+    /// Cơ sở KCB sở hữu văn bản. Null = văn bản DÙNG CHUNG toàn hệ thống (thông tư,
+    /// nghị định của Bộ Y tế) — mọi cơ sở đều tra ra.
+    ///
+    /// Có giá trị = tài liệu nội bộ của cơ sở đó (quy trình riêng, công văn nội bộ);
+    /// chỉ cơ sở đó và nhánh cấp dưới nhìn thấy, cơ sở khác hỏi trợ lý không truy hồi ra.
+    /// </summary>
+    public long? FacilityId { get; set; }
+
     public bool IsActive { get; set; } = true;
 
     public DateTime CreatedAt { get; set; }

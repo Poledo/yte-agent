@@ -1,4 +1,3 @@
-using AIValidation.Api.Authorization;
 using AIValidation.Api.Models.Auth;
 using AIValidation.Api.Services.Auth;
 using Microsoft.AspNetCore.Mvc;
@@ -9,7 +8,6 @@ namespace AIValidation.Api.Controllers.Auth;
 /// Quản trị vai trò và quyền của vai trò. Yêu cầu quyền Role.Manage.
 /// </summary>
 [Route("api/admin/roles")]
-[RequirePermission(Permissions.RoleManage)]
 public sealed class RolesController : AuthControllerBase
 {
     private readonly IRoleAdminService _service;

@@ -80,6 +80,8 @@ sudo systemctl enable --now chienbinh-api
 | `LLM__ApiKey` | API key OpenRouter (bỏ trống nếu dùng Ollama/tắt AI) |
 | `LLM__Provider` / `LLM__BaseUrl` / `LLM__Model` | chọn provider LLM |
 | `ASPNETCORE_URLS` | ví dụ `http://0.0.0.0:5075` |
+| `Rbac__Mode` | `Audit` (chỉ ghi nhật ký từ chối) hoặc `Enforce` (chặn thật). Lên bản mới thì chạy `Audit` trước, soi nhật ký, cấp bù quyền rồi mới đổi - xem [INSTALLATION.md](INSTALLATION.md) mục 7 |
+| `Licensing__Mode` | `Off` / `Warn` / `Enforce` cho khóa bản quyền theo cơ sở KCB |
 
 Cập nhật schema khi nâng phiên bản: `dotnet ef database update` (migration idempotent, có lịch sử `__EFMigrationsHistory`).
 

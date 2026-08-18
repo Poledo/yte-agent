@@ -5,7 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../core/auth.service';
 
 /**
- * Trang giới thiệu (index "/") — nhúng bản trình chiếu tĩnh public/gioi-thieu.html
+ * Trang giới thiệu ("/gioi-thieu-du-an") — nhúng bản trình chiếu tĩnh public/gioi-thieu.html
  * và phủ hàng menu nổi góc trên phải (Đăng nhập / Trang quản trị).
  * Không cần đăng nhập; vào khu quản trị sẽ qua authGuard như cũ.
  */

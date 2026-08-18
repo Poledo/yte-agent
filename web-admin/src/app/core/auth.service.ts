@@ -20,7 +20,13 @@ export interface CurrentUser {
   email: string;
   fullName: string;
   roles: string[];
+  /** Mã quyền phẳng. Quản trị hệ thống chỉ có đúng một phần tử `"*"`. */
   permissions: string[];
+  isSuperAdmin: boolean;
+  /** null = tài khoản cấp hệ thống, không thuộc cơ sở nào. */
+  facilityId: number | null;
+  facilityCode: string | null;
+  facilityName: string | null;
 }
 
 /** Dịch vụ xác thực + trạng thái phiên bằng signals. */
@@ -33,18 +39,63 @@ export class AuthService {
   // ===== State bằng signals =====
   readonly currentUser = signal<CurrentUser | null>(null);
   readonly isAuthenticated = computed(() => this.currentUser() !== null);
+
+  /**
+   * Quyền dạng Set: bảng quyền giờ mịn tới từng endpoint (cả trăm mã), mà menu và
+   * bảng dữ liệu hỏi quyền trên mỗi lần render — dò tuyến tính trên mảng ở đó là phí.
+   */
+  private readonly permissionSet = computed(
+    () => new Set(this.currentUser()?.permissions ?? []),
+  );
+
+  /** Danh sách mã quyền (đọc để hiển thị; kiểm tra thì dùng các hàm bên dưới). */
   readonly permissions = computed(() => this.currentUser()?.permissions ?? []);
 
-  /** Kiểm tra user có 1 quyền cụ thể (System.Admin = toàn quyền). */
+  /**
+   * Tài khoản nhìn được toàn hệ thống: quản trị hệ thống, hoặc tài khoản không gắn
+   * cơ sở nào. Đây là cờ DUY NHẤT quyết định có hiện cột "Cơ sở" và ô chọn cơ sở hay
+   * không — quản trị cơ sở thì mọi dòng đều là cơ sở của họ, cột đó chỉ tốn chỗ.
+   */
+  readonly isSystemScope = computed(() => {
+    const user = this.currentUser();
+    return user !== null && (user.isSuperAdmin || user.facilityId === null);
+  });
+
+  /** Cơ sở của tài khoản đang đăng nhập (null = cấp hệ thống). */
+  readonly facilityId = computed(() => this.currentUser()?.facilityId ?? null);
+
+  /**
+   * Kiểm tra user có một mã quyền cụ thể. `"*"` là toàn quyền — máy chủ trả đúng một
+   * phần tử đó cho quản trị hệ thống thay vì liệt kê cả trăm mã.
+   */
   hasPermission(code: string): boolean {
-    const perms = this.permissions();
-    return perms.includes('System.Admin') || perms.includes(code);
+    const perms = this.permissionSet();
+    return perms.has('*') || perms.has(code);
   }
 
-  /** Kiểm tra có ít nhất một trong các quyền. */
+  /**
+   * Có ÍT NHẤT một quyền bắt đầu bằng tiền tố (vd `'Catalog.'`). Menu và route gác
+   * theo tiền tố chứ không theo mã: một màn hình gọi nhiều endpoint, đòi đúng một mã
+   * thì người chỉ được xem sẽ không vào nổi màn hình xem.
+   */
+  hasModule(prefix: string): boolean {
+    const perms = this.permissionSet();
+    if (perms.has('*')) return true;
+    for (const code of perms) {
+      if (code.startsWith(prefix)) return true;
+    }
+    return false;
+  }
+
+  /** Kiểm tra có ít nhất một trong các quyền. Danh sách rỗng = không đòi hỏi gì. */
   hasAny(codes: string[]): boolean {
     if (codes.length === 0) return true;
     return codes.some((c) => this.hasPermission(c));
+  }
+
+  /** Kiểm tra có ĐỦ tất cả các quyền. */
+  hasAll(codes: string[]): boolean {
+    return codes.every((c) => this.hasPermission(c));
   }
 
   /** Đăng nhập, lưu token và nạp thông tin user. */
@@ -59,6 +110,10 @@ export class AuthService {
           fullName: data.fullName,
           roles: data.roles ?? [],
           permissions: data.permissions ?? this.extractPermissionsFromToken(data.accessToken),
+          isSuperAdmin: data.isSuperAdmin ?? false,
+          facilityId: data.facilityId ?? null,
+          facilityCode: data.facilityCode ?? null,
+          facilityName: data.facilityName ?? null,
         });
       }),
     );
@@ -94,6 +149,10 @@ export class AuthService {
           fullName: me.fullName,
           roles: me.roles ?? [],
           permissions: me.permissions ?? [],
+          isSuperAdmin: me.isSuperAdmin ?? false,
+          facilityId: me.facilityId ?? null,
+          facilityCode: me.facilityCode ?? null,
+          facilityName: me.facilityName ?? null,
         });
       }),
     );
