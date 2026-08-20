@@ -1,0 +1,39 @@
+﻿using AIValidation.Api.Models;
+
+namespace AIValidation.Api.Providers.Interfaces;
+
+/// <summary>
+/// Interface cho provider tổng hợp dữ liệu tham chiếu (Knowledge) từ nhiều nguồn.
+/// 
+/// Chịu trách nhiệm:
+/// - Gọi tất cả IKnowledgeSource
+/// - Tổng hợp kết quả
+/// - Loại bỏ trùng lặp (nếu cần)
+/// - Trả về IReadOnlyList&lt;KnowledgeDocument&gt;
+/// 
+/// Hỗ trợ cấu trúc mở rộng:
+/// - Multiple data sources
+/// - File-based knowledge
+/// - Database connections
+/// - External APIs
+/// - Vector databases
+/// - RAG systems
+/// </summary>
+public interface IKnowledgeProvider
+{
+    /// <summary>
+    /// Cung cấp danh sách Knowledge Document từ tất cả Knowledge Sources.
+    /// 
+    /// Quy trình:
+    /// 1. Gọi GetDocumentsAsync() của tất cả IKnowledgeSource
+    /// 2. Tổng hợp kết quả từ tất cả sources
+    /// 3. Loại bỏ trùng lặp nếu cần
+    /// 4. Trả về IReadOnlyList&lt;KnowledgeDocument&gt;
+    /// </summary>
+    /// <param name="request">Yêu cầu xác thực để xác định knowledge cần thiết.</param>
+    /// <param name="cancellationToken">Token hủy yêu cầu.</param>
+    /// <returns>Danh sách Knowledge Document từ tất cả sources.</returns>
+    Task<IReadOnlyList<KnowledgeDocument>> GetKnowledgeAsync(
+        ValidationRequest request,
+        CancellationToken cancellationToken = default);
+}

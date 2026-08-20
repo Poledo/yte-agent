@@ -47,3 +47,21 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE/Editor temp
+.editorconfig.user
+
+# Logs & temp
+logs/
+*.log
+temp/
+tmp/
+*.tmp
+.cache/

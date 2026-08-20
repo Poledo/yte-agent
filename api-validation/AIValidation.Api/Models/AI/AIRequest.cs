@@ -10,7 +10,7 @@ namespace AIValidation.Api.Models.AI;
 /// - Form Data (from ValidationRequest)
 /// - Knowledge (from KnowledgeProvider)
 /// - Output Schema (from PromptLoader)
-/// - Model & Temperature (from Configuration)
+/// - Model &amp; Temperature (from Configuration)
 /// 
 /// LLMProvider sẽ nhận AIRequest và gửi đến AI Provider cụ thể.
 /// </summary>

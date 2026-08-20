@@ -1,0 +1,36 @@
+﻿# Các thư mục dưới đây VẪN NẰM TRÊN ĐĨA, chỉ là không đưa vào git.
+# Chuyển từ workspace cũ D:\VNPT\hackathon sang ngày 08/08/2026.
+
+# ---- Bí mật: tuyệt đối không commit ----
+# notes/ chứa khóa OpenRouter, mật khẩu CSDL, chuỗi kết nối.
+# vnpt-cloud/ chứa credential ECR, kubeconfig cụm, mật khẩu ứng dụng Gmail.
+notes/
+vnpt-cloud/
+# File này ghi mật khẩu tài khoản production cbyts.vnpt.vn và tài khoản HIS demo.
+nop-btc/11-link-truy-cap-he-thong/
+
+# ---- Dữ liệu thật của khách hàng: không commit ----
+# Luật thi: chỉ dùng dữ liệu giả lập (Mock Data) hoặc đã ẩn danh.
+# kich-ban-demo/ là hồ sơ bệnh án thật (họ tên bệnh nhân trong XML).
+# data-import/ là dữ liệu xuất toán BHYT và danh mục HIS thật của Khánh Hòa.
+kich-ban-demo/
+data-import/
+
+# ---- Bản sao lịch sử git trước khi viết lại bằng filter-repo ----
+# Vẫn còn các bí mật đã gỡ khỏi lịch sử chính, đưa vào đây là lộ lại.
+backup-git/
+
+# ---- Sản phẩm trung gian, sinh lại được ----
+report/_extract/bin/
+report/_extract/obj/
+report/_extract/out/
+report/_unpacked_report/
+report/**/node_modules/
+
+# ---- Gói triển khai IIS: sinh lại được bằng deploy/iis/Build-Package.ps1 ----
+deploy/iis/out/
+# File môi trường do Build-Package.ps1 sinh khi deploy kiểu 2 site riêng (-ApiBaseUrl).
+web-admin/src/environments/environment.iis.ts
+
+# Khóa ký tiện ích Chrome: lộ là người khác ký được bản cập nhật giả gửi tới máy trạm.
+*.pem

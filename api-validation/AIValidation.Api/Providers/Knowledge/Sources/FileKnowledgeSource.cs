@@ -9,7 +9,7 @@ namespace AIValidation.Api.Providers.Knowledge.Sources;
 /// Chịu trách nhiệm:
 /// - Đọc knowledge files từ thư mục Knowledge/
 /// - Parse dữ liệu từ file
-/// - Trả về IReadOnlyList<KnowledgeDocument>
+/// - Trả về IReadOnlyList&lt;KnowledgeDocument&gt;
 /// 
 /// Hỗ trợ file formats:
 /// - JSON (recommended)
@@ -40,7 +40,7 @@ public class FileKnowledgeSource : IKnowledgeSource
     /// 2. Xây dựng file path dựa trên category
     /// 3. Đọc file từ Knowledge folder
     /// 4. Parse JSON/CSV/XML thành KnowledgeDocument
-    /// 5. Trả về IReadOnlyList<KnowledgeDocument>
+    /// 5. Trả về IReadOnlyList&lt;KnowledgeDocument&gt;
     /// 
     /// File structure:
     /// Knowledge/

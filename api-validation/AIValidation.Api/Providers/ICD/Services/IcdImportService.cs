@@ -258,7 +258,7 @@ public class IcdImportService : IIcdImportService
     /// <summary>
     /// Build metadata dictionary from ICD row
     /// Stores all decoded flags and additional information for validation rules
-    /// Note: Npgsql with .NET 10 has issues with Dictionary<string, object> in JSONB fields,
+    /// Note: Npgsql with .NET 10 has issues with Dictionary&lt;string, object&gt; in JSONB fields,
     /// so we serialize to JSON string and let EF Core handle the conversion
     /// </summary>
     private Dictionary<string, object> BuildMetadata(Models.IcdCodeRecord row)

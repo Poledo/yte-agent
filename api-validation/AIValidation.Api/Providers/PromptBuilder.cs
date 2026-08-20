@@ -15,7 +15,7 @@ namespace AIValidation.Api.Providers;
 /// - Knowledge: Dữ liệu tham chiếu (ICD, thuốc, etc.)
 /// - Form Snapshot: Dữ liệu trường cần xác thực
 /// - Output Schema: Định dạng JSON kết quả mong muốn
-/// - Model & Temperature: Từ LLMOptions configuration
+/// - Model &amp; Temperature: Từ LLMOptions configuration
 /// 
 /// Prompt không được hard-code trong C#, được quản lý riêng qua IPromptLoader.
 /// </summary>

@@ -16,7 +16,7 @@ namespace AIValidation.Api.Providers;
 ///
 /// Architecture:
 /// - Depends on IKnowledgeRepository (data layer)
-/// - Returns IReadOnlyList<KnowledgeDocument> (immutable contract)
+/// - Returns IReadOnlyList&lt;KnowledgeDocument&gt; (immutable contract)
 /// - No business logic (data access only)
 /// - Async/await with CancellationToken support
 /// - Structured logging with document counts
@@ -78,7 +78,7 @@ public class KnowledgeProvider : IKnowledgeProvider
     /// 2. Query repository: SearchByCodeAsync("ICD", icdCode)
     /// 3. Map KnowledgeItem → KnowledgeDocument
     /// 4. Attach metadata (code, content for AI context)
-    /// 5. Return as IReadOnlyList<KnowledgeDocument>
+    /// 5. Return as IReadOnlyList&lt;KnowledgeDocument&gt;
     ///
     /// Task-015 Specific:
     /// - Validates ICD O80 (female only) vs male patients

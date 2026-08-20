@@ -9,7 +9,7 @@ namespace AIValidation.Api.Providers.Interfaces;
 /// - Gọi tất cả IKnowledgeSource
 /// - Tổng hợp kết quả
 /// - Loại bỏ trùng lặp (nếu cần)
-/// - Trả về IReadOnlyList<KnowledgeDocument>
+/// - Trả về IReadOnlyList&lt;KnowledgeDocument&gt;
 /// 
 /// Hỗ trợ cấu trúc mở rộng:
 /// - Multiple data sources
@@ -28,7 +28,7 @@ public interface IKnowledgeProvider
     /// 1. Gọi GetDocumentsAsync() của tất cả IKnowledgeSource
     /// 2. Tổng hợp kết quả từ tất cả sources
     /// 3. Loại bỏ trùng lặp nếu cần
-    /// 4. Trả về IReadOnlyList<KnowledgeDocument>
+    /// 4. Trả về IReadOnlyList&lt;KnowledgeDocument&gt;
     /// </summary>
     /// <param name="request">Yêu cầu xác thực để xác định knowledge cần thiết.</param>
     /// <param name="cancellationToken">Token hủy yêu cầu.</param>

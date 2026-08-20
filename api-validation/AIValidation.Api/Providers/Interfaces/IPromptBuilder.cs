@@ -12,7 +12,7 @@ namespace AIValidation.Api.Providers.Interfaces;
 /// - Knowledge dữ liệu tham chiếu (từ KnowledgeProvider)
 /// - Form Snapshot (từ ValidationRequest)
 /// - Output Schema (từ PromptLoader)
-/// - Model & Temperature (từ LLMOptions configuration)
+/// - Model &amp; Temperature (từ LLMOptions configuration)
 /// 
 /// Prompt không được hard-code trong C#, được quản lý riêng
 /// (từ files, config, database).
