@@ -39,7 +39,7 @@ public class KnowledgeProvider : IKnowledgeProvider
     /// - IKnowledgeRepository: Scoped (one per request)
     /// - ILogger<KnowledgeProvider>: Singleton (logger factory)
     /// - AppDbContext: Scoped (same lifetime as repository)
-    /// - Registered in Program.cs via AddScoped<IKnowledgeRepository, KnowledgeRepository>
+    /// - Registered in Program.cs via AddScoped&lt;IKnowledgeRepository, KnowledgeRepository&gt;
     ///
     /// Layered Architecture:
     /// KnowledgeProvider (orchestration)

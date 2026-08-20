@@ -34,7 +34,7 @@ namespace AIValidation.Api.Providers;
 /// Example Extension:
 /// To add a new provider (e.g., "gemini"):
 /// 1. Create GeminiProvider : IAIProvider
-/// 2. Register in Program.cs: builder.Services.AddHttpClient<IAIProvider, GeminiProvider>();
+/// 2. Register in Program.cs: builder.Services.AddHttpClient&lt;IAIProvider, GeminiProvider&gt;();
 /// 3. Set in appsettings.json: "Provider": "gemini"
 /// 4. No changes needed to LLMProvider - already extensible
 /// </summary>

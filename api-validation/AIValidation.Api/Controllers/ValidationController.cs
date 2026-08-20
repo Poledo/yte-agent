@@ -1,4 +1,4 @@
-﻿using AIValidation.Api.Models;
+using AIValidation.Api.Models;
 using AIValidation.Api.Services.Interfaces;
 using AIValidation.Api.Authorization.Dynamic;
 using Microsoft.AspNetCore.Cors;
@@ -112,7 +112,7 @@ public class ValidationController : ControllerBase
     /// </param>
     /// <param name="cancellationToken">Token hủy async operation.</param>
     /// <returns>
-    /// ActionResult<ValidationResponse>:
+    /// ActionResult&lt;ValidationResponse&gt;:
     /// - 200 OK: ValidationResponse with Issues list
     /// - 400 Bad Request: Invalid request
     /// - Wrapped by middleware for error handling
