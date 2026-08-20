@@ -28,7 +28,7 @@ namespace AIValidation.Api.Providers;
 ///
 /// Design Pattern:
 /// - Dependency Injection: IEnumerable&lt;IAIProvider&gt;
-/// - Configuration: IOptions<LLMOptions>
+/// - Configuration: IOptions&lt;LLMOptions&gt;
 /// - Extensibility: New providers added by implementing IAIProvider and registering in DI
 ///
 /// Example Extension:

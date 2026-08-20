@@ -1,11 +1,11 @@
+using AIValidation.Api.Authorization.Dynamic;
 using AIValidation.Api.Data;
+using AIValidation.Api.Data.Entities;
 using AIValidation.Api.Providers.Catalog;
 using AIValidation.Api.Services;
 using AIValidation.Api.Services.Catalog;
 using AIValidation.Api.Services.Rag;
 using AIValidation.Api.Services.Tenancy;
-using AIValidation.Api.Authorization.Dynamic;
-using AIValidation.Api.Data.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -203,7 +203,7 @@ public class CatalogController : ControllerBase
         // Một truy vấn gộp thay vì N truy vấn con.
         var fileNames = sources.Select(s => s.FileName).Distinct().ToList();
         var inKnowledge = await _db.MedicalDocuments
-            .Where(d => fileNames.Contains(d.SourceFileName))
+            .Where(d => d.SourceFileName != null && fileNames.Contains(d.SourceFileName))
             .Select(d => d.SourceFileName!)
             .Distinct()
             .ToListAsync(cancellationToken);

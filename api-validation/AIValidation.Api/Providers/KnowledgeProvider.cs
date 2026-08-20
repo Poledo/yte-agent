@@ -37,7 +37,7 @@ public class KnowledgeProvider : IKnowledgeProvider
     ///
     /// Dependency Injection Pattern:
     /// - IKnowledgeRepository: Scoped (one per request)
-    /// - ILogger<KnowledgeProvider>: Singleton (logger factory)
+    /// - ILogger&lt;KnowledgeProvider&gt;: Singleton (logger factory)
     /// - AppDbContext: Scoped (same lifetime as repository)
     /// - Registered in Program.cs via AddScoped&lt;IKnowledgeRepository, KnowledgeRepository&gt;
     ///

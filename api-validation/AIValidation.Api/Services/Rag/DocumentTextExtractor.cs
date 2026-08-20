@@ -187,7 +187,7 @@ public class DocumentTextExtractor : IDocumentTextExtractor
     private static string ExtractDocx(MemoryStream stream)
     {
         using var doc = WordprocessingDocument.Open(stream, isEditable: false);
-        var body = doc.MainDocumentPart?.Document.Body;
+        var body = doc.MainDocumentPart?.Document?.Body;
         if (body == null)
         {
             throw new NotSupportedException("File .docx không có nội dung văn bản.");
@@ -344,7 +344,7 @@ public class DocumentTextExtractor : IDocumentTextExtractor
             using var bitmap = PDFtoImage.Conversion.ToImage(
                 stream,
                 leaveOpen: true,
-                page: i,
+                page: (Index)i,
                 options: new PDFtoImage.RenderOptions(Dpi: renderDpi));
             using var png = bitmap.Encode(SKEncodedImageFormat.Png, 100);
             using var pix = Pix.LoadFromMemory(png.ToArray());
@@ -381,7 +381,7 @@ public class DocumentTextExtractor : IDocumentTextExtractor
             ?.Elements<SharedStringItem>().Select(i => i.InnerText).ToList();
 
         var sb = new StringBuilder();
-        foreach (var sheet in workbookPart.Workbook.Descendants<Sheet>())
+        foreach (var sheet in workbookPart.Workbook!.Descendants<Sheet>())
         {
             if (sheet.Id?.Value == null)
             {
@@ -392,7 +392,7 @@ public class DocumentTextExtractor : IDocumentTextExtractor
             var worksheetPart = (WorksheetPart)workbookPart.GetPartById(sheet.Id.Value!);
 
             List<string>? headers = null;
-            foreach (var row in worksheetPart.Worksheet.Descendants<Row>())
+            foreach (var row in worksheetPart.Worksheet!.Descendants<Row>())
             {
                 var cells = row.Elements<Cell>()
                     .Select(c => ReadCellValue(c, sharedStrings))
@@ -410,7 +410,7 @@ public class DocumentTextExtractor : IDocumentTextExtractor
     /// Ghi một dòng bảng: dòng tiêu đề lẻ (1 ô) giữ nguyên; dòng đầu tiên có từ 2 ô
     /// trở lên làm HEADER; các dòng sau ghép "Header: giá trị" từng ô.
     /// </summary>
-    private static void AppendSheetRow(StringBuilder sb, List<string?> cells, ref List<string>? headers)
+    private static void AppendSheetRow(StringBuilder sb, List<string> cells, ref List<string>? headers)
     {
         var nonEmpty = cells.Count(v => !string.IsNullOrWhiteSpace(v));
         if (nonEmpty == 0)

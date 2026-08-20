@@ -1,5 +1,5 @@
-using AIValidation.Api.Configuration;
 using AIValidation.Api.Authorization.Dynamic;
+using AIValidation.Api.Configuration;
 using AIValidation.Api.Services.Extension;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;

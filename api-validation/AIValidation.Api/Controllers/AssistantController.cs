@@ -1,11 +1,11 @@
 ﻿using System.Text.Json;
+using AIValidation.Api.Authorization.Dynamic;
 using AIValidation.Api.Data;
+using AIValidation.Api.Providers.Catalog;
 using AIValidation.Api.Services;
 using AIValidation.Api.Services.Licensing;
 using AIValidation.Api.Services.Rag;
 using AIValidation.Api.Services.Tenancy;
-using AIValidation.Api.Providers.Catalog;
-using AIValidation.Api.Authorization.Dynamic;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;

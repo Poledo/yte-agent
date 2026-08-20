@@ -1,7 +1,7 @@
+using AIValidation.Api.Authorization.Dynamic;
 using AIValidation.Api.Data;
 using AIValidation.Api.Data.Repositories.Interfaces;
 using AIValidation.Api.Models;
-using AIValidation.Api.Authorization.Dynamic;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AIValidation.Api.Controllers;
