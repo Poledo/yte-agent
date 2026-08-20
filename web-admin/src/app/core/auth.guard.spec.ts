@@ -100,8 +100,8 @@ describe('permissionGuard', () => {
     expect(runPermissionGuard(['User.Manage', 'Catalog.View'])).toBe(true);
   });
 
-  it('System.Admin đi qua mọi cửa', () => {
-    dangNhapVoi(['System.Admin']);
+  it('quản trị toàn quyền (*) đi qua mọi cửa', () => {
+    dangNhapVoi(['*']);
 
     expect(runPermissionGuard(['User.Manage'])).toBe(true);
   });

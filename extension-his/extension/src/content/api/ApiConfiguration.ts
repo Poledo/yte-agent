@@ -6,8 +6,8 @@ export class ApiConfiguration {
   headers: Record<string, string>
 
   constructor(
-    baseUrl: string = 'https://localhost:44350',
-    // baseUrl: string = 'https://cbyts.vnpt.vn',
+    // baseUrl: string = 'https://localhost:44350',
+    baseUrl: string = 'https://cbyts.vnpt.vn',
     timeout: number = 5000,
     retryCount: number = 0,
     retryDelay: number = 1000,

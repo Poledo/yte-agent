@@ -14,8 +14,8 @@ import { buildLicenseHeaders, describeLicenseError } from '../../shared/license/
  * Base URL cố định trỏ tới hệ thống đã deploy trên VNPT Cloud.
  */
 export class ChatApiClient {
-  private static readonly BASE_URL = 'https://localhost:44350'
-  //   private static readonly BASE_URL = 'https://cbyts.vnpt.vn'
+  //   private static readonly BASE_URL = 'https://localhost:44350'
+  private static readonly BASE_URL = 'https://cbyts.vnpt.vn'
   // Hỏi đáp RAG có thể gồm 2 lượt gọi AI ở backend (rerank + trả lời);
   // khi chạy model local trên CPU mỗi lượt có thể tới 120s — timeout phía
   // extension phải dài hơn tổng đó.
