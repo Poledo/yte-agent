@@ -32,7 +32,7 @@
          Tesseract nhận dạng chữ (cần file vie.traineddata trong Ocr/tessdata) -->
     <PackageReference Include="PDFtoImage" Version="4.1.1" />
     <PackageReference Include="Tesseract" Version="5.2.0" />
-    <PackageReference Include="Scalar.AspNetCore" Version="1.2.47" />
+    <PackageReference Include="Scalar.AspNetCore" Version="2.17.1" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.22.0" />
     <!-- System.Text.Encoding.CodePages KHÔNG khai báo ở đây: từ .NET 10 nó nằm sẵn
          trong shared framework (cảnh báo NU1510). CodePagesEncodingProvider vẫn dùng
