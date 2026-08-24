@@ -27,7 +27,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
-    <PackageReference Include="PdfPig" Version="0.1.15" />
+    <PackageReference Include="PdfPig" Version="0.1.16" />
     <!-- OCR miễn phí, chạy offline cho PDF scan: PDFtoImage render trang thành ảnh (pdfium),
          Tesseract nhận dạng chữ (cần file vie.traineddata trong Ocr/tessdata) -->
     <PackageReference Include="PDFtoImage" Version="4.1.1" />
