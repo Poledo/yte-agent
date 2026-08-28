@@ -50,4 +50,13 @@ export default tseslint.config(
             'no-console': 'off',
         },
     },
+    {
+        // Script công cụ build (pack-crx.mjs) chạy trên Node, không phải trong extension.
+        files: ['scripts/**/*.mjs'],
+        languageOptions: {
+            globals: {
+                ...globals.node,
+            },
+        },
+    },
 )
