@@ -316,7 +316,9 @@ export class Permissions {
           next: (r) => {
             this.notify.success(
               `Đã quét ${r.scanned} endpoint: thêm ${r.added}, cập nhật ${r.updated}, ` +
-                `tắt ${r.deactivated}, bật lại ${r.reactivated}, tự cấp ${r.autoGranted}.`,
+                `tắt ${r.deactivated}, bật lại ${r.reactivated}, tự cấp ${r.autoGranted}` +
+                (r.skipped > 0 ? `, bỏ qua ${r.skipped} mã trùng quyền tạo thủ công` : '') +
+                '.',
             );
             this.rescanning.set(false);
             this.load();

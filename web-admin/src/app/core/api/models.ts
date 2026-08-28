@@ -99,6 +99,11 @@ export interface CreateUserRequest {
 export interface UpdateUserRequest {
   fullName?: string;
   isActive?: boolean;
+  /**
+   * Cờ quản trị toàn hệ thống. Chỉ tài khoản cấp hệ thống mới đổi được; máy chủ bỏ
+   * qua nếu quản trị cơ sở gửi lên.
+   */
+  isSuperAdmin?: boolean;
 }
 
 export interface AssignRolesRequest {
@@ -195,6 +200,8 @@ export interface PermissionSyncResultDto {
   reactivated: number;
   /** Số quyền mới tự cấp cho vai trò ADMIN — thêm API mới không tự khóa chính mình. */
   autoGranted: number;
+  /** Số mã trùng với quyền tạo thủ công nên bị bỏ qua, không đồng bộ. */
+  skipped: number;
   completedAt: string;
 }
 

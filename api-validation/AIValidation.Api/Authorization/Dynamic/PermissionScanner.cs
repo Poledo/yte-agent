@@ -26,6 +26,7 @@ public sealed record PermissionSyncResult(
     int Deactivated,
     int Reactivated,
     int AutoGranted,
+    int Skipped,
     DateTime CompletedAt);
 
 public interface IPermissionScanner
@@ -185,11 +186,21 @@ public sealed class PermissionScanner : IPermissionScanner
             .GroupBy(p => MemberKey(p.ControllerName, p.ActionName), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
+        // Mã quyền do người quản trị tự tạo (ControllerName rỗng) không nằm trong tập
+        // `existing` ở trên. Phải biết chúng để KHÔNG insert trùng mã — index duy nhất
+        // trên Code sẽ ném DbUpdateException và cả lần quét biến thành lỗi 500.
+        var manualCodes = await db.Permissions
+            .Where(p => p.ControllerName == "")
+            .Select(p => p.Code)
+            .ToListAsync(cancellationToken);
+        var manualCodeSet = manualCodes.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         var now = DateTime.UtcNow;
         var matched = new HashSet<Guid>();
         var added = new List<Permission>();
         var updated = 0;
         var reactivated = 0;
+        var skipped = 0;
 
         foreach (var item in byCode)
         {
@@ -201,6 +212,18 @@ public sealed class PermissionScanner : IPermissionScanner
             // dòng đó, cập nhật tại chỗ thì mọi vai trò đang được gán vẫn giữ nguyên.
             var row = existingByCode.GetValueOrDefault(ep.Code)
                       ?? existingByMember.GetValueOrDefault(memberKey);
+
+            if (row is null && manualCodeSet.Contains(ep.Code))
+            {
+                // Mã này đã có dòng tự tạo giữ chỗ: để yên tuyệt đối, không insert
+                // trùng cũng không chiếm dòng đó. Endpoint tạm thời không được bảo vệ
+                // bằng mã riêng cho tới khi quản trị viên đổi tên hoặc tắt dòng tự tạo.
+                skipped++;
+                _logger.LogWarning(
+                    "Mã quyền {Code} trùng với quyền tạo thủ công, bỏ qua không đồng bộ",
+                    ep.Code);
+                continue;
+            }
 
             if (row is null)
             {
@@ -290,13 +313,14 @@ public sealed class PermissionScanner : IPermissionScanner
             Deactivated: deactivated,
             Reactivated: reactivated,
             AutoGranted: autoGranted,
+            Skipped: skipped,
             CompletedAt: now);
 
         _lastSync = result;
 
         _logger.LogInformation(
-            "Đồng bộ quyền: quét {Scanned}, thêm {Added}, cập nhật {Updated}, tắt {Deactivated}, bật lại {Reactivated}, tự cấp {AutoGranted}",
-            result.Scanned, result.Added, result.Updated, result.Deactivated, result.Reactivated, result.AutoGranted);
+            "Đồng bộ quyền: quét {Scanned}, thêm {Added}, cập nhật {Updated}, tắt {Deactivated}, bật lại {Reactivated}, tự cấp {AutoGranted}, bỏ qua {Skipped}",
+            result.Scanned, result.Added, result.Updated, result.Deactivated, result.Reactivated, result.AutoGranted, result.Skipped);
 
         return result;
     }

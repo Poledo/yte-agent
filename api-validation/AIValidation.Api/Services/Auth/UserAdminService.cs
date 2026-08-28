@@ -179,13 +179,45 @@ public sealed class UserAdminService : IUserAdminService
             user.IsActive = request.IsActive.Value;
         }
 
+        // Cờ quản trị hệ thống: chỉ tài khoản cấp hệ thống mới được đổi — quản trị cơ
+        // sở tự phong cho mình (hoặc cho người khác) là leo thang đặc quyền. Và không
+        // ai tự gỡ cờ của chính mình: gỡ nhầm là mất luôn tài khoản vào được toàn hệ thống.
+        var superAdminChanged = false;
+        if (request.IsSuperAdmin.HasValue && request.IsSuperAdmin.Value != user.IsSuperAdmin)
+        {
+            if (!_tenant.IsSystemScope)
+            {
+                return ServiceResult<UserDto>.Fail(
+                    "Chỉ tài khoản cấp hệ thống mới được cấp hoặc gỡ quyền quản trị hệ thống.", 403);
+            }
+            if (actorId.HasValue && actorId.Value == user.Id && !request.IsSuperAdmin.Value)
+            {
+                return ServiceResult<UserDto>.Fail(
+                    "Không thể tự gỡ quyền quản trị hệ thống của chính mình.", 403);
+            }
+
+            user.IsSuperAdmin = request.IsSuperAdmin.Value;
+            superAdminChanged = true;
+        }
+
         var updated = await _userManager.UpdateAsync(user);
         if (!updated.Succeeded)
         {
             return ServiceResult<UserDto>.Fail(string.Join(" ", updated.Errors.Select(e => e.Description)));
         }
 
-        await _auditService.LogAsync("User.Update", actorId, entityType: "User", entityId: user.Id.ToString(), ipAddress: ip, ct: ct);
+        if (superAdminChanged)
+        {
+            // Cờ IsSuperAdmin nằm trong ảnh chụp quyền — không xóa cache thì tài khoản
+            // vừa được cấp vẫn phải chờ hết TTL mới có hiệu lực.
+            _permissionCache.InvalidateAll();
+        }
+
+        await _auditService.LogAsync("User.Update", actorId, entityType: "User", entityId: user.Id.ToString(),
+            detail: user.Email + (superAdminChanged
+                ? (user.IsSuperAdmin ? " [+quản trị hệ thống]" : " [-quản trị hệ thống]")
+                : string.Empty),
+            ipAddress: ip, ct: ct);
         return ServiceResult<UserDto>.Ok(await ToDtoAsync(user, ct), "Cập nhật người dùng thành công.");
     }
 

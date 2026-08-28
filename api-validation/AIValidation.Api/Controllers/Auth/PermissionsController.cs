@@ -144,7 +144,8 @@ public sealed class PermissionsController : AuthControllerBase
         await _auditService.LogAsync(
             "Permission.Rescan", CurrentUserId, entityType: "Permission",
             detail: $"quét {result.Scanned}, thêm {result.Added}, cập nhật {result.Updated}, "
-                  + $"tắt {result.Deactivated}, bật lại {result.Reactivated}, tự cấp {result.AutoGranted}",
+                  + $"tắt {result.Deactivated}, bật lại {result.Reactivated}, tự cấp {result.AutoGranted}, "
+                  + $"bỏ qua {result.Skipped}",
             ipAddress: ClientIp, ct: ct);
 
         return Ok(result);

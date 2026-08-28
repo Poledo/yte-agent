@@ -63,6 +63,18 @@
     @if (isEdit) {
       <mat-slide-toggle formControlName="isActive">Tài khoản đang hoạt động</mat-slide-toggle>
     }
+
+    @if (canPickFacility) {
+      <mat-slide-toggle formControlName="isSuperAdmin" [disabled]="isSelf && isEdit">
+        Quản trị hệ thống
+      </mat-slide-toggle>
+      <div class="toggle-hint">
+        Tài khoản thấy toàn bộ dữ liệu và bỏ qua kiểm tra quyền.
+        @if (isSelf && isEdit) {
+          Không thể tự gỡ quyền của chính mình.
+        }
+      </div>
+    }
   </form>
 </mat-dialog-content>
 <mat-dialog-actions align="end">

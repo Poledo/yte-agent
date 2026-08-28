@@ -1,20 +1,22 @@
 .form-grid {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  // gap rộng để mat-hint của ô trên không dính sát vào input ô dưới.
+  gap: 16px;
   min-width: 420px;
   padding-top: 8px;
 }
 
 mat-slide-toggle {
-  margin: 8px 0 4px;
+  margin: 4px 0 0;
 }
 
 .toggle-hint {
-  margin: 0 0 8px 4px;
+  // Cách toggle một nhịp thở; màu theo theme để dark mode không bị chìm.
+  margin: 6px 0 0 4px;
   font-size: 12px;
-  line-height: 1.4;
-  color: rgba(0, 0, 0, 0.6);
+  line-height: 1.5;
+  color: var(--mat-sys-on-surface-variant);
 }
 
 .form-error {

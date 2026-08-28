@@ -66,7 +66,12 @@ export class UserDialog {
     roles: [this.data.user?.roles ?? ([] as string[])],
     // null = tài khoản cấp hệ thống, thấy toàn bộ dữ liệu.
     facilityId: [this.data.user?.facilityId ?? (null as number | null)],
+    // Cờ quản trị toàn hệ thống — chỉ quản trị hệ thống mới thấy ô này.
+    isSuperAdmin: [this.data.user?.isSuperAdmin ?? false],
   });
+
+  /** Không cho tự gỡ cờ của chính mình — máy chủ cũng chặn, khóa trước ở UI cho rõ. */
+  readonly isSelf = this.data.user?.id === this.auth.currentUser()?.id;
 
   constructor() {
     if (this.canPickFacility && !this.isEdit) {
@@ -106,7 +111,13 @@ export class UserDialog {
     // song song thì lệnh về sau đụng stamp cũ và bị hủy (vai trò không lưu).
     const id = this.data.user!.id;
     this.api
-      .update(id, { fullName: v.fullName, isActive: v.isActive })
+      .update(id, {
+        fullName: v.fullName,
+        isActive: v.isActive,
+        // Chỉ gửi cờ khi người sửa có quyền đổi (quản trị hệ thống) — máy chủ cũng
+        // tự lọc, nhưng không gửi lên thì tránh được thông báo lỗi gây khó hiểu.
+        ...(this.canPickFacility ? { isSuperAdmin: v.isSuperAdmin } : {}),
+      })
       .pipe(
         switchMap(() =>
           this.rolesChanged(v.roles) ? this.api.assignRoles(id, { roles: v.roles }) : of(null),

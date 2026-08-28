@@ -12,8 +12,14 @@ namespace AIValidation.Api.Models.Auth;
 public record CreateUserRequest(
     string Email, string Password, string FullName, IReadOnlyList<string>? Roles, long? FacilityId = null);
 
-/// <summary>Cập nhật thông tin user.</summary>
-public record UpdateUserRequest(string? FullName, bool? IsActive);
+/// <summary>
+/// Cập nhật thông tin user.
+///
+/// IsSuperAdmin: cờ quản trị toàn hệ thống. Chỉ tài khoản cấp hệ thống mới được đổi
+/// (quản trị cơ sở gửi lên bị bỏ qua); không ai tự gỡ cờ của chính mình để tránh
+/// tự khóa cửa.
+/// </summary>
+public record UpdateUserRequest(string? FullName, bool? IsActive, bool? IsSuperAdmin = null);
 
 /// <summary>Gán danh sách role cho user (thay thế toàn bộ).</summary>
 public record AssignRolesRequest(IReadOnlyList<string> Roles);

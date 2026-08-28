@@ -8,3 +8,11 @@
 mat-slide-toggle {
   margin: 4px 0 8px;
 }
+
+.toggle-hint {
+  // Cách toggle một nhịp thở; màu theo theme để dark mode không bị chìm.
+  margin: 0 0 8px 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--mat-sys-on-surface-variant);
+}
