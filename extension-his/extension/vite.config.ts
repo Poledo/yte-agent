@@ -176,6 +176,8 @@ export default defineConfig(({ mode, command }) => {
                     fieldSyncBridge: resolve(__dirname, 'src/page/FieldSyncBridge.ts'),
                     // Bắt phản hồi danh sách phiếu thanh toán — xem src/page/PaymentListSniffer.ts
                     paymentListSniffer: resolve(__dirname, 'src/page/PaymentListSniffer.ts'),
+                    // Bắt tham số lượt Xuất XML KMH trên VNPT-HIS — xem src/page/GuiBhxhSniffer.ts
+                    guiBhxhSniffer: resolve(__dirname, 'src/page/GuiBhxhSniffer.ts'),
                     popup: resolve(__dirname, 'src/popup/index.html'),
                 },
                 output: {
@@ -183,6 +185,7 @@ export default defineConfig(({ mode, command }) => {
                         if (chunkInfo.name === 'background') return 'background/index.js'
                         if (chunkInfo.name === 'fieldSyncBridge') return 'page/FieldSyncBridge.js'
                         if (chunkInfo.name === 'paymentListSniffer') return 'page/PaymentListSniffer.js'
+                        if (chunkInfo.name === 'guiBhxhSniffer') return 'page/GuiBhxhSniffer.js'
                         if (chunkInfo.name === 'popup') return 'popup/index.js'
                         return 'chunks/[name]-[hash].js'
                     },

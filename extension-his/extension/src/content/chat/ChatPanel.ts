@@ -11,6 +11,10 @@ import {
     WordReportExporter,
 } from './export'
 import { IHisXmlDownloader, HisXmlDownloader } from './HisXmlDownloader'
+import { GuiBhxhStore } from './GuiBhxhStore'
+import { GuiBhxhXmlDownloader } from './GuiBhxhXmlDownloader'
+import { GuiKyTongStore } from './GuiKyTongStore'
+import { GuiKyTongXmlDownloader } from './GuiKyTongXmlDownloader'
 import { PaymentListStore } from './PaymentListStore'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { UnifiedAssistantPanel } from '../ui/UnifiedAssistantPanel'
@@ -52,6 +56,12 @@ export class ChatPanel {
     private readonly panel: UnifiedAssistantPanel
     /** Danh sách phiếu thanh toán người dùng vừa tìm trên màn hình Kiểm tra bảng kê. */
     private readonly paymentList: PaymentListStore
+    /** Tham số lượt "Xuất XML KMH" trên màn hình Gửi bảo hiểm 4210 (VNPT-HIS). */
+    private readonly guiBhxh: GuiBhxhStore
+    private readonly guiBhxhDownloader = new GuiBhxhXmlDownloader()
+    /** Tham số lượt "Xuất XML Ký tổng" trên màn hình Gửi DSHS BHXH 4210 (VNPT-HIS). */
+    private readonly guiKyTong: GuiKyTongStore
+    private readonly guiKyTongDownloader = new GuiKyTongXmlDownloader()
     /** Hộp thoại xác nhận trong panel — thay cho window.confirm mặc định. */
     private readonly confirmDialog: ConfirmDialog
     /** Đo cấu hình máy đang dùng để giới hạn số hồ sơ mỗi lô. */
@@ -110,11 +120,15 @@ export class ChatPanel {
         xmlDownloader?: IHisXmlDownloader,
         renderer?: ChatMessageRenderer,
         paymentList?: PaymentListStore,
+        guiBhxh?: GuiBhxhStore,
+        guiKyTong?: GuiKyTongStore,
     ) {
         this.apiClient = apiClient ?? new ChatApiClient()
         this.xmlDownloader = xmlDownloader ?? new HisXmlDownloader()
         this.renderer = renderer ?? new ChatMessageRenderer()
         this.paymentList = paymentList ?? new PaymentListStore()
+        this.guiBhxh = guiBhxh ?? new GuiBhxhStore()
+        this.guiKyTong = guiKyTong ?? new GuiKyTongStore()
         this.panel = panel
         this.container = panel.getTabContainer('chat')
         this.container.classList.add('chat-root')
@@ -124,6 +138,10 @@ export class ChatPanel {
         this.createUI()
         // Người dùng tìm kiếm lại trên bảng kê → cập nhật số lượng trên nút
         this.paymentList.onChange(() => this.renderPaymentBar())
+        // Người dùng bấm Xuất XML KMH → mở khóa/cập nhật số lượng nút kiểm tra
+        this.guiBhxh.onChange(() => this.renderGuiBhxhBar())
+        // Người dùng bấm Xuất XML Ký tổng → mở khóa nút kiểm tra
+        this.guiKyTong.onChange(() => this.renderGuiKyTongBar())
     }
 
     /**
@@ -166,6 +184,8 @@ export class ChatPanel {
         // Vẽ lại khay file để các nút ▶ / ✕ / "Kiểm tra tất cả" khóa-mở theo trạng thái bận
         this.renderTray()
         this.renderPaymentBar()
+        this.renderGuiBhxhBar()
+        this.renderGuiKyTongBar()
     }
 
     /** Hủy request đang chạy (người dùng bấm Dừng). Không gây lỗi ngoại lệ. */
@@ -202,6 +222,8 @@ export class ChatPanel {
             <div class="chat-messages"></div>
             <div class="chat-drop-hint">📄 Thả file XML vào đây để kiểm tra</div>
             <div class="chat-bangke" hidden></div>
+            <div class="chat-guibhxh" hidden></div>
+            <div class="chat-kytong" hidden></div>
             <div class="chat-tray" hidden></div>
             <div class="chat-input-wrap">
                 <div class="chat-plus-menu" hidden></div>
@@ -229,6 +251,8 @@ export class ChatPanel {
         this.attachEvents()
         this.showWelcome()
         this.renderPaymentBar()
+        this.renderGuiBhxhBar()
+        this.renderGuiKyTongBar()
 
         console.log('[ChatPanel] UI created')
     }
@@ -934,6 +958,251 @@ export class ChatPanel {
         bar.querySelector('[data-act="one"]')?.addEventListener('click', () => void this.checkSelectedRow())
     }
 
+    // ---------------------------------------------------------------
+    // Kiểm tra theo lô từ màn hình Gửi bảo hiểm 4210 (VNPT-HIS vncare)
+    // ---------------------------------------------------------------
+
+    /**
+     * Nút kiểm tra theo lô trên màn hình Gửi bảo hiểm 4210: người dùng chọn nhiều
+     * bệnh nhân, bấm "Xuất XML KMH" một lần (sniffer bắt tham số), rồi bấm nút này
+     * để extension gọi lại đúng lượt xuất đó lấy file XML gộp và kiểm tra một lượt.
+     */
+    private renderGuiBhxhBar(): void {
+        const bar = this.container.querySelector<HTMLElement>('.chat-guibhxh')
+        if (!bar) return
+        if (!GuiBhxhStore.isSupportedPage()) {
+            bar.hidden = true
+            bar.innerHTML = ''
+            return
+        }
+
+        const capture = this.guiBhxh.getCapture()
+        const count = capture?.maLkList.length ?? 0
+        const lock = this.isBusy || capture === null ? 'disabled' : ''
+        bar.hidden = false
+        bar.innerHTML = `
+            <div class="chat-bangke-row">
+                <button class="chat-guibhxh-btn" data-act="kmh" ${lock}
+                    title="${
+                        capture === null
+                            ? 'Hãy tick chọn bệnh nhân rồi bấm nút "Xuất XML KMH" của HIS trước — tôi sẽ dùng đúng lượt xuất đó để lấy file kiểm tra'
+                            : `Tải file XML KMH của lượt xuất vừa bấm (${count} bệnh nhân) rồi kiểm tra một lượt kèm đối chiếu chéo`
+                    }">
+                    📋 Kiểm tra XML KMH${count > 0 ? ` (${this.num(count)} bệnh nhân)` : ''}
+                </button>
+            </div>`
+        bar.querySelector('[data-act="kmh"]')?.addEventListener('click', () => void this.checkFromGuiBhxh())
+    }
+
+    /**
+     * Gọi lại RestService với đúng tham số của lượt "Xuất XML KMH" người dùng vừa bấm
+     * → nhận file XML gộp nhiều hồ sơ → đưa vào khay → kiểm tra một lượt như kéo-thả file.
+     */
+    private async checkFromGuiBhxh(): Promise<void> {
+        if (this.isBusy) return
+
+        const capture = this.guiBhxh.getCapture()
+        if (capture === null) {
+            this.addBotHtml(
+                '⚠ Chưa có lượt xuất XML nào để dùng.<br/>' +
+                    'Hãy tick chọn bệnh nhân rồi bấm nút <b>Xuất XML KMH</b> của HIS trước — tôi bắt tham số ' +
+                    'từ đúng lượt bấm đó và gọi lại để lấy file, không tự tìm kiếm lần nữa.',
+            )
+            return
+        }
+        const count = capture.maLkList.length
+        if (count === 0) {
+            this.addBotHtml('⚠ Lượt xuất vừa rồi không có bệnh nhân nào. Hãy chọn lại rồi bấm <b>Xuất XML KMH</b>.')
+            return
+        }
+
+        // Cùng nguyên tắc với bảng kê: không tự cắt bớt danh sách — đối chiếu chéo
+        // thiếu hồ sơ còn nguy hiểm hơn không kiểm tra. Chỉ bộ nhớ mới chặn được lô.
+        const plan = this.capacity.measure()
+        if (count > plan.maxFiles) {
+            this.addBotHtml(
+                `⚠ Lượt xuất có <b>${this.num(count)}</b> bệnh nhân, vượt sức bộ nhớ cho một lượt ` +
+                    `(<b>${this.num(plan.maxFiles)}</b> hồ sơ).<br/>` +
+                    `Máy đang dùng: ${plan.summary} — tải file gộp chừng đó hồ sơ vào bộ nhớ tab sẽ làm treo trình duyệt.<br/>` +
+                    'Hãy chọn ít bệnh nhân hơn rồi bấm <b>Xuất XML KMH</b> lại.',
+            )
+            return
+        }
+
+        const wait = this.capacity.estimateWait(count, plan)
+        const agreed = await this.confirmDialog.ask({
+            icon: '📋',
+            title: 'Kiểm tra XML KMH',
+            messageHtml:
+                `Bạn muốn kiểm tra file XML KMH của lượt xuất vừa bấm (<b>${this.num(count)}</b> bệnh nhân)?<br/>` +
+                'File sẽ được tải từ HIS rồi kiểm tra một lượt, có đối chiếu chéo giữa các hồ sơ.<br/>' +
+                `Thời gian chờ dự kiến: <b>${wait}</b> (máy đang dùng: ${plan.summary}).<br/>` +
+                'Trong lúc chạy vẫn xem được tiến độ và bấm <b>Dừng</b> bất cứ lúc nào.',
+            confirmLabel: `Kiểm tra ${this.num(count)} hồ sơ`,
+            cancelLabel: 'Để sau',
+        })
+        if (!agreed) return
+
+        const abort = new AbortController()
+        this.abortController = abort
+        this.setBusy(true)
+
+        const loading = this.addLoadingMessage('Đang tải file XML KMH từ HIS...')
+        try {
+            const xml = await this.guiBhxhDownloader.download(capture, abort.signal)
+            const stamp = new Date(capture.at)
+            const pad = (n: number) => String(n).padStart(2, '0')
+            const name = `KMH_${capture.hcode || 'hoso'}_${stamp.getFullYear()}${pad(stamp.getMonth() + 1)}${pad(
+                stamp.getDate(),
+            )}_${pad(stamp.getHours())}${pad(stamp.getMinutes())}${pad(stamp.getSeconds())}.xml`
+            const file = new File([xml], name, { type: 'text/xml' })
+
+            if (file.size > plan.budgetBytes) {
+                this.setMessageHtml(
+                    loading,
+                    `⚠ File XML nặng ${this.mb(file.size)} — vượt ngân sách bộ nhớ của máy này ` +
+                        `(${plan.summary} → tối đa ${this.mb(plan.budgetBytes)}MB mỗi lượt).<br/>` +
+                        'Hãy chọn ít bệnh nhân hơn rồi bấm <b>Xuất XML KMH</b> lại.',
+                )
+                return
+            }
+
+            this.setMessageHtml(
+                loading,
+                `Đã tải file <b>${this.escape(name)}</b> (${this.mb(file.size)}, ${this.num(count)} bệnh nhân) — đang đưa vào kiểm tra...`,
+            )
+
+            const item: QueuedFile = {
+                id: ++this.fileSeq,
+                file,
+                status: 'pending' as QueuedStatus,
+                abort: null,
+                note: '',
+            }
+            this.fileQueue.push(item)
+            this.renderTray()
+            await this.checkBatch([item])
+        } catch (error) {
+            this.setMessageHtml(loading, this.renderEndOrError(error))
+        } finally {
+            this.setBusy(false)
+        }
+    }
+
+
+    // ---------------------------------------------------------------
+    // Kiểm tra XML Ký tổng từ màn hình Gửi danh sách hồ sơ BHXH 4210 (VNPT-HIS)
+    // ---------------------------------------------------------------
+
+    /**
+     * Nút kiểm tra XML Ký tổng trên màn hình Gửi DSHS BHXH 4210: người dùng bấm
+     * "Xuất XML Ký tổng" (sniffer bắt URL + JWT), rồi bấm nút này để extension gọi
+     * lại đúng liên kết đó lấy file XML đã ký số và kiểm tra một lượt.
+     */
+    private renderGuiKyTongBar(): void {
+        const bar = this.container.querySelector<HTMLElement>('.chat-kytong')
+        if (!bar) return
+        if (!GuiKyTongStore.isSupportedPage()) {
+            bar.hidden = true
+            bar.innerHTML = ''
+            return
+        }
+
+        const capture = this.guiKyTong.getCapture()
+        const lock = this.isBusy || capture === null ? 'disabled' : ''
+        bar.hidden = false
+        bar.innerHTML = `
+            <div class="chat-bangke-row">
+                <button class="chat-kytong-btn" data-act="kytong" ${lock}
+                    title="${
+                        capture === null
+                            ? 'Hãy bấm nút "Xuất XML Ký tổng" của HIS trước — tôi sẽ dùng đúng lượt xuất đó để lấy file kiểm tra'
+                            : 'Tải file XML Ký tổng của lượt xuất vừa bấm rồi kiểm tra một lượt kèm đối chiếu chéo'
+                    }">
+                    📋 Kiểm tra XML Ký tổng
+                </button>
+            </div>`
+        bar.querySelector('[data-act="kytong"]')?.addEventListener('click', () => void this.checkFromGuiKyTong())
+    }
+
+    /**
+     * Gọi lại IdgStorageUpload với đúng URL + JWT của lượt "Xuất XML Ký tổng"
+     * người dùng vừa bấm → nhận file XML gộp đã ký số → đưa vào khay → kiểm tra
+     * một lượt như kéo-thả file.
+     */
+    private async checkFromGuiKyTong(): Promise<void> {
+        if (this.isBusy) return
+
+        const capture = this.guiKyTong.getCapture()
+        if (capture === null) {
+            this.addBotHtml(
+                '⚠ Chưa có lượt xuất XML nào để dùng.<br/>' +
+                    'Hãy bấm nút <b>Xuất XML Ký tổng</b> của HIS trước — tôi bắt liên kết tải ' +
+                    'từ đúng lượt bấm đó và gọi lại để lấy file, không tự tìm kiếm lần nữa.',
+            )
+            return
+        }
+
+        const plan = this.capacity.measure()
+        const agreed = await this.confirmDialog.ask({
+            icon: '📋',
+            title: 'Kiểm tra XML Ký tổng',
+            messageHtml:
+                'Bạn muốn kiểm tra file XML Ký tổng của lượt xuất vừa bấm?<br/>' +
+                'File sẽ được tải từ HIS rồi kiểm tra một lượt, có đối chiếu chéo giữa các hồ sơ.<br/>' +
+                `Máy đang dùng: ${plan.summary}.<br/>` +
+                'Trong lúc chạy vẫn xem được tiến độ và bấm <b>Dừng</b> bất cứ lúc nào.',
+            confirmLabel: 'Kiểm tra',
+            cancelLabel: 'Để sau',
+        })
+        if (!agreed) return
+
+        const abort = new AbortController()
+        this.abortController = abort
+        this.setBusy(true)
+
+        const loading = this.addLoadingMessage('Đang tải file XML Ký tổng từ HIS...')
+        try {
+            const xml = await this.guiKyTongDownloader.download(capture, abort.signal)
+            const stamp = new Date(capture.at)
+            const pad = (n: number) => String(n).padStart(2, '0')
+            const name = `KyTong_${stamp.getFullYear()}${pad(stamp.getMonth() + 1)}${pad(stamp.getDate())}_${pad(
+                stamp.getHours(),
+            )}${pad(stamp.getMinutes())}${pad(stamp.getSeconds())}.xml`
+            const file = new File([xml], name, { type: 'text/xml' })
+
+            if (file.size > plan.budgetBytes) {
+                this.setMessageHtml(
+                    loading,
+                    `⚠ File XML nặng ${this.mb(file.size)} — vượt ngân sách bộ nhớ của máy này ` +
+                        `(${plan.summary} → tối đa ${this.mb(plan.budgetBytes)}MB mỗi lượt).<br/>` +
+                        'Hãy xuất lô ít hồ sơ hơn rồi bấm <b>Xuất XML Ký tổng</b> lại.',
+                )
+                return
+            }
+
+            this.setMessageHtml(
+                loading,
+                `Đã tải file <b>${this.escape(name)}</b> (${this.mb(file.size)}) — đang đưa vào kiểm tra...`,
+            )
+
+            const item: QueuedFile = {
+                id: ++this.fileSeq,
+                file,
+                status: 'pending' as QueuedStatus,
+                abort: null,
+                note: '',
+            }
+            this.fileQueue.push(item)
+            this.renderTray()
+            await this.checkBatch([item])
+        } catch (error) {
+            this.setMessageHtml(loading, this.renderEndOrError(error))
+        } finally {
+            this.setBusy(false)
+        }
+    }
+
     /**
      * Kiểm tra hồ sơ của dòng phiếu thanh toán đang chọn. Chỉ một file nên chạy thẳng,
      * không hỏi xác nhận. Nút đã bị khóa khi chưa chọn dòng nào — đây chỉ là chốt chặn.
@@ -1557,6 +1826,56 @@ export class ChatPanel {
             }
             .chat-bangke-btn:hover:not(:disabled) { background: #eff6ff; }
             .chat-bangke-btn:disabled { opacity: 0.55; cursor: default; }
+            /* Thanh nút màn hình Gửi bảo hiểm 4210 (VNPT-HIS) — cùng kiểu thanh bảng kê */
+            .chat-guibhxh {
+                border-top: 1px solid #e5e7eb;
+                background: #f8fafc;
+                padding: 8px 10px;
+                flex-shrink: 0;
+            }
+            .chat-guibhxh[hidden] { display: none; }
+            .chat-guibhxh-btn {
+                flex: 1 1 0;
+                min-width: 0;
+                padding: 9px 8px;
+                border: 1px solid var(--zc-accent-deep, #2563eb);
+                border-radius: 8px;
+                background: #ffffff;
+                color: var(--zc-accent-deep, #2563eb);
+                font-size: 12.5px;
+                font-weight: 600;
+                line-height: 1.35;
+                text-align: center;
+                cursor: pointer;
+            }
+            .chat-guibhxh-btn:hover:not(:disabled) { background: #eff6ff; }
+            .chat-guibhxh-btn:disabled { opacity: 0.55; cursor: default; }
+            /* Thanh nút màn hình Gửi DSHS BHXH 4210 (VNPT-HIS) — cùng kiểu thanh bảng kê */
+            .chat-kytong {
+                border-top: 1px solid #e5e7eb;
+                background: #f8fafc;
+                padding: 8px 10px;
+                flex-shrink: 0;
+            }
+            .chat-kytong[hidden] { display: none; }
+            .chat-kytong-btn {
+                flex: 1 1 0;
+                min-width: 0;
+                padding: 9px 8px;
+                border: 1px solid var(--zc-accent-deep, #2563eb);
+                border-radius: 8px;
+                background: #ffffff;
+                color: var(--zc-accent-deep, #2563eb);
+                font-size: 12.5px;
+                font-weight: 600;
+                line-height: 1.35;
+                text-align: center;
+                cursor: pointer;
+            }
+            .chat-kytong-btn:hover:not(:disabled) { background: #eff6ff; }
+            .chat-kytong-btn:disabled { opacity: 0.55; cursor: default; }
+
+
 
             .chat-tray {
                 border-top: 1px solid #e5e7eb;
