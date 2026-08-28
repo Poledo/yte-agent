@@ -2,7 +2,8 @@
   "manifest_version": 3,
   "name": "ZeroCheck AI",
   "description": "Tiện ích mở rộng hỗ trợ giúp kiểm tra và xác thực dữ liệu đầu vào trên phần mềm HIS",
-  "version": "1.1.0",
+  "version": "1.2.0",
+  "update_url": "https://cbyts.vnpt.vn/api/extension-release/update.xml",
   "icons": {
     "16": "assets/icon16.png",
     "32": "assets/icon32.png",

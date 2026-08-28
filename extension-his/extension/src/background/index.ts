@@ -6,6 +6,12 @@ import {
     CATALOG_IMPORT_START,
     CATALOG_IMPORT_STATUS,
 } from '../shared/his/CatalogImportChannel'
+import {
+    CHECK_UPDATE_MESSAGE,
+    FORCE_UPDATE_MESSAGE,
+    checkForUpdate,
+    forceUpdate,
+} from './ExtensionUpdater'
 import { HisCatalogImporter } from './HisCatalogImporter'
 
 console.log('ZeroCheck AI Background Service Worker loaded')
@@ -14,6 +20,25 @@ console.log('ZeroCheck AI Background Service Worker loaded')
 function initializeBackground(): void {
     console.log('Background initialization started')
     listenCatalogImport()
+    listenUpdateCheck()
+}
+
+/**
+ * Nút "Kiểm tra bản mới" ở popup: hỏi máy chủ có bản mới không và (nếu có) ép
+ * Chrome tải ngay thay vì chờ chu kỳ tự động ~5 giờ. Xem ExtensionUpdater.
+ */
+function listenUpdateCheck(): void {
+    chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+        if (message?.type === CHECK_UPDATE_MESSAGE) {
+            void checkForUpdate().then(sendResponse)
+            return true // trả lời bất đồng bộ
+        }
+        if (message?.type === FORCE_UPDATE_MESSAGE) {
+            void forceUpdate().then(sendResponse)
+            return true
+        }
+        return false
+    })
 }
 
 /**

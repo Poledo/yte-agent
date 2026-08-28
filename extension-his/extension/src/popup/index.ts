@@ -14,6 +14,11 @@ import {
     type CatalogImportState,
 } from '../shared/his/CatalogImportChannel'
 import { loadLicenseSettings, saveLicenseSettings } from '../shared/license/LicenseSettings'
+import {
+    CHECK_UPDATE_MESSAGE,
+    FORCE_UPDATE_MESSAGE,
+    type UpdateCheckResult,
+} from '../background/ExtensionUpdater'
 
 function initializePopup(): void {
     console.log('Popup initialized')
@@ -28,6 +33,66 @@ function initializePopup(): void {
     initializePopupRobot()
     initializeGuideButton()
     initializeCatalogImport()
+    initializeUpdateCheck()
+}
+
+/**
+ * Nút "Kiểm tra bản mới": hỏi máy chủ có bản mới không; nếu có thì đổi nút thành
+ * "Cập nhật ngay" để ép Chrome tải bản mới luôn (không chờ chu kỳ tự động ~5 giờ).
+ * Việc so version và gọi Chrome chạy ở service worker (xem ExtensionUpdater).
+ */
+function initializeUpdateCheck(): void {
+    const button = document.getElementById('checkUpdate') as HTMLButtonElement | null
+    const status = document.getElementById('updateStatus')
+    if (!button || !status) return
+
+    let hasUpdate = false
+
+    const showStatus = (message: string, tone: 'ok' | 'warn' | 'error'): void => {
+        status.textContent = message
+        status.dataset.tone = tone
+        status.hidden = false
+    }
+
+    const handleResult = (result: UpdateCheckResult | undefined): void => {
+        button.disabled = false
+        if (!result) {
+            showStatus('Không kiểm tra được. Hãy tải lại tiện ích rồi thử lại.', 'error')
+            return
+        }
+        if (result.status === 'update-available') {
+            hasUpdate = true
+            button.textContent = '⬇ Cập nhật ngay'
+            showStatus(result.message, 'warn')
+            return
+        }
+        if (result.status === 'update-downloading') {
+            showStatus(result.message, 'warn')
+            return
+        }
+        if (result.status === 'not-supported') {
+            showStatus(result.message, 'error')
+            return
+        }
+        if (result.status === 'error') {
+            showStatus(result.message, 'error')
+            return
+        }
+        showStatus(result.message, 'ok')
+    }
+
+    button.addEventListener('click', () => {
+        button.disabled = true
+        status.hidden = true
+        const type = hasUpdate ? FORCE_UPDATE_MESSAGE : CHECK_UPDATE_MESSAGE
+        chrome.runtime.sendMessage({ type }, (response) => {
+            if (chrome.runtime.lastError) {
+                handleResult(undefined)
+                return
+            }
+            handleResult(response as UpdateCheckResult | undefined)
+        })
+    })
 }
 
 /**

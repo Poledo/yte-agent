@@ -1,9 +1,20 @@
 name: Đóng gói bản cài extension
 
-# Chạy khi đẩy tag dạng extension-v1.2.3. Kết quả là một file .zip đính vào GitHub
-# Release — đây chính là file kéo lên Chrome Web Store khi nào cần, và cũng là bản
-# gửi cho đơn vị tự cài. Workflow này KHÔNG tự đăng lên store: store duyệt tay, mỗi
-# lần đăng phải tăng version, và đã đăng là mọi máy tự cập nhật — không lùi lại được.
+# Chạy khi đẩy tag dạng extension-v1.2.3. Kết quả:
+# 1. File .zip đính vào GitHub Release — bản gửi cho đơn vị tự cài / kéo lên Chrome
+#    Web Store khi nào cần (workflow này KHÔNG tự đăng lên store).
+# 2. File .crx đã ký + update.xml đẩy vào volume Storage của API trên cụm K8s —
+#    cơ chế tự cập nhật self-hosted: manifest của extension khai
+#    update_url = https://cbyts.vnpt.vn/api/extension-release/update.xml, Chrome tự
+#    hỏi file này ~5 giờ/lần và tải .crx khi thấy version mới hơn.
+#    (ExtensionReleaseController phục vụ 2 file này.)
+#
+# Secrets cần khai (Settings > Secrets and variables > Actions):
+#   EXTENSION_CRX_KEY - khóa riêng RSA 2048 dạng PEM (base64 -w0 zerocheck-ai.pem).
+#                       Khóa này quyết định extension ID — mất khóa là mất luôn ID và
+#                       mọi máy trạm phải cài lại từ đầu. Bản gốc cất ở vnpt-cloud/
+#                       (không commit).
+#   KUBE_CONFIG       - kubeconfig cụm VNPT K8s, mã hóa base64 (base64 -w0 kubeconfig.yaml)
 #
 # Tiền tố `extension-` là quy ước của monorepo: một kho chứa 3 thành phần nên tag
 # phải nói rõ đang phát hành cái nào (hồi tách repo tag chỉ là `v1.2.3`).
@@ -16,8 +27,32 @@ permissions:
   contents: write
 
 jobs:
+  kiem-tra-secrets:
+    name: Soát secrets phát hành
+    runs-on: ubuntu-latest
+    outputs:
+      du: ${{ steps.soat.outputs.du }}
+    steps:
+      - id: soat
+        env:
+          EXTENSION_CRX_KEY: ${{ secrets.EXTENSION_CRX_KEY }}
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+        run: |
+          THIEU=""
+          for TEN in EXTENSION_CRX_KEY KUBE_CONFIG; do
+            if [ -z "${!TEN}" ]; then THIEU="$THIEU $TEN"; fi
+          done
+          if [ -n "$THIEU" ]; then
+            echo "::warning::Bỏ qua đóng gói .crx và đẩy lên máy chủ: kho chưa khai secrets:$THIEU."
+            echo "du=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Đã đủ secrets phát hành."
+            echo "du=true" >> "$GITHUB_OUTPUT"
+          fi
+
   package:
-    name: Build và đóng gói .zip
+    name: Build, đóng gói và phát hành
+    needs: [kiem-tra-secrets]
     runs-on: ubuntu-latest
 
     steps:
@@ -63,6 +98,45 @@ jobs:
           echo "TEN_FILE=$TEN" >> "$GITHUB_ENV"
           unzip -l "$TEN" | tail -1
 
+      # Ký bằng khóa riêng trong secret — cùng một khóa cho mọi bản phát hành để
+      # extension ID không đổi (scripts/pack-crx.mjs in ID ra để đối chiếu).
+      - name: Đóng gói .crx và tạo update.xml
+        if: needs.kiem-tra-secrets.outputs.du == 'true'
+        run: |
+          umask 077
+          echo "${{ secrets.EXTENSION_CRX_KEY }}" | base64 -d > crx-key.pem
+          node extension-his/extension/scripts/pack-crx.mjs crx-key.pem extension-his/extension/dist zerocheck-ai.crx
+          rm -f crx-key.pem
+          # Đọc lại ID từ chính file .crx vừa đóng — không phụ thuộc biến môi trường.
+          EXTENSION_ID=$(node -e "
+            const fs = require('node:fs');
+            const crx = fs.readFileSync('zerocheck-ai.crx');
+            const headerLen = crx.readUInt32LE(8);
+            let i = 12, signedData = null;
+            while (i < 12 + headerLen) {
+              let tag = 0, shift = 0;
+              while (crx[i] & 0x80) { tag |= (crx[i] & 0x7f) << shift; shift += 7; i++; }
+              tag |= (crx[i] & 0x7f) << shift; i++;
+              let len = 0; shift = 0;
+              while (crx[i] & 0x80) { len |= (crx[i] & 0x7f) << shift; shift += 7; i++; }
+              len |= (crx[i] & 0x7f) << shift; i++;
+              if ((tag >>> 3) === 10000) signedData = crx.subarray(i, i + len);
+              i += len;
+            }
+            // SignedData { crx_id = 1 }: 16 byte cuối chính là crx_id.
+            const crxId = signedData.subarray(signedData.length - 16);
+            console.log(crxId.toString('hex').replace(/[0-9a-f]/g, c => 'abcdefghijklmnop'[parseInt(c, 16)]));
+          ")
+          echo "Extension ID: $EXTENSION_ID"
+          printf '%s\n' \
+            '<?xml version="1.0" encoding="UTF-8"?>' \
+            '<gupdate xmlns="http://www.google.com/update2/response" protocol="2.0">' \
+            "  <app appid=\"$EXTENSION_ID\">" \
+            '    <updatecheck codebase="https://cbyts.vnpt.vn/api/extension-release/zerocheck-ai.crx" version="${{ steps.ver.outputs.version }}" />' \
+            '  </app>' \
+            '</gupdate>' > update.xml
+          cat update.xml
+
       - name: Lưu .zip làm artifact
         uses: actions/upload-artifact@v4
         with:
@@ -70,19 +144,63 @@ jobs:
           path: ${{ env.TEN_FILE }}
           retention-days: 90
 
+      - name: Lưu .crx và update.xml làm artifact
+        if: needs.kiem-tra-secrets.outputs.du == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ban-phat-hanh-${{ steps.ver.outputs.version }}
+          path: |
+            zerocheck-ai.crx
+            update.xml
+          retention-days: 90
+
+      # Đẩy 2 file vào volume Storage (PVC api-storage) — API phục vụ ngay không cần
+      # redeploy. Chỉ chạy khi phát hành từ tag; bấm tay (workflow_dispatch) dừng ở artifact.
+      - name: Đẩy bản phát hành lên cụm K8s
+        if: needs.kiem-tra-secrets.outputs.du == 'true' && github.ref_type == 'tag'
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+          POD=$(kubectl -n cbyts get pod -l app=api-validation -o jsonpath='{.items[0].metadata.name}')
+          echo "Pod API: $POD"
+          kubectl -n cbyts exec "$POD" -- mkdir -p /app/Storage/extension-release
+          kubectl -n cbyts cp zerocheck-ai.crx "$POD:/app/Storage/extension-release/zerocheck-ai.crx"
+          kubectl -n cbyts cp update.xml "$POD:/app/Storage/extension-release/update.xml"
+          kubectl -n cbyts exec "$POD" -- ls -la /app/Storage/extension-release
+          # Smoke test qua ingress: phải thấy đúng version vừa tag.
+          sleep 3
+          curl -sf https://cbyts.vnpt.vn/api/extension-release/update.xml | tee /tmp/update.xml
+          grep -q 'version="${{ steps.ver.outputs.version }}"' /tmp/update.xml \
+            || { echo "::error::update.xml trên máy chủ chưa có version ${{ steps.ver.outputs.version }}"; exit 1; }
+          curl -sf -o /dev/null -w "crx: %{http_code} (%{size_download} bytes)\n" https://cbyts.vnpt.vn/api/extension-release/zerocheck-ai.crx
+
       # Chỉ tạo Release khi chạy từ tag. Bấm tay (workflow_dispatch) thì dừng ở artifact.
-      - name: Đính .zip vào GitHub Release
+      - name: Đính file vào GitHub Release
         if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ env.TEN_FILE }}
+          files: |
+            ${{ env.TEN_FILE }}
+            zerocheck-ai.crx
+            update.xml
           name: ZeroCheck AI ${{ github.ref_name }}
           body: |
             Bản cài extension ZeroCheck AI ${{ github.ref_name }}.
 
+            **Tự cập nhật (máy trạm đã cài qua .crx):** không cần làm gì — Chrome tự
+            hỏi `https://cbyts.vnpt.vn/api/extension-release/update.xml` khoảng 5 giờ/lần
+            và tải bản mới. Muốn cập nhật ngay, mở popup tiện ích bấm *Kiểm tra bản mới*
+            rồi *Cập nhật ngay*.
+
+            **Cài mới cho máy trạm:** tải `zerocheck-ai.crx` rồi kéo thả vào
+            `chrome://extensions` (đang bật Chế độ dành cho nhà phát triển), hoặc triển
+            khai hàng loạt qua GPO/registry `ExtensionInstallForcelist`.
+
             **Cài để dùng thử:** tải file `${{ env.TEN_FILE }}`, giải nén, vào
             `chrome://extensions` bật *Chế độ dành cho nhà phát triển* rồi bấm
-            *Tải tiện ích đã giải nén* và trỏ vào thư mục vừa giải nén.
+            *Tải tiện ích đã giải nén* và trỏ vào thư mục vừa giải nén. Lưu ý: bản cài
+            kiểu giải nén KHÔNG tự cập nhật.
 
             **Đưa lên Chrome Web Store:** tải chính file .zip này lên trang quản trị
             của tài khoản nhà phát triển, không cần đóng gói lại.
