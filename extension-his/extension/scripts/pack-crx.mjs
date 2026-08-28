@@ -12,7 +12,7 @@
  *     sha256_with_rsa = [ { public_key, signature } ],   // field 2
  *     signed_header_data = SignedData { crx_id }.serialize()  // field 10000
  *   }
- *   signature = RSA-SHA256( "CRX3 SignedData" | u32 len(signedHeaderData) | signedHeaderData | zip )
+ *   signature = RSA-SHA256( "CRX3 SignedData\\0" | u32 len(signedHeaderData) | signedHeaderData | zip )
  *
  * Extension ID = 32 ký tự đầu của SHA256(publicKey DER), ánh xạ 0-9a-f → a-p.
  *
@@ -64,10 +64,12 @@ const extensionId = idHex.replace(/[0-9a-f]/g, (c) => 'abcdefghijklmnop'[parseIn
 // ---- SignedData { crx_id = 1 } ----
 const signedHeaderData = field(1, crxId)
 
-// ---- Chữ ký: "CRX3 SignedData" | u32 len | signedHeaderData | zip ----
+// ---- Chữ ký: "CRX3 SignedData\0" | u32 len | signedHeaderData | zip ----
+// kContextLabel trong Chromium là "CRX3 SignedData" + byte 0 kết thúc chuỗi C —
+// thiếu byte 0 này Chrome sẽ từ chối chữ ký ("CRX_REQUIRED_PROOF_MISSING").
 const lenBuf = Buffer.alloc(4)
 lenBuf.writeUInt32LE(signedHeaderData.length)
-const toSign = Buffer.concat([Buffer.from('CRX3 SignedData'), lenBuf, signedHeaderData, zip])
+const toSign = Buffer.concat([Buffer.from('CRX3 SignedData\0', 'latin1'), lenBuf, signedHeaderData, zip])
 const signature = createSign('sha256').update(toSign).sign(privateKey)
 
 // ---- AsymmetricKeyProof { public_key = 1, signature = 2 } ----
