@@ -65,16 +65,12 @@ public sealed class ExtensionReleaseController : ControllerBase
             contentType = fallbackContentType;
         }
 
-        // Không cache update.xml (phải thấy bản mới ngay khi CI vừa đẩy lên);
-        // .crx cho cache 1 giờ để nhiều máy trạm tải không kéo lại từ đầu.
-        if (fileName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
-        {
-            Response.Headers.CacheControl = "no-cache";
-        }
-        else
-        {
-            Response.Headers.CacheControl = "public, max-age=3600";
-        }
+        // Cả 2 file đều KHÔNG cache: file .crx bị thay thế tại chỗ ở CÙNG URL mỗi lần
+        // phát hành, nên max-age sẽ khiến trình duyệt dùng lại bản cũ tới 1 giờ —
+        // đúng lỗi CRX_REQUIRED_PROOF_MISSING khi người dùng tải ngay sau bản vá.
+        // no-cache vẫn cho phép xác thực lại bằng ETag nên nhiều máy trạm tải
+        // không kéo lại từ đầu khi file chưa đổi.
+        Response.Headers.CacheControl = "no-cache";
 
         return PhysicalFile(path, contentType, enableRangeProcessing: true);
     }
