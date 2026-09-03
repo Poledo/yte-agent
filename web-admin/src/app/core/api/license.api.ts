@@ -7,8 +7,8 @@ import { IssuedLicenseDto, LicenseDto, LicenseRequest } from './models';
 /**
  * Client cho /api/license — hợp đồng bán theo cơ sở KCB.
  *
- * Khóa bản quyền chỉ đi ra khỏi máy chủ đúng một lần, ở kết quả của create/rotate.
- * Không có endpoint nào đọc lại khóa: máy chủ chỉ lưu bản băm.
+ * Khóa bản quyền chỉ đi ra khỏi máy chủ ở create/rotate (lần cấp) và ở reveal
+ * (xem lại khi cơ sở báo mất khóa — máy chủ lưu bản mã hóa, không phải chỉ băm).
  */
 @Injectable({ providedIn: 'root' })
 export class LicenseApi {
@@ -33,6 +33,15 @@ export class LicenseApi {
   /** Cấp lại khóa: khóa cũ mất hiệu lực NGAY, sản lượng và hóa đơn giữ nguyên. */
   rotate(id: number): Observable<IssuedLicenseDto> {
     return this.http.post<IssuedLicenseDto>(`${this.base}/${id}/rotate`, {});
+  }
+
+  /**
+   * Xem lại khóa đã cấp — cho trường hợp cơ sở báo mất khóa nhưng chưa cần
+   * rotate (rotate làm khóa cũ chết ngay, phải nhập lại tất cả máy trạm).
+   * Yêu cầu permission License.Reveal; máy chủ ghi audit log mỗi lần xem.
+   */
+  reveal(id: number): Observable<IssuedLicenseDto> {
+    return this.http.post<IssuedLicenseDto>(`${this.base}/${id}/reveal`, {});
   }
 
   revoke(id: number): Observable<{ message: string }> {

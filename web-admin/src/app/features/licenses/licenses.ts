@@ -168,6 +168,30 @@ export class Licenses {
       });
   }
 
+  /**
+   * Xem lại khóa đã cấp — cho khi cơ sở báo mất khóa mà chưa cần rotate.
+   * Không làm chết khóa cũ: các máy trạm đã khai vẫn chạy bình thường.
+   */
+  reveal(license: LicenseDto): void {
+    this.confirm
+      .open({
+        title: 'Xem lại khóa bản quyền',
+        message:
+          `Xem lại khóa của "${license.facilityName}" (${license.facilityCode})? ` +
+          'Khóa sẽ hiển thị trên trình duyệt của bạn — chỉ dùng khi cơ sở báo mất khóa. ' +
+          'Lượt xem này được ghi vào nhật ký kiểm toán. Khóa vẫn hoạt động như cũ, ' +
+          'không cần nhập lại trên các máy trạm.',
+        confirmText: 'Xem khóa',
+      })
+      .subscribe((yes) => {
+        if (!yes) return;
+        this.api.reveal(license.id).subscribe({
+          next: (issued) => this.showKey(issued),
+          error: (e) => this.notify.error(e?.error?.message ?? 'Không xem lại được khóa'),
+        });
+      });
+  }
+
   revoke(license: LicenseDto): void {
     this.confirm
       .open({

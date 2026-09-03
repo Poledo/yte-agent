@@ -186,3 +186,29 @@ ASP.NET Identity lưu vai trò kèm việc xoay `ConcurrencyStamp` của chính 
 cùng một `SaveChanges`. Gọi song song thì lệnh về sau cầm stamp cũ, cả transaction bị hủy - bản
 ghi vai trò cũng bị rollback - và trả về `ConcurrencyFailure`. Bỏ qua kết quả thì API báo "thành
 công" trong khi vai trò không hề được lưu, đúng triệu chứng "sửa vai trò lưu lại không ăn".
+
+## Khóa bản quyền lưu thêm bản mã hóa AES để xem lại được
+
+Quyết định:
+
+`facility_licenses` giữ `KeyHash` (SHA-256, chuẩn đối chiếu khi client gửi khóa) và thêm
+`KeyCipher` — bản mã hóa AES-256-GCM của khóa gốc, dùng cho endpoint `POST /api/license/{id}/reveal`
+(quyền `License.Reveal`, ghi audit log). Khóa AES nằm ở secret của môi trường chạy
+(`Licensing__EncryptionKey`, base64 32 byte), không nằm trong DB.
+
+Lý do:
+
+Thiết kế "khóa chỉ hiện một lần" (chỉ lưu băm) an toàn tối đa nhưng va vào nghiệp vụ thật: cơ sở
+nhận key xong người phụ trách quên, quản trị phải rotate — sinh khóa mới và nhập lại cho TẤT CẢ máy
+trạm của đơn vị. Lưu thêm bản mã hóa giải được khi cần, mà người có bản sao DB vẫn không dùng được
+dịch vụ (muốn verify vẫn phải qua KeyHash, còn bản mã hóa cần khóa AES ở secret).
+
+Đánh đổi đã chấp nhận:
+
+- Khóa AES phải ổn định: đổi key là mọi `KeyCipher` cũ không giải được, hợp đồng đó phải cấp lại
+  khóa (reveal báo lỗi, hướng dẫn rotate).
+- Hợp đồng cấp TRƯỚC khi có cột này (KeyCipher null) không xem lại được — hành vi cũ, phải rotate.
+- Chưa cấu hình `Licensing__EncryptionKey`: cấp khóa vẫn chạy (chỉ không lưu bản mã, có log cảnh
+  báo) để tính năng ra mắt không bắt buộc cấu hình đồng thời.
+- Reveal đối chiếu bản mã với KeyHash trước khi trả — bắt bản mã lưu bị vênh thay vì giao nhầm
+  khóa cho quản trị.

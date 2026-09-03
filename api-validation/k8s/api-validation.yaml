@@ -97,6 +97,16 @@ spec:
                   optional: true
             - name: Email__WebAppBaseUrl
               value: https://cbyts.vnpt.vn
+            # Khóa AES-256 mã hóa bản lưu của khóa bản quyền (base64 32 byte, tạo
+            # bằng openssl rand -base64 32). Chưa có key thì bỏ trống -> cấp khóa
+            # vẫn chạy, chỉ không xem lại được khóa đã cấp (optional, không lỗi
+            # khởi động). Cần ổn định: đổi key là mọi bản mã cũ không giải được.
+            - name: Licensing__EncryptionKey
+              valueFrom:
+                secretKeyRef:
+                  name: cbyts-secrets
+                  key: license-encryptionkey
+                  optional: true
           volumeMounts:
             - name: storage
               mountPath: /app/Storage

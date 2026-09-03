@@ -497,6 +497,8 @@ builder.Services.AddScoped<ICatalogImportService, CatalogImportService>();
 // bật dần Warn (ghi log) rồi Enforce (chặn) khi các cơ sở đã khai khóa xong.
 builder.Services.Configure<LicensingOptions>(builder.Configuration.GetSection(LicensingOptions.SectionName));
 builder.Services.AddSingleton<ILicenseKeyGenerator, LicenseKeyGenerator>();
+// Singleton: chỉ giữ khóa AES đọc từ cấu hình, mã hóa thuần không có state theo request.
+builder.Services.AddSingleton<ILicenseKeyCipher, LicenseKeyCipher>();
 builder.Services.AddScoped<ILicenseResolver, LicenseResolver>();
 // Scoped: giấy phép đã phân giải thuộc về ĐÚNG một request.
 builder.Services.AddScoped<ILicenseContext, LicenseContext>();

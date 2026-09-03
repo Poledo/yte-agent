@@ -1,6 +1,7 @@
 using AIValidation.Api.Data;
 using AIValidation.Api.Data.Entities.Licensing;
 using AIValidation.Api.Services;
+using AIValidation.Api.Services.Auth;
 using AIValidation.Api.Services.Licensing;
 using AIValidation.Api.Services.Tenancy;
 using Microsoft.AspNetCore.Mvc;
@@ -16,11 +17,14 @@ namespace AIValidation.Api.Controllers;
 /// - POST   /api/license              : cấp hợp đồng mới — khóa hiện ĐÚNG MỘT LẦN
 /// - PUT    /api/license/{id}         : sửa gói cước, hạn mức, giá, phạm vi, hiệu lực
 /// - POST   /api/license/{id}/rotate  : cấp lại khóa (khóa cũ hết hiệu lực ngay)
+/// - POST   /api/license/{id}/reveal  : xem lại khóa đã cấp (cơ sở báo mất khóa)
 /// - POST   /api/license/{id}/revoke  : thu hồi
 /// - POST   /api/license/{id}/restore : bỏ thu hồi
 ///
-/// Khóa chỉ lưu dạng BĂM (SHA-256). Mất khóa thì cấp lại, không tra lại được — cùng
-/// nguyên tắc với mật khẩu, để lộ cơ sở dữ liệu cũng không lộ khóa của khách hàng.
+/// Khóa đối chiếu bằng BĂM (SHA-256) — cùng nguyên tắc với mật khẩu, để lộ cơ sở
+/// dữ liệu cũng không dùng được dịch vụ dưới danh nghĩa khách hàng. Ngoài băm còn
+/// lưu bản MÃ HÓA (AES-256-GCM, khóa giải nằm ở secret của môi trường chạy) để
+/// quản trị xem lại khi cơ sở báo mất khóa, không phải cấp lại cả tuyến máy trạm.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
@@ -29,6 +33,8 @@ public class LicenseController : ControllerBase
     private readonly AppDbContext _db;
     private readonly ILicenseKeyGenerator _keyGenerator;
     private readonly ILicenseResolver _resolver;
+    private readonly ILicenseKeyCipher _cipher;
+    private readonly IAuditService _audit;
     private readonly ITenantScope _tenant;
     private readonly ILogger<LicenseController> _logger;
 
@@ -36,12 +42,16 @@ public class LicenseController : ControllerBase
         AppDbContext db,
         ILicenseKeyGenerator keyGenerator,
         ILicenseResolver resolver,
+        ILicenseKeyCipher cipher,
+        IAuditService audit,
         ITenantScope tenant,
         ILogger<LicenseController> logger)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _keyGenerator = keyGenerator ?? throw new ArgumentNullException(nameof(keyGenerator));
         _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
+        _cipher = cipher ?? throw new ArgumentNullException(nameof(cipher));
+        _audit = audit ?? throw new ArgumentNullException(nameof(audit));
         _tenant = tenant ?? throw new ArgumentNullException(nameof(tenant));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -127,6 +137,7 @@ public class LicenseController : ControllerBase
             FacilityId = facility.Id,
             FacilityCode = facility.Code,
             KeyHash = generated.Hash,
+            KeyCipher = _cipher.Encrypt(generated.Key),
             KeyPrefix = generated.Prefix,
             Plan = request.Plan.Trim(),
             MonthlyQuota = request.MonthlyQuota,
@@ -143,6 +154,14 @@ public class LicenseController : ControllerBase
 
         _db.FacilityLicenses.Add(license);
         await _db.SaveChangesAsync(cancellationToken);
+
+        if (license.KeyCipher is null)
+        {
+            _logger.LogWarning(
+                "Cấp hợp đồng {LicenseId} nhưng KHÔNG lưu được bản mã hóa của khóa — " +
+                "chưa cấu hình Licensing:EncryptionKey nên không xem lại khóa được.",
+                license.Id);
+        }
 
         _logger.LogInformation(
             "Cấp hợp đồng {LicenseId} cho đơn vị {Code} ({Name}), gói {Plan}",
@@ -226,9 +245,18 @@ public class LicenseController : ControllerBase
 
         var generated = _keyGenerator.Generate(license.FacilityCode);
         license.KeyHash = generated.Hash;
+        license.KeyCipher = _cipher.Encrypt(generated.Key);
         license.KeyPrefix = generated.Prefix;
         await _db.SaveChangesAsync(cancellationToken);
         _resolver.Invalidate();
+
+        if (license.KeyCipher is null)
+        {
+            _logger.LogWarning(
+                "Cấp lại khóa cho hợp đồng {LicenseId} nhưng KHÔNG lưu được bản mã hóa — " +
+                "chưa cấu hình Licensing:EncryptionKey nên không xem lại khóa được.",
+                license.Id);
+        }
 
         _logger.LogWarning("Cấp lại khóa cho hợp đồng {LicenseId} ({Code})", license.Id, license.FacilityCode);
 
@@ -238,6 +266,91 @@ public class LicenseController : ControllerBase
             Key = generated.Key,
             Message = "Đã cấp lại khóa. Khóa CŨ ngừng hoạt động ngay — cập nhật khóa mới "
                 + "trên tiện ích của tất cả máy trạm thuộc đơn vị này.",
+        });
+    }
+
+    /// <summary>
+    /// Xem lại khóa đã cấp — dùng khi cơ sở báo mất khóa và chưa muốn rotate
+    /// (rotate làm khóa cũ chết ngay, phải nhập lại cho tất cả máy trạm).
+    ///
+    /// Yêu cầu permission License.Reveal (tự sinh qua permission scanner) và ghi
+    /// audit log: xem lại khóa là thao tác nhạy cảm, phải truy vết được ai đã xem.
+    /// </summary>
+    [HttpPost("{id:long}/reveal")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IssuedLicenseDto))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RevealAsync(long id, CancellationToken cancellationToken)
+    {
+        var license = await _db.FacilityLicenses
+            .Include(l => l.Facility)
+            .FirstOrDefaultAsync(l => l.Id == id, cancellationToken);
+        if (license == null)
+        {
+            return NotFound(new { message = "Không tìm thấy hợp đồng." });
+        }
+        if (await GuardAsync(license.FacilityId, license.FacilityCode, cancellationToken) is { } denied)
+        {
+            return denied;
+        }
+        if (license.RevokedAt is not null)
+        {
+            return BadRequest(new { message = "Hợp đồng đã thu hồi — khóa không còn dùng được, không cần xem lại." });
+        }
+        if (string.IsNullOrEmpty(license.KeyCipher))
+        {
+            return BadRequest(new
+            {
+                message = "Khóa này được cấp trước khi có chức năng xem lại (hoặc lúc cấp chưa cấu hình "
+                    + "khóa mã hóa), nên không tra lại được. Dùng chức năng Cấp lại khóa.",
+            });
+        }
+
+        string key;
+        try
+        {
+            key = _cipher.Decrypt(license.KeyCipher);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Giải mã KeyCipher thất bại cho hợp đồng {LicenseId}", license.Id);
+            return Problem(
+                title: "Không xem lại được khóa",
+                detail: ex.Message,
+                statusCode: StatusCodes.Status500InternalServerError);
+        }
+
+        // Đối chiếu bản mã với băm trong DB — bắt ngay bản mã lưu bị vênh (đổi cột
+        // tay, hoặc mã hóa bằng khóa khác) thay vì trả về khóa sai cho quản trị.
+        if (!string.Equals(_keyGenerator.Hash(key), license.KeyHash, StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogError(
+                "Bản mã KeyCipher của hợp đồng {LicenseId} không khớp KeyHash — dữ liệu bị vênh.",
+                license.Id);
+            return Problem(
+                title: "Không xem lại được khóa",
+                detail: "Bản mã hóa của khóa không khớp bản băm trong hệ thống — dữ liệu bị vênh. "
+                    + "Phải cấp lại khóa cho hợp đồng này.",
+                statusCode: StatusCodes.Status500InternalServerError);
+        }
+
+        await _audit.LogAsync(
+            action: "License.Reveal",
+            userId: Guid.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)
+                ?.Value ?? User.FindFirst("sub")?.Value, out var actorId) ? actorId : null,
+            userName: User.Identity?.Name,
+            entityType: "License",
+            entityId: license.Id.ToString(),
+            detail: $"Xem lại khóa của {license.FacilityCode} ({license.KeyPrefix})",
+            ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+            ct: cancellationToken);
+
+        return Ok(new IssuedLicenseDto
+        {
+            License = ToDto(license, 0, 0),
+            Key = key,
+            Message = "Đây là khóa đã cấp cho đơn vị — chỉ xem lại khi cơ sở báo mất khóa. "
+                + "Khóa vẫn đang hoạt động, KHÔNG cần nhập lại trên các máy trạm.",
         });
     }
 

@@ -18,6 +18,12 @@ DB_CONNECTION="${DB_CONNECTION:-Host=postgres;Port=5432;Database=hackathon_ai;Us
 # managed (kèm SSL Mode=Require;Trust Server Certificate=true) và bỏ áp k8s/postgres.yaml.
 
 LLM_APIKEY="${LLM_APIKEY:-}"                       # API key LLM (OpenRouter / Google AI Studio)
+
+# --- Khóa mã hóa bản lưu của khóa bản quyền ---
+# Tạo bằng: openssl rand -base64 32. Để trống thì API vẫn cấp khóa được, chỉ
+# không xem lại được khóa đã cấp. Đã đặt rồi thì ĐỪNG đổi: đổi key là mọi bản mã
+# cũ không giải được nữa (phải cấp lại khóa cho các hợp đồng đó).
+LICENSE_ENCRYPTIONKEY="${LICENSE_ENCRYPTIONKEY:-}"
 # ========================
 
 if [ -z "$DB_PASSWORD" ]; then
@@ -36,11 +42,12 @@ kubectl -n cbyts create secret docker-registry ecr-pull \
   --docker-password="$ECR_PASSWORD" \
   --dry-run=client -o yaml | kubectl apply -f -
 
-# Secret cấu hình nhạy cảm: mật khẩu DB (pod postgres đọc), chuỗi kết nối + key LLM (API đọc)
+# Secret cấu hình nhạy cảm: mật khẩu DB (pod postgres đọc), chuỗi kết nối + key LLM + khóa mã hóa license (API đọc)
 kubectl -n cbyts create secret generic cbyts-secrets \
   --from-literal=db-password="$DB_PASSWORD" \
   --from-literal=db-connection="$DB_CONNECTION" \
   --from-literal=llm-apikey="$LLM_APIKEY" \
+  --from-literal=license-encryptionkey="$LICENSE_ENCRYPTIONKEY" \
   --dry-run=client -o yaml | kubectl apply -f -
 
 echo "Xong. Kiểm tra: kubectl -n cbyts get secret"

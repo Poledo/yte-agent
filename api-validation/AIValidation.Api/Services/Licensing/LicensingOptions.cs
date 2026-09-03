@@ -47,4 +47,12 @@ public sealed class LicensingOptions
     /// Tên header client gửi khóa bản quyền.
     /// </summary>
     public string HeaderName { get; set; } = "X-License-Key";
+
+    /// <summary>
+    /// Khóa AES-256 (base64 của 32 byte) dùng mã hóa bản lưu của khóa bản quyền,
+    /// để xem lại khi cơ sở báo mất khóa. Rỗng = chưa bật chức năng xem lại —
+    /// cấp khóa vẫn chạy bình thường, chỉ không lưu bản mã.
+    /// Nạp từ biến môi trường Licensing__EncryptionKey (K8s secret / IIS appsettings).
+    /// </summary>
+    public string EncryptionKey { get; set; } = "";
 }

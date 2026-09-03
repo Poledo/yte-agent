@@ -29,10 +29,19 @@ public class FacilityLicense
     public required string FacilityCode { get; set; }
 
     /// <summary>
-    /// Băm SHA-256 (hex thường) của khóa bản quyền đầy đủ. Khóa gốc CHỈ hiện đúng
-    /// một lần lúc cấp — mất thì cấp lại khóa mới, không có cách khôi phục.
+    /// Băm SHA-256 (hex thường) của khóa bản quyền đầy đủ — dùng để đối chiếu khi
+    /// client gửi khóa lên, không đảo ngược được.
     /// </summary>
     public required string KeyHash { get; set; }
+
+    /// <summary>
+    /// Bản mã hóa AES-256-GCM của khóa gốc, để quản trị xem lại khi cơ sở báo mất
+    /// khóa (không phải rotate + nhập lại cả tuyến máy trạm). Khóa giải mã nằm ở
+    /// secret của môi trường chạy, KHÔNG nằm trong cơ sở dữ liệu — lộ DB không lộ khóa.
+    /// Null với khóa cấp trước khi có cột này, hoặc khi chưa cấu hình khóa mã hóa:
+    /// những hợp đồng đó không xem lại được, phải cấp lại khóa như cũ.
+    /// </summary>
+    public string? KeyCipher { get; set; }
 
     /// <summary>
     /// Phần đầu khóa để người quản trị nhận ra giấy phép nào trên màn hình,

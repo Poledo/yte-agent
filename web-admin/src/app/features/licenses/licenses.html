@@ -122,6 +122,14 @@
         <mat-icon>autorenew</mat-icon>
       </button>
       <button
+        *appHasPermission="'License.Reveal'"
+        matIconButton
+        matTooltip="Xem lại khóa (cơ sở báo mất khóa)"
+        (click)="reveal(row)"
+      >
+        <mat-icon>visibility</mat-icon>
+      </button>
+      <button
         *appHasPermission="'License.Revoke'"
         matIconButton
         matTooltip="Thu hồi hợp đồng"
