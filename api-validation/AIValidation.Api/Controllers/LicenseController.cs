@@ -299,6 +299,38 @@ public class LicenseController : ControllerBase
         return Ok(new { message = $"Đã khôi phục hợp đồng của đơn vị {license.FacilityCode}." });
     }
 
+    /// <summary>
+    /// Kiểm tra khóa bản quyền có hợp lệ không — dùng cho tiện ích khi người dùng
+    /// nhập/khôi phục khóa để xác nhận ngay lập tức.
+    /// </summary>
+    [HttpPost("verify")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> VerifyAsync(CancellationToken cancellationToken)
+    {
+        var headerName = HttpContext.RequestServices
+            .GetRequiredService<Microsoft.Extensions.Options.IOptions<LicensingOptions>>().Value.HeaderName;
+        var key = Request.Headers[headerName].FirstOrDefault();
+
+        var resolution = await _resolver.ResolveAsync(key, cancellationToken);
+        if (resolution.Status == LicenseStatus.Valid && resolution.License != null)
+        {
+            return Ok(new
+            {
+                valid = true,
+                message = "Khóa hợp lệ.",
+                facilityCode = resolution.License.FacilityCode,
+                plan = resolution.License.Plan,
+                expiresAt = (DateTime?)resolution.License.ValidTo,
+            });
+        }
+
+        return Ok(new
+        {
+            valid = false,
+            message = resolution.Message,
+        });
+    }
+
     /// <summary>403 nếu hợp đồng thuộc cơ sở ngoài nhánh của người gọi; null nghĩa là cho phép.</summary>
     private async Task<IActionResult?> GuardAsync(
         long facilityId, string facilityCode, CancellationToken cancellationToken)

@@ -31,6 +31,42 @@ export interface LicenseSettings {
 
 const EMPTY: LicenseSettings = { licenseKey: '', facilityCode: '', staffCode: '' }
 
+/**
+ * Kiểm tra khóa có đúng định dạng ZC-{mã cơ sở}-{chuỗi bí mật 32 ký tự} không.
+ *
+ * Khóa luôn được chuẩn hoá viết hoa trước khi lưu nên regex chỉ cần khớp chữ hoa.
+ * Bảng chữ Base32 đã loại ký tự dễ nhầm: I, L, O, U, 0, 1.
+ */
+const LICENSE_KEY_REGEX = /^ZC-[A-Z0-9]+-[A-Z0-9]{32}$/
+
+export function validateLicenseKeyFormat(key: string): { valid: boolean; error?: string } {
+    const trimmed = key.trim().toUpperCase()
+    if (!trimmed) {
+        return { valid: false, error: 'Chưa nhập khóa bản quyền.' }
+    }
+    if (!trimmed.startsWith('ZC-')) {
+        return { valid: false, error: 'Khóa phải bắt đầu bằng "ZC-".' }
+    }
+    const parts = trimmed.split('-')
+    if (parts.length < 3) {
+        return { valid: false, error: 'Định dạng không đúng. Cần dạng ZC-<mã cơ sở>-<khóa bí mật>.' }
+    }
+    const secret = parts[parts.length - 1]
+    if (secret.length !== 32) {
+        return {
+            valid: false,
+            error: `Phần bí mật phải đúng 32 ký tự (hiện có ${secret.length} ký tự).`,
+        }
+    }
+    if (!LICENSE_KEY_REGEX.test(trimmed)) {
+        return {
+            valid: false,
+            error: 'Khóa chứa ký tự không hợp lệ. Chỉ dùng chữ hoa A–Z và số 2–9.',
+        }
+    }
+    return { valid: true }
+}
+
 /** Đọc cấu hình đã lưu. Chưa khai gì thì trả về chuỗi rỗng, KHÔNG ném lỗi. */
 export async function loadLicenseSettings(): Promise<LicenseSettings> {
     try {

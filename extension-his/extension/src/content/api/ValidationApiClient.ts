@@ -1,7 +1,7 @@
 import { ApiConfiguration } from './ApiConfiguration'
 import { ApiValidationRequest, ApiValidationResponse } from './ApiModels'
 import { ApiException } from './ApiException'
-import { buildLicenseHeaders } from '../../shared/license/LicenseSettings'
+import { buildLicenseHeaders, describeLicenseError } from '../../shared/license/LicenseSettings'
 
 export class ValidationApiClient {
     private config: ApiConfiguration
@@ -39,6 +39,9 @@ export class ValidationApiClient {
             })
 
             clearTimeout(timeoutId)
+
+            // Lỗi bản quyền (401/403) — hiển thị hướng dẫn tiếng Việt thay vì mã HTTP
+            await ValidationApiClient.throwIfLicenseError(response)
 
             // Handle HTTP errors
             if (!response.ok) {
@@ -112,6 +115,20 @@ export class ValidationApiClient {
             return {
                 error: response.statusText,
             }
+        }
+    }
+
+    /**
+     * Ném lỗi có hướng dẫn tiếng Việt khi máy chủ từ chối vì bản quyền (401) hoặc
+     * vì hồ sơ nằm ngoài phạm vi hợp đồng (403).
+     */
+    private static async throwIfLicenseError(response: Response): Promise<void> {
+        if (response.status !== 401 && response.status !== 403) return
+
+        const payload = (await response.json().catch(() => null)) as { message?: string } | null
+        const message = describeLicenseError(response.status, payload?.message)
+        if (message) {
+            throw new ApiException(message, `LICENSE_${response.status}`, response.status)
         }
     }
 

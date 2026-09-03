@@ -13,7 +13,11 @@ import {
     type CatalogFileProgress,
     type CatalogImportState,
 } from '../shared/his/CatalogImportChannel'
-import { loadLicenseSettings, saveLicenseSettings } from '../shared/license/LicenseSettings'
+import {
+    loadLicenseSettings,
+    saveLicenseSettings,
+    validateLicenseKeyFormat,
+} from '../shared/license/LicenseSettings'
 import {
     CHECK_UPDATE_MESSAGE,
     FORCE_UPDATE_MESSAGE,
@@ -128,9 +132,17 @@ function initializeLicenseSettings(): void {
     })
 
     saveButton.addEventListener('click', () => {
-        const licenseKey = keyInput.value.trim()
+        const licenseKey = keyInput.value.trim().toUpperCase()
         if (!licenseKey) {
             showStatus('Chưa nhập khóa bản quyền.', 'error')
+            keyInput.focus()
+            return
+        }
+
+        // Kiểm tra định dạng khóa trước khi lưu
+        const formatCheck = validateLicenseKeyFormat(licenseKey)
+        if (!formatCheck.valid) {
+            showStatus(formatCheck.error!, 'error')
             keyInput.focus()
             return
         }
@@ -144,7 +156,33 @@ function initializeLicenseSettings(): void {
                 keyInput.value = saved.licenseKey
                 facilityInput.value = saved.facilityCode
                 staffInput.value = saved.staffCode
-                showStatus('Đã lưu. Khóa có hiệu lực ngay, không cần tải lại trang HIS.', 'ok')
+                showStatus('Đã lưu. Đang kiểm tra khóa với máy chủ...', 'ok')
+
+                // Kiểm tra khóa có hợp lệ trên máy chủ không
+                try {
+                    const resp = await fetch('https://cbyts.vnpt.vn/api/license/verify', {
+                        method: 'POST',
+                        headers: { 'X-License-Key': saved.licenseKey },
+                    })
+                    const result = (await resp.json().catch(() => null)) as {
+                        valid?: boolean
+                        message?: string
+                        facilityCode?: string
+                        plan?: string
+                    } | null
+                    if (result?.valid) {
+                        const extras = [result.plan, result.facilityCode].filter(Boolean).join(' · ')
+                        showStatus(`✓ Khóa hợp lệ${extras ? ` — ${extras}` : ''}. Khóa có hiệu lực ngay.`, 'ok')
+                    } else {
+                        showStatus(
+                            result?.message || 'Khóa không hợp lệ. Liên hệ đơn vị cung cấp dịch vụ để được cấp lại.',
+                            'error',
+                        )
+                    }
+                } catch {
+                    // Lỗi mạng — khóa đã lưu, có thể dùng offline
+                    showStatus('Đã lưu. Không kiểm tra được với máy chủ (mất kết nối).', 'ok')
+                }
             })
             .catch(() => {
                 showStatus('Không lưu được khóa. Hãy tải lại tiện ích rồi thử lại.', 'error')
