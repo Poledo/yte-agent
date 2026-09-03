@@ -12,7 +12,11 @@ namespace AIValidation.Tests.Licensing;
 /// </summary>
 public class LicenseKeyCipherTests
 {
-    private const string Key32BytesBase64 = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="; // 0..31
+    // Sinh khóa test lúc runtime thay vì khai hằng base64: chuỗi base64 32 byte
+    // entropy cao trong mã nguồn sẽ bị máy quét bí mật (gitleaks) bắt nhầm là
+    // API key thật, chặn cả pipeline.
+    private static string NewTestAesKey() =>
+        Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
 
     private static LicenseKeyCipher Create(string? encryptionKey) =>
         new(Options.Create(new LicensingOptions
@@ -25,7 +29,7 @@ public class LicenseKeyCipherTests
     [Fact]
     public void RoundTrip_MaHoaRoiGiaiMa_TraVeKhoaGoc()
     {
-        var cipher = Create(Key32BytesBase64);
+        var cipher = Create(NewTestAesKey());
 
         var encrypted = cipher.Encrypt(SampleLicenseKey);
         var decrypted = cipher.Decrypt(encrypted!);
@@ -38,7 +42,7 @@ public class LicenseKeyCipherTests
     {
         // AES-GCM sinh nonce ngẫu nhiên mỗi lần — hai bản mã của cùng một khóa
         // phải khác nhau, kẻ lộ DB không khớp được bản mã theo cơ sở.
-        var cipher = Create(Key32BytesBase64);
+        var cipher = Create(NewTestAesKey());
 
         var first = cipher.Encrypt(SampleLicenseKey);
         var second = cipher.Encrypt(SampleLicenseKey);
@@ -60,7 +64,7 @@ public class LicenseKeyCipherTests
     [Fact]
     public void GiaiMaBangKhoaKhac_NemLoi()
     {
-        var encryptor = Create(Key32BytesBase64);
+        var encryptor = Create(NewTestAesKey());
         var encrypted = encryptor.Encrypt(SampleLicenseKey)!;
 
         var otherKey = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("01234567890123456789012345678901"));
@@ -72,7 +76,7 @@ public class LicenseKeyCipherTests
     [Fact]
     public void BanMaBiSuaMotByte_NemLoi()
     {
-        var cipher = Create(Key32BytesBase64);
+        var cipher = Create(NewTestAesKey());
         var encrypted = cipher.Encrypt(SampleLicenseKey)!;
         var bytes = Convert.FromBase64String(encrypted);
         bytes[^1] ^= 0xFF; // đảo byte cuối (thuộc tag) — GCM phải phát hiện
@@ -94,7 +98,7 @@ public class LicenseKeyCipherTests
     [Fact]
     public void BanMaQuaNgan_NemLoi()
     {
-        var cipher = Create(Key32BytesBase64);
+        var cipher = Create(NewTestAesKey());
         var tooShort = Convert.ToBase64String(new byte[10]); // < nonce 12 + tag 16
 
         Assert.Throws<InvalidOperationException>(() => cipher.Decrypt(tooShort));
