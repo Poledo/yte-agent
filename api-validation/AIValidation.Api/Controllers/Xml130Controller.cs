@@ -28,9 +28,12 @@ namespace AIValidation.Api.Controllers;
 [EnableCors("Extension")]
 [ApiController]
 [Route("api/[controller]")]
-// Đây là endpoint sinh ra doanh thu — mọi request phải kèm khóa bản quyền của cơ sở KCB.
-// Mức siết do cấu hình Licensing:Mode quyết định (Off/Warn/Enforce).
-[RequireLicense]
+// KHÔNG gắn [RequireLicense] ở cấp controller: các endpoint quản trị (rules,
+// field-specs, field-specs/import) do web-admin gọi bằng JWT, không có khóa bản
+// quyền của cơ sở — gắn cấp class thì bật Licensing:Mode=Enforce là các màn hình
+// quản trị nhận 401 và bị đẩy về trang đăng nhập. Chỉ gắn cổng cấp phép ở từng
+// endpoint sinh doanh thu (validate*) mà extension gọi bằng khóa cơ sở, giống
+// pattern đã dùng cho AssistantController.ask.
 public class Xml130Controller : ControllerBase
 {
     private readonly IXml130ValidationService _validationService;
@@ -69,6 +72,8 @@ public class Xml130Controller : ControllerBase
     /// Query: useAi=true để sinh thêm nhận định AI (cần cấu hình LLM ApiKey).
     /// </summary>
     [IgnorePermission("Extension gọi bằng khóa bản quyền, không có phiên đăng nhập")]
+    // Sinh doanh thu: bắt buộc khóa bản quyền của cơ sở KCB (Enforce sẽ chặn 401).
+    [RequireLicense]
     [HttpPost("validate")]
     [Consumes("multipart/form-data", "text/xml", "application/xml", "text/plain")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Xml130ValidationResponse))]
@@ -247,6 +252,8 @@ public class Xml130Controller : ControllerBase
     /// cùng bệnh nhân có 2 đợt điều trị chồng thời gian...
     /// </summary>
     [IgnorePermission("Extension gọi bằng khóa bản quyền, không có phiên đăng nhập")]
+    // Sinh doanh thu: bắt buộc khóa bản quyền của cơ sở KCB (Enforce sẽ chặn 401).
+    [RequireLicense]
     [HttpPost("validate-batch")]
     [Consumes("multipart/form-data")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Xml130BatchValidationResponse))]
@@ -327,6 +334,8 @@ public class Xml130Controller : ControllerBase
     /// kèm tiến độ) → "done". Client hiển thị dần, không phải chờ một cục.
     /// </summary>
     [IgnorePermission("Extension gọi bằng khóa bản quyền, không có phiên đăng nhập")]
+    // Sinh doanh thu: bắt buộc khóa bản quyền của cơ sở KCB (Enforce sẽ chặn 401).
+    [RequireLicense]
     [HttpPost("validate-batch-stream")]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(1024L * 1024 * 1024)]
