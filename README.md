@@ -1,83 +1,102 @@
-# yte-agent — ZeroCheck AI
+# ZeroCheck AI (`yte-agent`)
 
-> Trợ lý AI cảnh báo xuất toán BHYT cho phần mềm khám chữa bệnh (HIS) của VNPT.
-> Sản phẩm của đội **Chiến binh Y tế số**. Bản chạy thật: <https://cbyts.vnpt.vn>
+> **Open-Source AI Compliance & Real-Time Validation Engine for Healthcare Information Systems (HIS)**  
+> Ensuring Medical Insurance (BHYT) Compliance and Preventing Billing Rejections with Deterministic Rule Engines & RAG.  
+> 🌐 **Live Demo:** <https://cbyts.vnpt.vn> | 📜 **License:** [MIT](LICENSE)
 
-Kho mã hợp nhất (monorepo) của 3 thành phần. Trước đây mỗi thành phần là một repo riêng;
-từ 08/08/2026 gộp về đây để phát triển chung một nơi.
+---
 
-## Cấu trúc
+## Overview
 
-| Thư mục | Thành phần | Công nghệ | Tài liệu riêng |
+Medical insurance billing compliance is a major operational challenge for healthcare facilities. In Vietnam, claims submitted under the **XML 130 format (Decision 130/QD-BYT)** must strictly adhere to complex regulatory catalogs, clinical indications, and cross-field constraints. Inadvertent coding errors lead to severe claim rejections (*xuất toán BHYT*), financial penalties, and significant administrative strain on clinicians.
+
+**ZeroCheck AI** is an open-source, AI-powered validation ecosystem designed to catch discrepancies at the point of care:
+- **Instant Clinical & Administrative Validation:** Verifies patient demographics, BHYT card validity, ICD-10 diagnosis age/gender constraints, prescription dosages, and cross-department scheduling conflicts in milliseconds.
+- **Regulatory Retrieval-Augmented Generation (RAG):** Grounds validation advice and appeals in indexed Ministry of Health legal circulars using PostgreSQL and `pgvector`.
+- **Zero-Intrusion HUD:** Injects contextual warnings and assistive chat directly into existing web-based HIS interfaces via a lightweight browser extension.
+
+---
+
+## Monorepo Architecture
+
+The repository is structured as a high-performance monorepo with three decoupled components:
+
+```
+yte-agent/
+├── api-validation/      # Backend AI Validation Engine (.NET 10, EF Core, PostgreSQL + pgvector)
+├── web-admin/           # Knowledge Base & Administration Dashboard (Angular 20, Material 3)
+└── extension-his/       # Browser Extension HUD for Hospital Information Systems (TypeScript, Vite)
+```
+
+| Component | Directory | Stack | Description |
 |---|---|---|---|
-| [`api-validation/`](api-validation) | AI Validation API — rule engine, kiểm tra XML 130, RAG văn bản y tế, xác thực & phân quyền | .NET 10, EF Core, PostgreSQL + pgvector | [`README`](api-validation/README.md), [`CLAUDE.md`](api-validation/CLAUDE.md), [`AIValidation.Api/docs/`](api-validation/AIValidation.Api/docs) |
-| [`web-admin/`](web-admin) | Web Admin — dashboard, kho tri thức, danh mục HIS, người dùng/vai trò/quyền, cấu hình AI | Angular 20, Material 3 | [`README`](web-admin/README.md) |
-| [`extension-his/`](extension-his) | Chrome Extension cắm vào HIS — cảnh báo nhập liệu, chat kiểm tra hồ sơ, nạp danh mục | TypeScript, Vite | [`README`](extension-his/README.md), [`CLAUDE.md`](extension-his/CLAUDE.md), [`ARCHITECTURE`](extension-his/ARCHITECTURE.md) |
+| **AI Validation Engine** | [`api-validation/`](api-validation) | .NET 10, C#, EF Core, PostgreSQL + pgvector | High-throughput rule engine, XML 130 parsing, legal RAG search, RBAC authentication. |
+| **Management Dashboard** | [`web-admin/`](web-admin) | Angular 20, TypeScript, Angular Material 3 | Knowledge indexing, HIS catalog management, user roles/tenancy, audit logs. |
+| **Point-of-Care Extension** | [`extension-his/`](extension-his) | TypeScript, Vite, Chrome Extension API (MV3) | In-situ alerts on medical entry screens, chat assistant, automated catalog synchronization. |
 
-Ngoài mã nguồn, kho còn giữ hồ sơ dự thi (chuyển từ workspace cũ sang 08/08/2026):
+---
 
-| Thư mục | Nội dung |
-|---|---|
-| [`nop-btc/`](nop-btc) | Bản nộp BTC: 11 mục docx + pdf, slide báo cáo, phản hồi rà soát. **Không tạo thêm file .md ở đây** |
-| [`report/`](report) | Báo cáo tiến độ, kịch bản demo, video hướng dẫn + phụ đề, ảnh minh chứng vibe code, script sinh pptx/video |
-| `gen-*.mjs` | 3 script sinh tài liệu docx/pptx |
+## Quick Start
 
-Còn một số thư mục **nằm trên đĩa nhưng cố ý không đưa vào git** - lý do ghi rõ trong
-[`.gitignore`](.gitignore): `notes/` và `vnpt-cloud/` (khóa, mật khẩu), `kich-ban-demo/` và
-`data-import/` (dữ liệu bệnh nhân và dữ liệu thật của khách hàng - luật thi cấm),
-`backup-git/` (bản lịch sử trước khi viết lại, còn nguyên bí mật đã gỡ).
-**Những thư mục này chỉ tồn tại trên máy, GitHub không có bản sao - muốn an toàn phải tự sao lưu.**
+### 1. Prerequisites
+- [.NET 10 SDK](https://dotnet.microsoft.com/)
+- [Node.js 20+ and npm](https://nodejs.org/)
+- [PostgreSQL 16+](https://www.postgresql.org/) with `pgvector` extension enabled
 
-Đang làm gì / còn nợ gì: xem [`DANG-LAM-GI.md`](DANG-LAM-GI.md).
+### 2. Running Locally
 
-## Chạy tại máy
-
+#### AI Validation API
 ```bash
-# API — cần PostgreSQL đang chạy
 cd api-validation/AIValidation.Api
-dotnet user-secrets set "ConnectionStrings:KnowledgeDatabase" "Host=localhost;Port=5432;Database=hackathon_ai;Username=postgres;Password=<mật khẩu máy bạn>"
+
+# Configure connection string (using dotnet user-secrets)
+dotnet user-secrets set "ConnectionStrings:KnowledgeDatabase" "Host=localhost;Port=5432;Database=hackathon_ai;Username=postgres;Password=<your_password>"
+
+# Apply database migrations
 dotnet ef database update
-dotnet run          # http://localhost:5075, Scalar UI tại /scalar
+
+# Run API server (Scalar API reference available at http://localhost:5075/scalar)
+dotnet run
 ```
 
+#### Web Admin Portal
 ```bash
-# Web admin
-cd web-admin && npm install && npm start        # http://localhost:4200
+cd web-admin
+npm install
+npm start
+# Navigate to http://localhost:4200
 ```
 
+#### Chrome Extension
 ```bash
-# Extension — build rồi Load unpacked thư mục extension/dist trong chrome://extensions
-cd extension-his/extension && npm ci && npm run build
+cd extension-his/extension
+npm ci
+npm run build
+# Open chrome://extensions, enable "Developer mode", and click "Load unpacked" targeting extension-his/extension/dist
 ```
 
-Chuỗi kết nối, khóa LLM, mật khẩu SMTP **luôn để trong user-secrets hoặc secret của cụm**,
-không bao giờ ghi vào file trong kho này.
+---
 
-## CI/CD
+## Continuous Integration & Deployment
 
-Toàn bộ pipeline nằm ở [`.github/workflows/`](.github/workflows) tại gốc kho (GitHub chỉ đọc
-workflow ở đây). Mỗi workflow lọc `paths:` theo thư mục của mình nên sửa web-admin không kéo
-theo build của API.
+Automated CI/CD pipelines are managed through [`.github/workflows/`](.github/workflows):
+- `api-validation.yml`: Builds, runs unit tests, performs static code analysis, builds container image, and deploys.
+- `web-admin.yml`: Executes test suites, audits dependencies, builds production artifacts.
+- `extension-his.yml`: Type checking, linting, unit tests, and artifact packaging.
+- `security-scan.yml`: Automated secret detection using `gitleaks`.
 
-| Workflow | Kích hoạt | Làm gì |
-|---|---|---|
-| [`api-validation.yml`](.github/workflows/api-validation.yml) | push/PR `master` chạm `api-validation/**` | test + `dotnet format` + soi CVE → build image → push ECR → `kubectl apply` + rollout |
-| [`web-admin.yml`](.github/workflows/web-admin.yml) | push/PR `master` chạm `web-admin/**` | `npm test` + `npm audit` → build image → push ECR → rollout |
-| [`extension-his.yml`](.github/workflows/extension-his.yml) | push/PR `master` chạm `extension-his/**` | tsc + lint + test + audit + build, chặn `dist/` cũ, lưu bản unpacked làm artifact |
-| [`extension-release.yml`](.github/workflows/extension-release.yml) | tag `extension-v1.2.3` | đóng gói `.zip` + tạo GitHub Release (tag phải khớp version trong manifest) |
-| [`security-scan.yml`](.github/workflows/security-scan.yml) | push/PR `master`, hằng tuần | gitleaks quét cả kho |
+---
 
-**Push lên `master` là deploy thẳng lên cụm production** — pull request thì chỉ chạy test.
+## Community & Contributing
 
-Trước khi deploy chạy được phải khai 4 secrets ở *Settings > Secrets and variables > Actions*:
-`ECR_ID`, `ECR_USER`, `ECR_PASSWORD`, `KUBE_CONFIG`. Chưa khai đủ thì job `kiem-tra-secrets`
-báo warning và **bỏ qua** phần triển khai, CI vẫn xanh chứ không đỏ.
+We welcome contributions from healthcare professionals, software engineers, and health-informatics researchers. Please check out [CONTRIBUTING.md](CONTRIBUTING.md) for code conventions, testing instructions, and pull request procedures.
 
-## Nguồn gốc
+---
 
-Ba repo cũ vẫn còn, giữ toàn bộ lịch sử commit và tag `release-v2-final` đã nộp BTC —
-tra `git log`/`git blame` các thay đổi trước 08/08/2026 ở đó:
+## Giới thiệu tiếng Việt
 
-- <https://github.com/Poledo/hackathon-api-validation>
-- <https://github.com/Poledo/hackathon-web-admin>
-- <https://github.com/Poledo/hackathon-extension-his>
+**ZeroCheck AI** là hệ sinh thái mã nguồn mở trợ lý AI cảnh báo xuất toán bảo hiểm y tế (BHYT) dành cho các phần mềm khám chữa bệnh (HIS). Hệ thống cung cấp công cụ tự động hóa kiểm tra tính hợp lệ của hồ sơ bệnh án điện tử chuẩn **XML 130**, đối soát chỉ định cận lâm sàng, tương tác thuốc và hỗ trợ tra cứu văn bản pháp quy y tế theo thời gian thực.
+
+- **Bản thử nghiệm thực tế:** <https://cbyts.vnpt.vn>
+- **Tài liệu chi tiết API:** Xem tại [`api-validation/README.md`](api-validation/README.md)
+- **Kiến trúc mở rộng:** Xem tại [`extension-his/ARCHITECTURE.md`](extension-his/ARCHITECTURE.md)

@@ -29,8 +29,23 @@ report/**/node_modules/
 
 # ---- Gói triển khai IIS: sinh lại được bằng deploy/iis/Build-Package.ps1 ----
 deploy/iis/out/
+# ---- Gói triển khai K8s tạm thời (mặc định xuất vào vnpt-cloud/ đã ignore ở trên) ----
+deploy/k8s/out/
 # File môi trường do Build-Package.ps1 sinh khi deploy kiểu 2 site riêng (-ApiBaseUrl).
 web-admin/src/environments/environment.iis.ts
 
 # Khóa ký tiện ích Chrome: lộ là người khác ký được bản cập nhật giả gửi tới máy trạm.
 *.pem
+
+# Visual Studio / IDE temp files
+.vs/
+.vscode/
+
+# Build archives
+*.tar
+
+# Competition submissions (archived on branch archive/hackathon-v2 and backed up in his-agent)
+nop-btc/
+report/
+gen-*.mjs
+

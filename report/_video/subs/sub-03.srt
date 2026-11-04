@@ -1,8 +1,0 @@
-1
-00:00:00,100 --> 00:00:03,786
-Phần một: tiện ích chạy ngay trên phần mềm HIS.
-
-2
-00:00:03,736 --> 00:00:07,350
-Đây là nơi nhân viên y tế làm việc hằng ngày.
-
