@@ -2,7 +2,7 @@
 
 > **Open-Source AI Compliance & Real-Time Validation Engine for Healthcare Information Systems (HIS)**  
 > Ensuring Medical Insurance (BHYT) Compliance and Preventing Billing Rejections with Deterministic Rule Engines & RAG.  
-> 🌐 **Live Demo:** <https://cbyts.vnpt.vn> | 📜 **License:** [MIT](LICENSE)
+> 🌐 **Live Demo:** <https://zerocheckai.vnptkhanhhoa.vn/> | 📜 **License:** [MIT](LICENSE)
 
 ---
 
@@ -97,6 +97,6 @@ We welcome contributions from healthcare professionals, software engineers, and 
 
 **ZeroCheck AI** là hệ sinh thái mã nguồn mở trợ lý AI cảnh báo xuất toán bảo hiểm y tế (BHYT) dành cho các phần mềm khám chữa bệnh (HIS). Hệ thống cung cấp công cụ tự động hóa kiểm tra tính hợp lệ của hồ sơ bệnh án điện tử chuẩn **XML 130**, đối soát chỉ định cận lâm sàng, tương tác thuốc và hỗ trợ tra cứu văn bản pháp quy y tế theo thời gian thực.
 
-- **Bản thử nghiệm thực tế:** <https://cbyts.vnpt.vn>
+- **Bản thử nghiệm thực tế:** <https://zerocheckai.vnptkhanhhoa.vn/>
 - **Tài liệu chi tiết API:** Xem tại [`api-validation/README.md`](api-validation/README.md)
 - **Kiến trúc mở rộng:** Xem tại [`extension-his/ARCHITECTURE.md`](extension-his/ARCHITECTURE.md)
