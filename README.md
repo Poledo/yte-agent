@@ -93,6 +93,12 @@ We welcome contributions from healthcare professionals, software engineers, and 
 
 ---
 
+## Project Roadmap
+
+Check out our [ROADMAP.md](ROADMAP.md) for upcoming milestones, including planned integrations with advanced Claude reasoning models for regulatory legal synthesis and synthetic XML 130 community benchmarks.
+
+---
+
 ## Giới thiệu tiếng Việt
 
 **ZeroCheck AI** là hệ sinh thái mã nguồn mở trợ lý AI cảnh báo xuất toán bảo hiểm y tế (BHYT) dành cho các phần mềm khám chữa bệnh (HIS). Hệ thống cung cấp công cụ tự động hóa kiểm tra tính hợp lệ của hồ sơ bệnh án điện tử chuẩn **XML 130**, đối soát chỉ định cận lâm sàng, tương tác thuốc và hỗ trợ tra cứu văn bản pháp quy y tế theo thời gian thực.
